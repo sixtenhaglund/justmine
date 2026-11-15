@@ -1256,7 +1256,7 @@ function rockPath(style, s, R) {
   }
 }
 function drawRock(r, bname) {
-  const b = BIOMES[G.biome], style = b.style || 'block';
+  const b = BIOMES[G.biome], style = 'block';   // every biome uses his rounded-square rock again (Sixten asked)
   const born = clamp((G.time - r.born) / 0.35, 0, 1);
   const grow = 0.55 + 0.45 * ease(born);
   const jx = r.shake ? (Math.random() - 0.5) * r.shake * 0.7 : 0, jy = r.shake ? (Math.random() - 0.5) * r.shake * 0.7 : 0;
