@@ -91,7 +91,7 @@ const SHOP = {
     costs: [2e5, 4e6, 8e7, 1.6e9, 3.2e10],
     desc: l => 'Every bomb drops ' + (l + 1) + ' extra bomb' + (l ? 's' : '') },
   robo: { title: 'Robot speed', name: l => 'Robot speed ' + (l + 1), icon: 'gear', col: '#9ae05a', isNew: true,
-    costs: [50000, 6e5, 7e6, 8e7, 1e9, 3.6e10],
+    costs: [8000, 6e4, 6e5, 7e6, 8e7, 1e9, 1.2e10, 1.5e11, 2e12, 3e13],
     desc: l => 'Robots crack at ' + Math.round(100 / SHOPV.robo[l]) + '% of your speed' },
 };
 const SHOPV = {
@@ -99,7 +99,7 @@ const SHOPV = {
   speed: [1.125, 0.75, 0.375, 0.15, 0.01, 0.006, 0.004, 0.0025, 0.0015, 0.001],
   luck: [0.08, 0.15, 0.22, 0.3, 0.38, 0.45, 0.52, 0.6],
   regen: [1.6, 1.2, 0.9, 0.6, 0.4, 0.25],
-  robo: [1.8, 1.6, 1.4, 1.25, 1.1, 1.0],
+  robo: [1.8, 1.6, 1.4, 1.25, 1.1, 1.0, 0.8, 0.6, 0.45, 0.33],
 };
 const SHOP_ORDER = ['creditz', 'speed', 'bomb', 'auto', 'luck', 'regen', 'radius', 'cluster', 'robo'];
 const LVL_KEY = { creditz: 'cmLevel', speed: 'spLevel', bomb: 'bombLevel', auto: 'autoLevel', luck: 'luckLevel', regen: 'regenLevel', radius: 'radiusLevel', cluster: 'clusterLevel', robo: 'roboLevel' };
