@@ -349,6 +349,20 @@ function rollMineral(b) {
   for (let i = 0; i < b.minerals.length; i++) { const n = b.minerals[i][0]; if (rnd(1, n) === n) return i; }
   return -1;
 }
+// real % chance per rock of each mineral in a biome (his checks run top to bottom, first hit wins;
+// Luck gives empty rocks a second roll)
+function realChances(b) {
+  const p = []; let left = 1;
+  for (const m of b.minerals) { const c = left / m[0]; p.push(c); left -= c; }
+  const reroll = 1 + left * luck();
+  return { p: p.map(c => c * reroll), empty: left * (1 - luck()) };
+}
+function fmtPct(c) {
+  const v = c * 100;
+  if (v >= 10) return Math.round(v) + '%';
+  if (v >= 1) return v.toFixed(1) + '%';
+  return Number(v.toPrecision(2)) + '%';
+}
 function addFound(key, i) {
   const arr = G.found[key] || (G.found[key] = []);
   const first = !arr[i];
@@ -1820,7 +1834,8 @@ function renderBook() {
     const isEv = T === BIOMES.length, b = BIOMES[T];
     const key = isEv ? 'Event' : b.name, list = isEv ? EVENT_MINERALS.map(e => [0, 0, e[1], e[0], e[2]]) : b.minerals;
     const found = G.found[key] || [];
-    txt(isEv ? 'Event minerals' : b.name + '  -  found ' + found.filter(x => x > 0).length + ' / ' + list.length, 360, Y + 6, 16, '#ffffff');
+    const head = isEv ? 'Event minerals' : b.name + '  -  found ' + found.filter(x => x > 0).length + ' / ' + list.length + '  -  empty rocks: ' + fmtPct(realChances(b).empty);
+    txt(head, 360, Y + 6, fitSize(head, 16, 680), '#ffffff');
     list.forEach((m, i) => {
       const cw = 212, ch = 190, x = 30 + (i % 3) * (cw + 12), y = Y + 26 + Math.floor(i / 3) * (ch + 10), got = found[i] > 0, art = gemArt(key, i), rar = m[2];
       ctx.fillStyle = got ? rgba(RCOL[rar], 0.08) : 'rgba(255,255,255,0.03)'; rr(x, y, cw, ch, 12); ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = got ? rgba(RCOL[rar], 0.5) : 'rgba(255,255,255,0.1)'; ctx.stroke();
@@ -1828,7 +1843,7 @@ function renderBook() {
       const nm = got ? art.name : '???';
       txt(nm, x + cw / 2, y + 120, fitSize(nm, 18, cw - 16), got ? '#ffffff' : '#6a7080');
       txt(got || isEv ? rar : '?', x + cw / 2, y + 140, 12, RCOL[rar], { font: FB, weight: 900 });
-      const info = isEv ? m[4] : '1 in ' + m[0] + '   +' + fmt(m[1] * b.bonus) + ' Creditz';
+      const info = isEv ? m[4] : fmtPct(realChances(b).p[i]) + ' chance   +' + fmt(m[1] * b.bonus) + ' Creditz';
       txt(info, x + cw / 2, y + 158, fitSize(info, 11, cw - 12, FB), '#aeb6c6', { font: FB, weight: 800 });
       if (got) txt('found x' + fmt(found[i]), x + cw / 2, y + 176, 10, '#7dff7a', { font: FB, weight: 900 });
     });
