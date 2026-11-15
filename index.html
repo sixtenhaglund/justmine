@@ -765,7 +765,7 @@ function resize() {
 // world: Scratch coordinates (y up). Grid centre (0,32) sits in the middle of the play area.
 const toScreen = (x, y) => ({ x: CX + x * K, y: CY - (y - 32) * K });
 const toWorld = (sx, sy) => ({ x: (sx - CX) / K, y: 32 - (sy - CY) / K });
-function setScreen() { ctx.setTransform(DPR, 0, 0, DPR, 0, 0); }
+function setScreen() { ctx.setTransform(DPR, 0, 0, DPR, 0, 0); UI.frame = { x: 0, y: 0, s: 1 }; }
 function setWorld(shx, shy) { ctx.setTransform(DPR * K, 0, 0, DPR * K, DPR * (CX + shx), DPR * (CY + shy)); }   // world units, y DOWN, origin = (0,32)
 const wy = y => -(y - 32);
 
