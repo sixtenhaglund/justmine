@@ -384,7 +384,9 @@ function recolor(rock) {
   if (l < 40) c = mix(c, '#4a4650', 0.45);                               // keep near-black rocks readable
   rock.col = rock.golden ? '#e8ae1c' : c;
 }
-const aliveRocks = () => G.rocks.filter(r => r.state === 'rock' && !r.hard).length;
+const aliveRocks = () => { let n = 0; for (const r of G.rocks) if (r.state === 'rock' && !r.hard) n++; return n; };
+// remove items from a list without making a new array every frame
+function compact(arr, keep) { let j = 0; for (let i = 0; i < arr.length; i++) if (keep(arr[i])) arr[j++] = arr[i]; arr.length = j; return arr; }
 
 // ---------------- quests: 3 goals at a time, each gives a x2 Creditz boost ----------------
 const QUEST_TYPES = {
@@ -691,12 +693,13 @@ function tick() {
     // auto miners (they skip reinforced rocks)
     while (G.drills.length < drillCount()) G.drills.push({ target: null, wait: 0.15 * G.drills.length, x: 0, y: 200, spin: Math.random() * 6, hitT: 0 });
     if (G.drills.length > drillCount()) G.drills.length = drillCount();
+    let free = null;   // built at most once per frame, only if a robot needs a new rock
     for (const d of G.drills) {
       if (d.target && d.target !== G.heart && (d.target.state !== 'rock' || G.rocks.indexOf(d.target) < 0)) d.target = null;
       if (d.target === G.heart && !G.heart) d.target = null;
       if (!d.target && (d.wait -= DT) <= 0) {
-        const free = G.rocks.filter(r => r.state === 'rock' && !r.hard && r.spawnT <= 0 && !G.drills.some(o => o.target === r));
-        if (free.length) d.target = free[Math.floor(Math.random() * free.length)];
+        if (!free) { const taken = new Set(); for (const o of G.drills) if (o.target) taken.add(o.target); free = G.rocks.filter(r => r.state === 'rock' && !r.hard && r.spawnT <= 0 && !taken.has(r)); }
+        if (free.length) { const k = Math.floor(Math.random() * free.length); d.target = free[k]; free[k] = free[free.length - 1]; free.pop(); }
         else if (G.heart) d.target = G.heart;
         d.wait = 0.4;
       }
@@ -730,7 +733,7 @@ function tick() {
       else if (!rock.hard) { const d = G.drills.find(d => d.target === rock); if (d) { by = 'auto'; d.hitT = 0.15; } }
       if (by) hitRock(rock, by);
     }
-    G.rocks = G.rocks.filter(r => r.state !== 'dead');
+    compact(G.rocks, r => r.state !== 'dead');
     // the Heart of the Mountain
     if (G.heart) {
       const h = G.heart;
@@ -759,13 +762,13 @@ function tick() {
     else if (p.kind === 'coin') { p.vy -= 0.4; p.rot += 0.3; if (p.y < -105 && p.vy < 0 && !p.bounced) { p.vy *= -0.4; p.bounced = true; } }
     else if (p.kind === 'suck') { p.x += (p.tx - p.x) * 0.16; p.y += (p.ty - p.y) * 0.16; }
   }
-  G.parts = G.parts.filter(p => p.life > 0);
-  if (G.parts.length > 700) G.parts.splice(0, G.parts.length - 700);
+  compact(G.parts, p => p.life > 0);
+  if (G.parts.length > MAX_PARTS()) G.parts.splice(0, G.parts.length - MAX_PARTS());
   for (const l of G.lights) l.life -= DT;
-  G.lights = G.lights.filter(l => l.life > 0);
+  compact(G.lights, l => l.life > 0);
   if (G.lights.length > 60) G.lights.splice(0, G.lights.length - 60);
   for (const f of G.floats) { f.t += DT; f.y += 0.9; }
-  G.floats = G.floats.filter(f => f.t < 1.5);
+  compact(G.floats, f => f.t < 1.5);
   if (G.floats.length > 40) G.floats.splice(0, G.floats.length - 40);
   for (const t of G.toasts) t.t += DT;
   G.toasts = G.toasts.filter(t => t.t < 2.6);
@@ -806,7 +809,7 @@ function toast(text, col) {
 function tickAmbient() {
   const type = G.scene === 'title' ? 'dust' : BIOMES[G.biome].amb;
   const A = G.amb, R = Math.random;
-  const want = { dust: 40, sparks: 26, heavy: 45, shimmer: 50, embers: 55, snow: 110, bubbles: 40, void: 70, sand: 70, jungle: 34, storm: 120, lava: 50 }[type];
+  const want = Math.round({ dust: 40, sparks: 26, heavy: 45, shimmer: 50, embers: 55, snow: 110, bubbles: 40, void: 70, sand: 70, jungle: 34, storm: 120, lava: 50 }[type] * (QUALITY.low ? 0.5 : 1));
   while (A.length < want) {
     const p = { x: R(), y: R(), t: 0, life: 4 + R() * 6, s: R(), ph: R() * 6.28, type };
     if (type === 'embers' || type === 'bubbles' || type === 'lava') p.y = 1 + R() * 0.2;
@@ -1074,13 +1077,30 @@ const AUDIO = (() => {
 //  DRAWING
 // ====================================================================
 const cv = document.getElementById('c');
-const ctx = cv.getContext('2d');
+let ctx = cv.getContext('2d');   // "let" so sprites can be drawn with the same drawing code
+// quality: low mode drops the canvas to 1x and trims effects when the game runs slow
+const QUALITY = { low: false, auto: true, show: false, fps: 60, ms: 16, slowT: 0, fastT: 0 };
+const PERF = { rockSprites: 0, gemSprites: 0 };
+const MAX_PARTS = () => QUALITY.low ? 160 : 420;
 let W = 960, H = 640, DPR = 1, K = 2, CX = 480, CY = 320;
 const FH = '"Lilita One", "Arial Black", Impact, sans-serif', FB = '"Nunito", "Segoe UI", Arial, sans-serif';
 const TOP = 88, BOT = 92;
 const PATHS = new Map();
 const path = d => { let p = PATHS.get(d); if (!p) { p = new Path2D(d); PATHS.set(d, p); } return p; };
-let bgCache = null, bgKey = '';
+let bgCache = null, bgKey = '', tintBg = null;
+// full-screen soft overlays (vignettes, frost, HUD shading) are smooth gradients: draw them once at 1/4 size, then stretch
+const ovlCache = new Map();
+function overlay(key, alpha, build) {
+  const k = key + '|' + W + 'x' + H;
+  let c = ovlCache.get(k);
+  if (!c) {
+    if (ovlCache.size > 24) ovlCache.clear();
+    c = document.createElement('canvas'); c.width = Math.max(2, Math.ceil(W / 4)); c.height = Math.max(2, Math.ceil(H / 4));
+    const x = c.getContext('2d'); x.scale(c.width / W, c.height / H); build(x);
+    ovlCache.set(k, c);
+  }
+  ctx.save(); ctx.globalAlpha = alpha; ctx.drawImage(c, 0, 0, W, H); ctx.restore();
+}
 const softCache = new Map();
 function soft(col) {
   let c = softCache.get(col);
@@ -1093,7 +1113,7 @@ function soft(col) {
   return c;
 }
 function resize() {
-  DPR = Math.min(2.5, window.devicePixelRatio || 1);
+  DPR = Math.min(QUALITY.low ? 1 : 1.5, window.devicePixelRatio || 1);   // 1.5x looks the same as 2.5x and is up to 2.8x fewer pixels
   W = window.innerWidth; H = window.innerHeight;
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
   K = Math.min((W - 24) / 470, (H - TOP - BOT - 10) / 262);
@@ -1172,9 +1192,17 @@ function drawBg(bi, shx, shy) {
   if (bgKey !== key) { bgCache = buildBg(bi); bgKey = key; }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   const rainbow = BIOMES[bi].rainbow && G.scene === 'play';
-  if (rainbow) ctx.filter = 'hue-rotate(' + ((G.time * 30 * 1.8) % 360).toFixed(0) + 'deg)';   // his Crystal Cave colour cycle
-  ctx.drawImage(bgCache, shx * DPR - 4 * DPR, shy * DPR - 4 * DPR, cv.width + 8 * DPR, cv.height + 8 * DPR);
-  if (rainbow) ctx.filter = 'none';
+  let src = bgCache;
+  if (rainbow) {   // his Crystal Cave colour cycle
+    const step = Math.floor(((G.time * 30 * 1.8) % 360) / 6);
+    if (!tintBg || tintBg.src !== bgCache || tintBg.step !== step) {
+      if (!tintBg || tintBg.src !== bgCache) { tintBg = { c: document.createElement('canvas'), src: bgCache, step: -1 }; tintBg.c.width = Math.ceil(bgCache.width / 2); tintBg.c.height = Math.ceil(bgCache.height / 2); }
+      const tx = tintBg.c.getContext('2d'); tx.filter = 'hue-rotate(' + step * 6 + 'deg)'; tx.drawImage(bgCache, 0, 0, tintBg.c.width, tintBg.c.height); tx.filter = 'none';
+      tintBg.step = step; PERF.tints = (PERF.tints || 0) + 1;
+    }
+    src = tintBg.c;
+  }
+  ctx.drawImage(src, shx * DPR - 4 * DPR, shy * DPR - 4 * DPR, cv.width + 8 * DPR, cv.height + 8 * DPR);
 }
 
 // ---------------- ambient drawing ----------------
@@ -1216,16 +1244,14 @@ function drawAmbient(front) {
       ctx.beginPath(); G.bolt.pts.forEach((p, i) => i ? ctx.lineTo(p[0] * W, p[1] * H) : ctx.moveTo(p[0] * W, p[1] * H)); ctx.stroke();
       ctx.globalCompositeOperation = 'source-over';
     }
-    if (type === 'lava') { const g = ctx.createLinearGradient(0, H * 0.75, 0, H); g.addColorStop(0, 'rgba(255,90,0,0)'); g.addColorStop(1, 'rgba(255,120,20,' + (0.18 + 0.08 * Math.sin(G.time * 1.5)) + ')'); ctx.fillStyle = g; ctx.fillRect(0, H * 0.75, W, H * 0.25); }
+    if (type === 'lava') overlay('lavaglow', (0.18 + 0.08 * Math.sin(G.time * 1.5)) / 0.26, x => { const g = x.createLinearGradient(0, H * 0.75, 0, H); g.addColorStop(0, 'rgba(255,90,0,0)'); g.addColorStop(1, 'rgba(255,120,20,0.26)'); x.fillStyle = g; x.fillRect(0, H * 0.75, W, H * 0.25); });
     if (type === 'bubbles') { for (let k = 0; k < 3; k++) { const yy = H * (0.25 + k * 0.28) + Math.sin(G.time * 0.4 + k) * 20; const g = ctx.createLinearGradient(0, yy - 40, 0, yy + 40); g.addColorStop(0, 'rgba(90,200,40,0)'); g.addColorStop(0.5, 'rgba(90,200,40,0.08)'); g.addColorStop(1, 'rgba(90,200,40,0)'); ctx.fillStyle = g; ctx.fillRect(0, yy - 40, W, 80); } }
   } else if (type === 'snow') {
     // frost creeping in from the corners
-    const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.42, W / 2, H / 2, Math.max(W, H) * 0.72);
-    g.addColorStop(0, 'rgba(200,235,255,0)'); g.addColorStop(1, 'rgba(200,235,255,0.22)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    overlay('frost', 1, x => { const g = x.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.42, W / 2, H / 2, Math.max(W, H) * 0.72); g.addColorStop(0, 'rgba(200,235,255,0)'); g.addColorStop(1, 'rgba(200,235,255,0.22)'); x.fillStyle = g; x.fillRect(0, 0, W, H); });
   } else if (type === 'void') {
     const p = 0.35 + 0.1 * Math.sin(G.time * 0.8);
-    const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.7);
-    g.addColorStop(0, 'rgba(20,0,40,0)'); g.addColorStop(1, 'rgba(20,0,40,' + p + ')'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    overlay('void', p / 0.45, x => { const g = x.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.7); g.addColorStop(0, 'rgba(20,0,40,0)'); g.addColorStop(1, 'rgba(20,0,40,0.45)'); x.fillStyle = g; x.fillRect(0, 0, W, H); });
   }
 }
 function star4(x, y, s, col) {
@@ -1255,16 +1281,11 @@ function rockPath(style, s, R) {
     default: { const q = s * 0.95; rr(-q, -q, q * 2, q * 2, style === 'heavy' ? 4 : 7); RX[style] = q; }   // a square's corners are rounded, so its half-width is what matters
   }
 }
-function drawRock(r, bname) {
+// A rock's look only changes when it cracks (or the screen is resized), so its body is drawn once
+// into a small sprite and then just stamped every frame. Animated bits (shine, flash) go on top.
+function rockBody(r, bname) {
   const b = BIOMES[G.biome], style = 'block';   // every biome uses his rounded-square rock again (Sixten asked)
-  const born = clamp((G.time - r.born) / 0.35, 0, 1);
-  const grow = 0.55 + 0.45 * ease(born);
-  const jx = r.shake ? (Math.random() - 0.5) * r.shake * 0.7 : 0, jy = r.shake ? (Math.random() - 0.5) * r.shake * 0.7 : 0;
-  const x = r.x + jx * 0.5, y = wy(r.y) + jy * 0.5;
-  const s = 23, col = r.col, seedN = Math.floor(r.seed * 1000) + 7;
-  ctx.save();
-  ctx.translate(x, y); ctx.scale(grow, grow);
-  ctx.globalAlpha = born;
+  const s = 23, col = r.col, seedN = Math.floor(r.seed * 1000) + 7, born = 1;
   // shadow
   ctx.save(); ctx.translate(2, 4); ctx.fillStyle = 'rgba(0,0,0,0.4)'; rockPath(style, s, seeded(seedN)); ctx.fill(); ctx.restore();
   // body with bevel light
@@ -1314,15 +1335,36 @@ function drawRock(r, bname) {
       ctx.fillStyle = '#2a2f38'; for (const xx of [-s * 0.7, 0, s * 0.7]) { ctx.beginPath(); ctx.arc(xx, yy + 4, 1.6, 0, 6.283); ctx.fill(); }
     }
   }
-  if (r.golden) {
-    const sx = ((G.time * 40 + r.seed) % 90) - 45;
-    const gg = ctx.createLinearGradient(sx - 10, -s, sx + 10, s); gg.addColorStop(0, 'rgba(255,255,255,0)'); gg.addColorStop(0.5, 'rgba(255,250,210,0.55)'); gg.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = gg; ctx.fillRect(-s - 4, -s - 4, s * 2 + 8, s * 2 + 8);
-  }
-  if (r.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,' + r.flash * 0.45 + ')'; ctx.fillRect(-s - 4, -s - 4, s * 2 + 8, s * 2 + 8); }
-  if (r.spawnT > 0) { ctx.fillStyle = 'rgba(0,0,0,' + (r.spawnT / Math.max(0.01, r.spawnMax)) * 0.35 + ')'; ctx.fillRect(-s - 4, -s - 4, s * 2 + 8, s * 2 + 8); }
   ctx.restore();
   ctx.lineWidth = 1.6; ctx.strokeStyle = r.hard ? '#2a2f38' : '#08080c'; rockPath(style, s, seeded(seedN)); ctx.stroke();
+}
+const ROCK_BOX = 60;   // sprite covers -30..30 world units (rock + shadow)
+function drawRock(r, bname) {
+  const sc = K * DPR, key = r.costume + '|' + r.col + '|' + r.dir + '|' + (r.hard ? 1 : 0) + '|' + bname + '|' + Math.round(sc * 100);
+  if (r.sprKey !== key) {
+    const S = Math.ceil(ROCK_BOX * sc);
+    const c = r.spr && r.spr.width === S ? r.spr : document.createElement('canvas');
+    c.width = c.height = S;
+    const sctx = c.getContext('2d'); sctx.setTransform(1, 0, 0, 1, 0, 0); sctx.clearRect(0, 0, S, S); sctx.setTransform(sc, 0, 0, sc, S / 2, S / 2);
+    const keep = ctx; ctx = sctx; rockBody(r, bname); ctx = keep;
+    r.spr = c; r.sprKey = key; PERF.rockSprites++;
+  }
+  const born = clamp((G.time - r.born) / 0.35, 0, 1);
+  const grow = 0.55 + 0.45 * ease(born);
+  const jx = r.shake ? (Math.random() - 0.5) * r.shake * 0.7 : 0, jy = r.shake ? (Math.random() - 0.5) * r.shake * 0.7 : 0;
+  const x = r.x + jx * 0.5, y = wy(r.y) + jy * 0.5, s = 23, q = s * 0.95;
+  ctx.save();
+  ctx.translate(x, y); ctx.scale(grow, grow);
+  ctx.globalAlpha = born;
+  ctx.drawImage(r.spr, -ROCK_BOX / 2, -ROCK_BOX / 2, ROCK_BOX, ROCK_BOX);
+  if (r.golden) {
+    const sx = ((G.time * 40 + r.seed) % 90) - 45;
+    ctx.save(); rr(-q, -q, q * 2, q * 2, 7); ctx.clip();
+    const gg = ctx.createLinearGradient(sx - 10, -s, sx + 10, s); gg.addColorStop(0, 'rgba(255,255,255,0)'); gg.addColorStop(0.5, 'rgba(255,250,210,0.55)'); gg.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = gg; ctx.fillRect(-s, -s, s * 2, s * 2); ctx.restore();
+  }
+  if (r.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,' + r.flash * 0.45 + ')'; rr(-q, -q, q * 2, q * 2, 7); ctx.fill(); }
+  if (r.spawnT > 0) { ctx.fillStyle = 'rgba(0,0,0,' + (r.spawnT / Math.max(0.01, r.spawnMax)) * 0.35 + ')'; rr(-q, -q, q * 2, q * 2, 7); ctx.fill(); }
   if (r.golden) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25 + 0.15 * Math.sin(G.time * 4 + r.seed); ctx.drawImage(soft('#ffcc33'), -40, -40, 80, 80); ctx.globalCompositeOperation = 'source-over'; }
   ctx.restore();
 }
@@ -1347,7 +1389,30 @@ function drawGem(art, x, y, px, o) {
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = o.alpha === undefined ? 1 : o.alpha;
   }
+  const m = ctx.getTransform ? ctx.getTransform() : null, dev = m && m.a !== undefined ? Math.hypot(m.a, m.b) : DPR * 2;
+  if (!o.tint && !o.nocache && px * dev < 400) {
+    const S = Math.max(8, Math.ceil(px * 1.25 * dev / 4) * 4), key = art.name + '|' + (o.silhouette ? 1 : 0) + '|' + S;
+    let c = gemCache.get(key);
+    if (!c) {
+      if (gemCache.size > 400) gemCache.clear();
+      c = document.createElement('canvas'); c.width = c.height = S;
+      const g2 = c.getContext('2d'); const ss = S / (px * 1.25) * s;
+      g2.setTransform(ss, 0, 0, ss, S / 2 - art.cx * ss, S / 2 - art.cy * ss);
+      const keep = ctx; ctx = g2; gemShapes(art, o); ctx = keep;
+      gemCache.set(key, c); PERF.gemSprites++;
+    }
+    ctx.drawImage(c, -px * 0.625, -px * 0.625, px * 1.25, px * 1.25);
+    ctx.restore();
+    gemGlint(art, x, y, px, o);
+    return;
+  }
   ctx.scale(s, s); ctx.translate(-art.cx, -art.cy);
+  gemShapes(art, o);
+  ctx.restore();
+  gemGlint(art, x, y, px, o);
+}
+const gemCache = new Map();
+function gemShapes(art, o) {
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   for (const sh of art.shapes) {
     const p = path(sh.d);
@@ -1366,7 +1431,8 @@ function drawGem(art, x, y, px, o) {
     ctx.lineWidth = Math.max(sh.sw || 0.5, 0.45) * (sh.fill ? 1.15 : 1);
     ctx.stroke(p);
   }
-  ctx.restore();
+}
+function gemGlint(art, x, y, px, o) {
   if (!o.silhouette && px > 14) {   // glint
     const tw = 0.5 + 0.5 * Math.sin(G.time * 3 + x * 0.1);
     ctx.save(); ctx.globalAlpha = (o.alpha === undefined ? 1 : o.alpha) * (0.5 + tw * 0.5);
@@ -1393,12 +1459,12 @@ function drawHeart(h) {
   for (let k = 0; k < 26; k++) {
     const a = R() * 6.283, l = 30 + R() * 50; let x = Math.cos(a) * 16, y = Math.sin(a) * 16;
     if (k >= n) { R(); R(); R(); continue; }
-    ctx.strokeStyle = '#ff7a2a'; ctx.lineWidth = 2.2; ctx.shadowColor = '#ff5a00'; ctx.shadowBlur = 8;
     ctx.beginPath(); ctx.moveTo(x, y);
     for (let j = 0; j < 3; j++) { x += Math.cos(a + (R() - 0.5)) * l / 3; y += Math.sin(a + (R() - 0.5)) * l / 3; ctx.lineTo(x, y); }
-    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,90,0,0.28)'; ctx.lineWidth = 8; ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,110,20,0.45)'; ctx.lineWidth = 4.5; ctx.stroke();
+    ctx.strokeStyle = '#ff7a2a'; ctx.lineWidth = 2.2; ctx.stroke();
   }
-  ctx.shadowBlur = 0;
   if (h.flash > 0) { ctx.fillStyle = 'rgba(255,220,180,' + h.flash * 0.35 + ')'; ctx.fillRect(-s, -s, s * 2, s * 2); }
   ctx.restore();
   ctx.lineWidth = 2.5; ctx.strokeStyle = '#050505'; rr(-s, -s, s * 2, s * 2, 16); ctx.stroke();
@@ -1411,6 +1477,7 @@ function drawHeart(h) {
   ctx.restore();
 }
 // ---------------- auto miner robots ----------------
+let drillGrad = null;
 function drawDrill(d) {
   const x = d.x, y = wy(d.y) + Math.sin(G.time * 4 + d.spin) * 2;
   ctx.save(); ctx.translate(x, y);
@@ -1419,7 +1486,8 @@ function drawDrill(d) {
   ctx.strokeStyle = '#1a1d24'; ctx.lineWidth = 1.4; const rw = 10 * Math.abs(Math.cos(G.time * 30 + d.spin));
   ctx.beginPath(); ctx.moveTo(-rw, -11); ctx.lineTo(rw, -11); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, -11); ctx.lineTo(0, -7); ctx.stroke();
   // body
-  const g = ctx.createLinearGradient(-7, -8, 7, 8); g.addColorStop(0, '#e9eef5'); g.addColorStop(1, '#7c8696');
+  if (!drillGrad || drillGrad.ctx !== ctx) { drillGrad = { ctx, g: ctx.createLinearGradient(-7, -8, 7, 8) }; drillGrad.g.addColorStop(0, '#e9eef5'); drillGrad.g.addColorStop(1, '#7c8696'); }   // one gradient shared by every robot
+  const g = drillGrad.g;
   rr(-8, -7, 16, 13, 4); ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = '#11141a'; ctx.lineWidth = 1.2; ctx.stroke();
   ctx.fillStyle = '#1a1f28'; rr(-5, -4, 10, 5, 2); ctx.fill();
   ctx.fillStyle = d.hitT > 0 ? '#ffffff' : '#7be05a'; ctx.beginPath(); ctx.arc(-2, -1.5, 1.4, 0, 6.283); ctx.arc(2, -1.5, 1.4, 0, 6.283); ctx.fill();
@@ -1456,6 +1524,7 @@ function region(id, x, y, w, h, fn) {
   const f = UI.frame;
   UI.regions.push({ id, x: f.x + x * f.s, y: f.y + y * f.s, w: w * f.s, h: h * f.s, fn });
 }
+const btnGrads = new Map();
 function btn(id, x, y, w, h, label, o) {
   o = o || {};
   region(id, x, y, w, h, o.disabled && !o.clickDisabled ? null : o.fn);
@@ -1464,8 +1533,9 @@ function btn(id, x, y, w, h, label, o) {
   const lift = press ? 1 : 0;
   ctx.save();
   ctx.fillStyle = darken(base, 0.55); rr(x, y + 3, w, h, o.r || 10); ctx.fill();
-  const g = ctx.createLinearGradient(0, y, 0, y + h);
-  g.addColorStop(0, lighten(base, hot ? 0.32 : 0.2)); g.addColorStop(1, hot ? base : darken(base, 0.12));
+  const gk = y + '|' + h + '|' + base + '|' + hot;
+  let g = btnGrads.get(gk);
+  if (!g || btnGrads.ctx !== ctx) { if (btnGrads.size > 300 || btnGrads.ctx !== ctx) btnGrads.clear(); btnGrads.ctx = ctx; g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, lighten(base, hot ? 0.32 : 0.2)); g.addColorStop(1, hot ? base : darken(base, 0.12)); btnGrads.set(gk, g); }
   rr(x, y + lift, w, h - 1, o.r || 10); ctx.fillStyle = g; ctx.fill();
   ctx.lineWidth = 1.5; ctx.strokeStyle = darken(base, 0.6); ctx.stroke();
   ctx.strokeStyle = rgba('#ffffff', 0.22); ctx.lineWidth = 1; rr(x + 2, y + 2 + lift, w - 4, h * 0.5, (o.r || 10) - 2); ctx.stroke();
@@ -1477,7 +1547,7 @@ function btn(id, x, y, w, h, label, o) {
 function panel(x, y, w, h, title, accent) {
   accent = accent || '#5a6b9a';
   ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 10;
+  for (let k = 3; k >= 1; k--) { ctx.fillStyle = 'rgba(0,0,0,' + (0.16 + 0.04 * (3 - k)) + ')'; rr(x - k * 5, y + 10 - k * 4, w + k * 10, h + k * 8, 18 + k * 5); ctx.fill(); }
   rr(x, y, w, h, 18);
   const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, '#252b3a'); g.addColorStop(1, '#151923');
   ctx.fillStyle = g; ctx.fill(); ctx.restore();
@@ -1485,7 +1555,7 @@ function panel(x, y, w, h, title, accent) {
   ctx.lineWidth = 1.5; ctx.strokeStyle = rgba(accent, 0.6); rr(x + 3, y + 3, w - 6, h - 6, 15); ctx.stroke();
   if (title) {
     const tw = Math.min(w - 60, Math.max(170, title.length * 14 + 50));
-    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 8;
+    ctx.save(); ctx.fillStyle = 'rgba(0,0,0,0.35)'; rr(x + w / 2 - tw / 2 - 2, y - 15, tw + 4, 38, 11); ctx.fill();
     const gg = ctx.createLinearGradient(0, y - 18, 0, y + 18); gg.addColorStop(0, lighten(accent, 0.25)); gg.addColorStop(1, darken(accent, 0.2));
     rr(x + w / 2 - tw / 2, y - 18, tw, 36, 10); ctx.fillStyle = gg; ctx.fill(); ctx.restore();
     ctx.lineWidth = 2; ctx.strokeStyle = '#0a0c12'; rr(x + w / 2 - tw / 2, y - 18, tw, 36, 10); ctx.stroke();
@@ -1687,8 +1757,11 @@ function renderHUD() {
   setScreen();
   const b = BIOMES[G.biome];
   // top + bottom shading strips
-  let g = ctx.createLinearGradient(0, 0, 0, TOP + 10); g.addColorStop(0, 'rgba(5,6,10,0.88)'); g.addColorStop(1, 'rgba(5,6,10,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, TOP + 10);
-  g = ctx.createLinearGradient(0, H - BOT - 10, 0, H); g.addColorStop(0, 'rgba(5,6,10,0)'); g.addColorStop(1, 'rgba(5,6,10,0.9)'); ctx.fillStyle = g; ctx.fillRect(0, H - BOT - 10, W, BOT + 10);
+  overlay('hudstrips', 1, x => {
+    let g2 = x.createLinearGradient(0, 0, 0, TOP + 10); g2.addColorStop(0, 'rgba(5,6,10,0.88)'); g2.addColorStop(1, 'rgba(5,6,10,0)'); x.fillStyle = g2; x.fillRect(0, 0, W, TOP + 10);
+    g2 = x.createLinearGradient(0, H - BOT - 10, 0, H); g2.addColorStop(0, 'rgba(5,6,10,0)'); g2.addColorStop(1, 'rgba(5,6,10,0.9)'); x.fillStyle = g2; x.fillRect(0, H - BOT - 10, W, BOT + 10);
+  });
+  let g;
   const banner = W > 640;
   // Creditz (never wider than the space left of the biome banner)
   const pulse = 1 + G.hudPulse * 0.12, cw = banner ? W / 2 - 125 - 70 : W - 230;
@@ -2180,13 +2253,31 @@ if (document.fonts && document.fonts.load) {
 let last = 0, acc = 0;
 function frame(t) {
   if (!last) last = t;
-  acc += Math.min(0.25, (t - last) / 1000); last = t;
+  const dt = Math.min(0.25, (t - last) / 1000);
+  acc += dt; last = t;
   while (acc >= DT) { tick(); acc -= DT; }
-  render();
+  const r0 = performance.now(); render(); const rms = performance.now() - r0;
+  watchQuality(dt, rms);
+  if (QUALITY.show) drawFps(rms);
   requestAnimationFrame(frame);
 }
+// measures frame time; if the game keeps running slow it switches to low quality (and back when it's fast again)
+function watchQuality(dt, rms) {
+  if (dt <= 0) return;
+  QUALITY.ms = QUALITY.ms * 0.95 + dt * 1000 * 0.05; QUALITY.fps = 1000 / QUALITY.ms; QUALITY.rms = (QUALITY.rms || rms) * 0.95 + rms * 0.05;
+  if (!QUALITY.auto || G.scene !== 'play') return;
+  if (!QUALITY.low && QUALITY.ms > 26) { if ((QUALITY.slowT += dt) > 3) { QUALITY.low = true; QUALITY.slowT = 0; resize(); toast('Low quality mode on (press F3 to see FPS)', '#9aa0aa'); } } else QUALITY.slowT = 0;
+  if (QUALITY.low && QUALITY.ms < 13) { if ((QUALITY.fastT += dt) > 20) { QUALITY.low = false; QUALITY.fastT = 0; resize(); } } else QUALITY.fastT = 0;
+}
+function drawFps(rms) {
+  setScreen();
+  const lab = Math.round(QUALITY.fps) + ' FPS  ' + QUALITY.ms.toFixed(1) + ' ms  draw ' + (QUALITY.rms || 0).toFixed(1) + ' ms  ' + (QUALITY.low ? 'LOW' : 'HIGH') + ' ' + DPR + 'x';
+  ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(W - 250, H - 22, 246, 18);
+  ctx.font = '900 11px ' + FB; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillStyle = QUALITY.fps < 40 ? '#ff8a8a' : '#7dff7a'; ctx.fillText(lab, W - 8, H - 12.5);
+}
+window.addEventListener('keydown', e => { if (e.code === 'F3') { QUALITY.show = !QUALITY.show; e.preventDefault(); } });
 requestAnimationFrame(frame);
-window.__JM = { setHeart: n => { HEART_REBIRTHS = n; }, isUnlocked, TUNE, RX, ROCK_MAX, HEART: HEART_REBIRTHS, REBIRTH_COSTS, costOf, canVisit, SHOPV, SHOP_ORDER, LVL_KEY, PICKS, fmt, quest, startRush, bombTier, pickTier, G, tick, render, BIOMES, SHOP, ART, UI, startGame, buy, teleport, tryRebirth, loadBiome, openMenu, dropBomb, miningSpeed, rebirthCost, canLoad, creditzMult, totalMult, perk, toScreen, toWorld, hitRegion, checkAch, startShower, resize };
+window.__JM = { QUALITY, PERF, dpr: () => DPR, setHeart: n => { HEART_REBIRTHS = n; }, isUnlocked, TUNE, RX, ROCK_MAX, HEART: HEART_REBIRTHS, REBIRTH_COSTS, costOf, canVisit, SHOPV, SHOP_ORDER, LVL_KEY, PICKS, fmt, quest, startRush, bombTier, pickTier, G, tick, render, BIOMES, SHOP, ART, UI, startGame, buy, teleport, tryRebirth, loadBiome, openMenu, dropBomb, miningSpeed, rebirthCost, canLoad, creditzMult, totalMult, perk, toScreen, toWorld, hitRegion, checkAch, startShower, resize };
 </script>
 </body>
 </html>
