@@ -1,0 +1,811 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Just Mine ©</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0d0d0f; overflow: hidden; }
+  canvas { position: absolute; touch-action: none; user-select: none; -webkit-user-select: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+'use strict';
+// ============================================================
+//  JUST MINE ©  -  remade from Sixten's Scratch project
+//  Everything happens on a 480x360 "stage" like Scratch:
+//  x goes right, y goes UP, and (0,0) is the middle.
+// ============================================================
+
+// ---------- his costumes: [name, file, rotationCenterX, rotationCenterY, width, height] ----------
+const COSTUMES={"Stage":[["Common Caverns","dfbfd5af61e25f80f735c4746dd0823b",265.5,213.5,531,427],["Magnetic Mountain","0f208359350f263169de02726c69d753",265.5,213.5,531,427],["Heavy Hights","c290ec2814349f1096a9c2adbd5e52dc",265.5,213.5,531,427],["Crystal Cave","a60a4fafbac535cff7e904f3ff483b91",265.5,213.5,531,427],["Red Ravines","5b9c08cdc5abf6b5d613a4ce91683b33",265.5,213.5,531,427],["Cryo Cliffs","15f575c2ffd4f7499bc549f72ee82309",265.5,213.5,531,427]],"Rarities":[["costume1","824b456241c163bad732fb480e966df2",6.82,19.54,13.7,38.71]],"Shop Button":[["costume1","7d236d7145c0b2594be0a3154d0a9d7e",8.39,4.43,16.79,8.68]],"Rebirth Button":[["costume1","ad43dba37d4d867c98ca7fba60a45ca5",11.29,4.37,22.58,8.62]],"Confirm Rebirth Button":[["costume1","72ecaaf199902d23d34ed1dcf9a4e746",12.08,4.37,24.16,8.62]],"Biomes button":[["costume1","ce4d3a8355b362808534da4e336272ad",11.29,4.37,22.58,8.62]],"Shop":[["costume1","8a160cc38c7d39f0d2c5e4171888441e",15.82,36.18,31.64,72.36]],"Biome menu":[["costume1","dee7b21d0403e63f075070429b0b7a4a",58.15,38.55,116.31,63.92]],"Biomes":[["Common Caverns","0006d7b3324c085d7b74d5d4ff5c2765",25.24,4.37,50.49,12.62],["Magnetic Mountain","28a3b0b22b82311edb40e0acfba6f192",27.04,4.43,54.08,12.69],["Heavy Hights","2008bb364f420fe4ea8385b080a40424",18.55,4.37,37.11,12.55],["Crystal Cave","3d50ee6f80d38f49744cc31dc1c28e5c",17.53,4.37,35.06,12.55],["Red Ravines","bd2602d4b59642c49f80d0bd64e2f2f4",17.41,4.37,34.82,12.55],["Cryo Cliffs","a5849f21a5c91b34ed7c680d582d1355",17.41,4.37,34.82,12.55]],"Rebirth Menu":[["costume1","1531b407cfd3abf308ac1b0eeb26b7d5",38.46,35.45,76.92,56.31],["costume2","5fdc11dc6d9a6845e6f5e971c37d7fce",38.46,35.45,76.92,56.31],["costume3","1c8bb2ec2118e526e694b6adc46fa414",38.46,35.45,76.92,56.31],["costume4","527c194b20c3fc61055223aceb174746",38.46,35.45,76.92,56.31],["costume5","45b16e0604922e71e596164010aeb307",38.46,35.45,76.92,56.31],["costume6","cbdda37b43f311257ce45c6a8b7e056c",38.46,35.45,76.92,56.31]],"Bomb":[["costume1","4fe04bc96822af30cffed692908a4974",8.45,8.12,16.95,16.24],["costume2","a43fdd6276ead7b783a3f5d7a96f99b4",11.38,10.39,22.72,20.89],["costume3","aa7f22b4cb6019b3bf30ad2a9ab0228e",14.94,12.74,29.81,25.36],["costume4","2a3b840ca86f8198d44dbb83f26aa0eb",14.05,14.08,28.21,27.98],["costume5","bef239f85a7afff3ea93047ac4a96eec",19.14,16.4,38.2,32.69]],"More Creditz Upgrade":[["x2 Creditz","60ef51305b658f7b261f8dcc5d134494",8.25,4.11,16.5,8.21],["x4 Creditz","7e9117daf6dbba5667c6ac21af8987aa",8.25,4.11,16.5,8.21],["x8 Creditz","ff8b20ac99a8489f433032e1b30c2bee",8.25,4.11,16.5,8.21],["x10 Creditz","9ed93f8fa219c45963f18410855943d0",8.25,4.11,16.5,8.21],["x20 Creditz","7994db54e5e52cf8610a33a59f6e929f",8.25,4.11,16.5,8.21],["x50 Creditz","de7d05e9964c9c4475a8683a5b1ff697",8.25,4.11,16.5,8.21],["x100 Creditz","c7101cd5a5a0412663fd1b6151dbd80b",8.25,4.09,16.5,8.18],["Sold Out","1752367c9b33fb8339b0bf2a694c1a9e",8.25,4.09,16.5,8.18]],"Faster Mining Upgrade":[["+10% Mining Speed","f22c0f16d12bd5585095e27be16325f5",8.25,4.09,16.5,8.18],["+25% Mining Speed","80752ea808cbb365cef61116993ee1c8",8.25,4.09,16.5,8.18],["+50% Mining Speed","354a30c16282124fd4d4514a59af3fb0",8.25,4.09,16.5,8.18],["+75% Mining Speed","9abd43e37f9f511bc11967c28e397da6",8.25,4.09,16.5,8.18],["+100% Mining Speed","b1ab2ab68443183adb232da36b2ad4af",8.25,4.09,16.5,8.18],["Sold Out","0a6c361ccd2ffb2f206eddbb67f4ba84",8.25,4.09,16.5,8.18]],"Bomb Upgrade":[["Bomb level 1","9669bc950d7e1968d9e7c269a9fb2276",8.25,4.09,16.5,8.18],["Bomb level 2","925a0886be529313598ae5eeb185b781",8.25,4.09,16.5,8.18],["Bomb level 3","fba2595a5a8550f35dbc29a780d6fd2f",8.25,4.09,16.5,8.18],["Bomb level 4","40ebda600deadb66ba7ec24c04e5c1ea",8.25,4.09,16.5,8.18],["Bomb level 5","cc0ad33b0536721dbc72c2f420d33284",8.25,4.09,16.5,8.18],["Sold Out","fca230cad3ab62a8d5012f0cf9e83154",8.25,4.09,16.5,8.18]],"Auto miner upgrade":[["Auto miner level 1","e25ef2babf49e3a80851c530549b1151",8.25,4.09,16.5,8.18],["Auto miner level 2","cd8bc0738e05df966f68c53a726ecedf",8.25,4.09,16.5,8.18],["Auto miner level 3","08022aa3112087e4c95da00fb052b17a",8.25,4.09,16.5,8.18],["Auto miner level 4","3eb70adfb5495b45890d379761c04355",8.25,4.09,16.5,8.18],["Auto miner level 5","3b7e3dc142337abe4759a3f497234c4d",8.25,4.09,16.5,8.18],["Sold Out","989870ed84fa3a6e23da16b96e2b2bf5",8.25,4.09,16.5,8.18]],"Sprite1":[["costume1","4aeac5a60d98cd6dbc63b32c61a35caa",9.25,9.25,18.5,18.5]],"Rock/Minerals Common Caverns":[["costume1","0748bce39638c203074758608bc82113",8.56,8.56,17.11,17.11],["costume2","dbbaf8b2d25c7e6b6363893d4a0ee73c",8.56,8.56,17.11,17.11],["costume3","365820d46d85c25bb14f63b9e935e842",8.56,8.56,17.11,17.11],["costume4","21fbe81d35d2876c8e0b7ba75796aa57",8.56,8.56,17.11,17.11],["costume5","956b3cdde62eedde4dd26bf262a7ec75",8.67,8.56,17.23,17.25],["Glassium","15a405d563bebdc026a7d86510b58e09",5,7.79,10.06,14.68],["Aquatium","8479395c9e488bf1be9611c4298649a7",5.88,7.79,11.82,15.12],["Rubium","a33df89b2e50bd5e1f4a0ff81e1331ab",5.88,7.79,11.82,14.59],["Blitsium","7f038068c08b9083bc88e6f7260756c8",5.65,7.79,11.3,13.7],["Allonium","775d9866be794f2c597b013af6ba880b",5.6,7.79,11.26,13.41],["Purplodium","db0a14d7fb8e70209a06569dbceeed83",6.2,7.75,12.45,13.25]],"Rock/Minerals Magnetic Mountain":[["costume1","e54eeb3307ef9864b10a3df964adf764",8.56,8.56,17.11,17.11],["costume2","4ac2502ba80953ff31d99cb26a411db0",8.56,8.56,17.11,17.11],["costume3","5af5e5605058ad376f22f4bac0e7c13a",8.56,8.56,17.11,17.11],["costume4","2719f1c1bda1371125937567e0692ddd",8.56,8.56,17.11,17.11],["costume5","0fcd962f7788b8047954a056f2078873",8.56,8.56,17.11,17.11],["Magnium","e8328269f1ae96208098a1ce09c9ee5e",5.88,7.79,11.82,13.68],["Electrum","25af7080b86ee9adee4bd1c69db43146",5.88,7.79,11.82,14.56],["Lodeium","db27962bd0d2b87ec9db1dcf6d63fb15",5.63,7.79,11.26,14.68],["Prodium","c620b0a71cebb71ca29bea151bb340ec",5.63,7.79,11.26,15.15],["Atomium","dd374162fc1986d03f971a2135fd56b6",6.2,7.79,12.45,15.44],["Attractium","eceb5c5bf18413b19af66ef9ca43d653",6.2,7.75,12.45,15.28]],"Rock/Minerals Heavy Hights":[["costume1","a77f090a0c7cdc6f32ac5448a4c595b1",8.56,8.56,17.11,17.11],["costume2","89ba896146a0aa6549f8137e06f04626",8.56,8.56,17.11,17.11],["costume3","6933157fdc7984de12cc54038b8e1ab8",8.56,8.56,17.11,17.11],["costume4","ad1709ae97ed89326d019a622203e8ce",8.56,8.56,17.11,17.11],["costume5","17e3fdffa9d86e4340dc0267ad1783bb",8.56,8.56,17.11,17.11],["Heavum","bf3ee2467be6a0617d32723bf104a110",5.6,7.8,11.26,15.04],["Carnium","af31bd65372557fa9ac6880fc38f1d85",5.6,7.8,11.26,14.3],["Thornium","518d4052682368a2c06993fc66e2dd26",6.2,7.8,12.45,14.2],["Frokium","cc5aa23b130125fc06b78e25e0d24c1a",7.86,7.8,16.01,14.93],["Crystium","ed36bce40d5425e0767dd5d44f0c6c60",6.2,7.8,12.45,14.93],["Orbium","f12be751ebacff80cdaf50a55f074a47",6.8,7.85,13.65,14.3]],"Rock/Minerals Crystal Cave":[["costume1","e54eeb3307ef9864b10a3df964adf764",8.56,8.56,17.11,17.11],["costume2","e3a76575b3c69d96736747fee449cda6",8.56,8.56,17.11,17.11],["costume3","f37f00dcb34418a3a5252658bab7570f",8.56,8.56,17.11,17.11],["costume4","6c15c19d6a0f2e9b3c01b32f3c687b85",8.56,8.56,17.11,17.11],["costume5","97ac632ea064e378b720a7e4f6021f6d",8.56,8.56,17.11,17.11],["Prismium","58685289f542ba5508445724782b847b",5.6,7.8,11.26,15.29],["Crystalium","6ff1ae6ab77d1582a10d2adeffcd58d7",6.2,7.84,12.45,14.45],["Starsium","f92062423bfa955862588a3e393b1a07",6.2,7.84,12.45,14.04],["Hanglium","8009fa68d157f9306d6d35ecbab60950",6.2,7.84,12.45,15.04],["Purplium","57282543a8a18c043d93ab3920d3b1d8",6.8,7.92,13.65,15.16],["Restlium","0b59c5f07c65dd083ff66db878275c61",6.8,7.92,13.65,14.74]],"Rock/Minerals Red Ravines":[["costume1","e54eeb3307ef9864b10a3df964adf764",8.56,8.56,17.11,17.11],["costume2","16c3fb394ad36e5290805a9878178580",8.56,8.56,17.11,17.11],["costume3","abf7b9cff62f174d35b90df88f5e2849",8.56,8.56,17.11,17.11],["costume4","ad19ebb09c64179ccbff9113ac9f89cc",8.56,8.62,17.11,17.17],["costume5","0c9654c98d64da1fdccbbadbd9016787",8.56,8.56,17.11,17.11],["Crimson powder","63a552a58d8030b527dccbd7b8eec185",6.67,7.88,13.83,13.16],["Bloodium","6f26800d7fd55d9f91e85d1f804bf5f3",6.2,7.88,12.45,14.11],["Reaperium","259311e76430ab15abc9c5b3b49a82c5",6.2,7.88,12.45,14.11],["Squadrium","bb15c955254cbedb4534e54792999632",6.8,7.88,13.65,14.75],["Criplotion","4b4be31d719eecd8c536faf5189b1cb0",6.81,7.88,13.65,14.12]],"Rock/Minerals Cryo Cliffs":[["costume1","b60a6732cccd6ca8bc9c790e85fff1f5",8.56,8.56,17.11,17.11],["costume2","c08a9135f9da4d17e70ce25cd4d691e0",8.56,8.56,17.11,17.11],["costume3","087e48e88ba80cee168139a36a661703",8.56,8.56,17.11,17.11],["costume4","6874b88fba455ce6d171f986f2d31d77",8.56,8.56,17.11,17.11],["costume5","69732ec12a575af84c90e0bbd69df5c1",8.56,8.56,17.11,17.11],["Froztium","958f1d2e8b78bd3d76498ec199a3f71d",6.2,7.88,12.45,13.95],["Crylonium","0052a109da5ccc1187699aa0c3bcf7f2",6.2,7.88,12.45,13.5],["Snawium","86c226fb1334e0d94a1f05798fdc02a6",6.2,7.88,12.45,12.5],["Frozeenia","5448dcc94a70d3a2799eaab24a206499",6.8,7.93,13.65,12.48]]};
+
+// ---------- his numbers (straight from the Scratch code) ----------
+// Each mineral: [chance "1 in N", Creditz]. The game checks them one after
+// another from the top, like his stack of "if pick random 1 to N = N" blocks:
+// the first one that hits wins, and if NONE hit, the rock was empty.
+const BIOMES = [
+  { name: 'Common Caverns',    sprite: 'Rock/Minerals Common Caverns',    factor: 1,   req: 0,
+    bright: [-25, 0], fade: 'ghost10', chip: '#7d7d7d',
+    minerals: [[3, 1], [4, 5], [6, 10], [8, 25], [10, 50], [20, 100]] },
+  { name: 'Magnetic Mountain', sprite: 'Rock/Minerals Magnetic Mountain', factor: 8,   req: 500,
+    bright: [-50, 0], magnet: true, fade: 'pixelate', chip: '#8f7ab8',
+    minerals: [[2, 5], [5, 15], [10, 30], [15, 65], [20, 120], [25, 200]] },
+  { name: 'Heavy Hights',      sprite: 'Rock/Minerals Heavy Hights',      factor: 20,  req: 2000,
+    bright: [-3, 0], fade: 'darkghost', chip: '#5d5d6b',
+    minerals: [[4, 45], [8, 80], [12, 150], [18, 250], [25, 500], [31, 1050]] },
+  { name: 'Crystal Cave',      sprite: 'Rock/Minerals Crystal Cave',      factor: 50,  req: 10000,
+    rainbow: true, fade: 'rainbow', chip: '#c49bff',
+    minerals: [[5, 55], [7, 120], [10, 270], [14, 520], [25, 1080], [36, 2100]] },
+  { name: 'Red Ravines',       sprite: 'Rock/Minerals Red Ravines',       factor: 100, req: 50000,
+    bright: [-50, 0], hitDarken: true, fade: 'ghost', chip: '#a83a3a',
+    minerals: [[4, 130], [8, 300], [17, 550], [25, 1200], [40, 2250]] },
+  { name: 'Cryo Cliffs',       sprite: 'Rock/Minerals Cryo Cliffs',       factor: 150, req: 150000,
+    bright: [0, 20], fade: 'ghost', chip: '#c6ecff',
+    minerals: [[4, 140], [7, 320], [13, 580], [20, 1500]] },
+];
+const BIOME_BTN_POS = [[-165, 135], [-160, 100], [-181, 65], [-183, 30], [-183, -5], [-183, -40]];
+
+const SHOP = {
+  creditz: { sprite: 'More Creditz Upgrade',  y: 145, costs: [100, 250, 450, 650, 1000, 2500, 10000], vals: [2, 4, 8, 10, 20, 50, 100] },
+  speed:   { sprite: 'Faster Mining Upgrade', y: 100, costs: [50, 150, 300, 650, 1500], vals: [1.125, 0.75, 0.375, 0.15, 0.01] },
+  bomb:    { sprite: 'Bomb Upgrade',          y: 55,  costs: [200, 1000, 5000, 15000, 1000000] },
+  auto:    { sprite: 'Auto miner upgrade',    y: 10,  costs: [500, 2000, 4500, 15000, 50000] },
+};
+const LVL_KEY = { creditz: 'cmLevel', speed: 'spLevel', bomb: 'bombLevel', auto: 'autoLevel' };
+const BASE_SPEED = 1.5;                               // seconds per crack, before upgrades
+const BOMB_STRENGTH = [0, 0.6, 0.5, 0.4, 0.2, 0.1];   // seconds per crack while a bomb touches a rock
+const BOMB_EXTRA = [[0, 0], [0, 0], [10, 30], [30, 50], [50, 80], [80, 100]];
+const BOMB_COOLDOWN = 5;
+const REBIRTH_COSTS = [1e6, 5e6, 1e7, 5e7, 1e8, 1e9];
+const AUTO_SLOW = 2;  // auto miners crack at half your speed (he never finished this part, so this is new)
+const FPS = 30, DT = 1 / FPS;   // Scratch runs at 30 frames per second
+
+// ---------- game state ----------
+const G = {
+  scene: 'loading',
+  creditz: 0, high: 0,
+  cmLevel: 0, spLevel: 0, bombLevel: 0, autoLevel: 0,
+  rebirths: 1, rebirthMult: 1,
+  biome: 0, crystalHue: 0,
+  rocks: [], gen: null, regenWait: -1,
+  loading: 0, spinDir: 90,
+  menu: null,               // 'shop' | 'rebirth' | 'biomes' | null
+  bombs: [], bombCD: 0,
+  drills: [],
+  parts: [], floats: [], toasts: [],
+  stageHue: 0, time: 0, saveT: 0,
+  btn: {},                  // button size animation
+  mouse: { x: 0, y: 0, down: false, over: false },
+  keys: {},
+  confirmNew: 0,
+};
+const creditzMult = () => G.cmLevel ? SHOP.creditz.vals[G.cmLevel - 1] : 1;
+const miningSpeed = () => G.spLevel ? SHOP.speed.vals[G.spLevel - 1] : BASE_SPEED;
+const rebirthCost = () => REBIRTH_COSTS[Math.min(G.rebirths, 6) - 1];
+const canLoad = () => G.loading <= 0;
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));   // like Scratch "pick random a to b"
+
+function fmt(n) {
+  n = Math.floor(n);
+  if (n >= 1e21) return n.toExponential(2).replace('e+', 'e');
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');   // 1 000 000 like on his signs
+}
+
+// ---------- saving (localStorage = a little storage box the browser keeps for this page) ----------
+const SAVE_KEY = 'justmine.save.v1';
+function save() {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      creditz: G.creditz, high: G.high, cm: G.cmLevel, sp: G.spLevel, bomb: G.bombLevel,
+      auto: G.autoLevel, rebirths: G.rebirths, rmult: G.rebirthMult, biome: G.biome, hue: G.crystalHue,
+    }));
+  } catch (e) {}
+}
+function loadSave() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SAVE_KEY));
+    if (!s) return false;
+    G.creditz = +s.creditz || 0; G.high = +s.high || 0;
+    G.cmLevel = s.cm | 0; G.spLevel = s.sp | 0; G.bombLevel = s.bomb | 0; G.autoLevel = s.auto | 0;
+    G.rebirths = Math.max(1, s.rebirths | 0); G.rebirthMult = +s.rmult || 1;
+    G.biome = Math.min(5, Math.max(0, s.biome | 0)); G.crystalHue = +s.hue || 0;
+    return true;
+  } catch (e) { return false; }
+}
+function hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } }
+function wipeSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
+
+// ---------- biome loading + rock generation ----------
+// His version: broadcast "2" deletes every rock and spins the loading circle for
+// 60 frames, while the generator makes a 9 x 5 grid of clones, one per frame,
+// column by column from the top-left corner (-192, 128), 48 steps apart.
+function loadBiome(i) {
+  G.biome = i;
+  G.rocks = [];
+  G.drills.forEach(d => { d.target = null; });
+  G.loading = 60; G.spinDir = 90;
+  G.menu = null;
+  G.regenWait = -1;
+  if (BIOMES[i].name !== 'Crystal Cave') G.stageHue = 0;
+  const q = [];
+  for (let c = 0; c < 9; c++) {
+    for (let r = 0; r < 5; r++) q.push({ c, r });
+    q.push(null);           // the frame his loop spends moving to the next column
+  }
+  G.gen = q;
+}
+function spawnRock(c, r) {
+  const b = BIOMES[G.biome];
+  let dir = 180;            // the generator points down while cloning, then each clone flips 4 coins
+  for (let k = 0; k < 4; k++) if (rnd(1, 2) === 2) dir += 90;
+  const rock = {
+    x: -192 + 48 * c, y: 128 - 48 * r, dir,
+    costume: 0, bright: 0, hue: 0,
+    spawnT: 2, cool: 0, coolMax: 1, state: 'rock', gem: -1, gemT: 0, fadeN: 0, fadeMax: 20, value: 0, shake: 0, born: G.time,
+  };
+  if (b.bright) rock.bright = rnd(b.bright[0], b.bright[1]);
+  if (b.magnet && rnd(1, 2) === 2) rock.hue = 125;
+  if (b.rainbow) { rock.hue = G.crystalHue; G.crystalHue = (G.crystalHue + 5) % 200; }
+  G.rocks.push(rock);
+}
+const aliveRocks = () => G.rocks.filter(r => r.state === 'rock').length;
+
+// ---------- mining ----------
+function rollMineral(b) {
+  for (let i = 0; i < b.minerals.length; i++) {
+    const n = b.minerals[i][0];
+    if (rnd(1, n) === n) return i;
+  }
+  return -1;                // his rocks can be empty!
+}
+function breakRock(rock) {
+  const b = BIOMES[G.biome];
+  const i = rollMineral(b);
+  burst(rock.x, rock.y, 14, b.chip, 3.2);
+  if (i < 0) {
+    rock.state = 'dead';
+    G.floats.push({ x: rock.x, y: rock.y, text: 'empty...', col: '#c8c8c8', t: 0, size: 11 });
+    sfx('pop', 0.7, 0.4);
+    return;
+  }
+  const gain = b.minerals[i][1] * G.rebirthMult * creditzMult();
+  G.creditz += gain;
+  if (G.creditz > G.high) G.high = G.creditz;
+  rock.state = 'gem'; rock.gem = i; rock.gemT = 0; rock.value = gain;
+  rock.fadeMax = b.fade === 'ghost10' ? 10 : 20; rock.fadeN = 0;
+  G.floats.push({ x: rock.x, y: rock.y + 32, text: '+' + fmt(gain), col: '#ffd84a', t: 0, size: 14 });
+  sfx('pop2', 0.9 + i * 0.12, 0.8);
+}
+function hitRock(rock, by) {
+  const b = BIOMES[G.biome];
+  if (rock.costume < 4) {
+    rock.costume++;
+    if (b.hitDarken) rock.bright -= 10;
+    const wait = by === 'bomb' ? BOMB_STRENGTH[G.bombLevel]
+      : miningSpeed() * b.factor * (by === 'auto' ? AUTO_SLOW : 1);
+    rock.cool = wait + DT;  // the wait, plus the one frame Scratch's loop takes
+    rock.coolMax = rock.cool;
+    rock.shake = 4;
+    burst(rock.x, rock.y, 5, b.chip, 2);
+    if (by === 'mouse') sfx('pop', 0.75 + rock.costume * 0.12, 0.35);
+  } else {
+    breakRock(rock);
+  }
+}
+function rockUnderMouse() {
+  const m = G.mouse;
+  for (const r of G.rocks) {
+    if (r.state !== 'rock') continue;
+    if (Math.abs(m.x - r.x) <= 24 && Math.abs(m.y - r.y) <= 24) return r;
+  }
+  return null;
+}
+function bombRadius(bomb) {
+  const c = COSTUMES.Bomb[bomb.costume];
+  return 0.42 * Math.max(c[4], c[5]) * bomb.size / 100;
+}
+function bombTouches(bomb, rock) {
+  const rad = bombRadius(bomb);
+  const dx = Math.max(Math.abs(bomb.x - rock.x) - 25.6, 0);
+  const dy = Math.max(Math.abs(bomb.y - rock.y) - 25.6, 0);
+  return dx * dx + dy * dy <= rad * rad;
+}
+
+// ---------- one game frame (one Scratch frame) ----------
+function tick() {
+  G.time += DT;
+  const b = BIOMES[G.biome];
+  if (b.rainbow) G.stageHue = (G.stageHue + 1) % 200;   // his Crystal Cave backdrop colour cycle
+
+  if (G.scene === 'play') {
+    // the generator: one clone per frame
+    if (G.gen && G.gen.length) {
+      const s = G.gen.shift();
+      if (s) spawnRock(s.c, s.r);
+      if (!G.gen.length) G.gen = null;
+    }
+    if (G.loading > 0) { G.loading--; G.spinDir += 15; }
+
+    // RegenRocks: when every rock is gone, wait 2 seconds and make a fresh grid
+    if (!G.gen && G.regenWait < 0 && aliveRocks() < 1) G.regenWait = 2;
+    if (G.regenWait >= 0) {
+      G.regenWait -= DT;
+      if (G.regenWait < 0) loadBiome(G.biome);
+    }
+
+    // bombs: hold space. One every 5 seconds, made where the mouse is.
+    if (G.bombCD > 0) G.bombCD -= DT;
+    if (G.keys.Space && canLoad() && G.bombCD <= 0) {
+      if (G.bombLevel > 0) {
+        G.bombCD = BOMB_COOLDOWN;
+        const ex = BOMB_EXTRA[G.bombLevel];
+        G.bombs.push({ x: G.mouse.x, y: G.mouse.y, size: 1 + rnd(ex[0], ex[1]), speed: 100, ghost: 0,
+          dir: 90 + rnd(0, 180), costume: G.bombLevel - 1 });
+        sfx('pop2', 0.4, 1);
+        sfx('pop', 0.3, 1);
+        burst(G.mouse.x, G.mouse.y, 20, '#ffb000', 5);
+      } else {
+        toast('Buy a Bomb in the Shop first!');
+      }
+    }
+    // his explosion: "repeat until speed < 0: change size by speed, speed -5, ghost +5"
+    for (const bo of G.bombs) { bo.size += bo.speed; bo.speed -= 5; bo.ghost += 5; }
+
+    // auto miners pick a random free rock and mine it
+    while (G.drills.length < G.autoLevel) G.drills.push({ target: null, wait: 0.15 * G.drills.length, spin: Math.random() * 6 });
+    if (G.drills.length > G.autoLevel) G.drills.length = G.autoLevel;
+    for (const d of G.drills) {
+      d.spin += 0.5;
+      if (!d.target || d.target.state !== 'rock' || G.rocks.indexOf(d.target) < 0) {
+        d.target = null;
+        if ((d.wait -= DT) <= 0) {
+          const free = G.rocks.filter(r => r.state === 'rock' && r.spawnT <= 0 && !G.drills.some(o => o.target === r));
+          if (free.length) d.target = free[Math.floor(Math.random() * free.length)];
+          d.wait = 0.4;
+        }
+      }
+    }
+
+    // who is hitting which rock this frame?
+    const hover = pointerOnUI() ? null : rockUnderMouse();
+    for (const rock of G.rocks) {
+      if (rock.shake > 0) rock.shake--;
+      if (rock.state === 'gem') {
+        rock.gemT += DT;
+        if (rock.gemT >= 2) { rock.fadeN++; if (rock.fadeN >= rock.fadeMax) rock.state = 'dead'; }
+        continue;
+      }
+      if (rock.state !== 'rock') continue;
+      if (rock.spawnT > 0) { rock.spawnT -= DT; continue; }   // new rocks can't be mined for 2 seconds
+      if (rock.cool > 0) { rock.cool -= DT; continue; }
+      let by = null;
+      if (G.bombs.some(bo => bombTouches(bo, rock))) by = 'bomb';
+      else if (hover === rock && G.mouse.down) by = 'mouse';
+      else if (G.drills.some(d => d.target === rock)) by = 'auto';
+      if (by) hitRock(rock, by);
+    }
+    G.rocks = G.rocks.filter(r => r.state !== 'dead');
+    G.bombs = G.bombs.filter(bo => bo.speed >= 0);
+
+    if ((G.saveT += DT) > 3) { G.saveT = 0; save(); }
+  }
+
+  // effects
+  for (const p of G.parts) { p.x += p.vx; p.y += p.vy; p.vy -= 0.35; p.life--; }
+  G.parts = G.parts.filter(p => p.life > 0);
+  for (const f of G.floats) { f.t += DT; f.y += 0.8; }
+  G.floats = G.floats.filter(f => f.t < 1.4);
+  for (const t of G.toasts) t.t += DT;
+  G.toasts = G.toasts.filter(t => t.t < 2.4);
+  if (G.confirmNew > 0) G.confirmNew -= DT;
+
+  // his buttons ease their size: "change size by (target - size) / 4"
+  updateButtonTargets();
+  for (const k in G.btn) { const s = G.btn[k]; s.size += (s.target - s.size) / 4; if (s.flash > 0) s.flash -= DT; }
+  if (G.creditz > G.high) G.high = G.creditz;
+}
+
+function burst(x, y, n, col, sp) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, v = Math.random() * sp + 0.5;
+    G.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v + 1.5, life: 12 + rnd(0, 14), col, s: rnd(2, 4) });
+  }
+  if (G.parts.length > 400) G.parts.splice(0, G.parts.length - 400);
+}
+function toast(text) {
+  const last = G.toasts[G.toasts.length - 1];
+  if (last && last.text === text) { last.t = Math.min(last.t, 0.3); return; }
+  G.toasts.push({ text, t: 0 });
+  if (G.toasts.length > 3) G.toasts.shift();
+}
+
+// ---------- buttons + menus ----------
+// Each button: sprite, costume, x, y, normal size, hover size. (His buttons SHRINK when hovered.)
+function buttons() {
+  const list = [];
+  if (G.scene === 'title') {
+    list.push({ id: 'play', title: true, text: hasSave() ? 'Continue' : 'Play', x: 0, y: -40, w: 150, h: 40 });
+    if (hasSave()) list.push({ id: 'new', title: true, text: G.confirmNew > 0 ? 'Sure? Click again' : 'New game', x: 0, y: -95, w: 150, h: 30, small: true });
+    return list;
+  }
+  if (G.scene !== 'play') return list;
+  list.push({ id: 'shopBtn', sprite: 'Shop Button', costume: 0, x: 210, y: -160, size: 300, hover: 250 });
+  list.push({ id: 'rebirthBtn', sprite: 'Rebirth Button', costume: 0, x: 0, y: -160, size: 400, hover: 350 });
+  list.push({ id: 'biomesBtn', sprite: 'Biomes button', costume: 0, x: -200, y: -165, size: 300, hover: 250 });
+  if (!canLoad()) return list;
+  if (G.menu === 'shop') {
+    for (const k of ['creditz', 'speed', 'bomb', 'auto'])
+      list.push({ id: 'up_' + k, sprite: SHOP[k].sprite, costume: G[LVL_KEY[k]], x: 170, y: SHOP[k].y, size: 500, hover: 450, shop: k });
+  }
+  if (G.menu === 'rebirth') list.push({ id: 'confirm', sprite: 'Confirm Rebirth Button', costume: 0, x: 0, y: -50, size: 400, hover: 350 });
+  if (G.menu === 'biomes') {
+    BIOME_BTN_POS.forEach((p, i) => list.push({ id: 'biome' + i, sprite: 'Biomes', costume: i, x: p[0], y: p[1], size: 250, hover: 220, biome: i }));
+  }
+  return list;
+}
+function btnRect(bt, size) {
+  if (bt.title) { const k = (size || 100) / 100; return { l: bt.x - bt.w / 2 * k, r: bt.x + bt.w / 2 * k, t: bt.y + bt.h / 2 * k, b: bt.y - bt.h / 2 * k }; }
+  const c = COSTUMES[bt.sprite][bt.costume];
+  const s = (size || bt.size) / 100;
+  return { l: bt.x - c[2] * s, r: bt.x + (c[4] - c[2]) * s, t: bt.y + c[3] * s, b: bt.y - (c[5] - c[3]) * s };
+}
+const inRect = (r, x, y) => x >= r.l && x <= r.r && y <= r.t && y >= r.b;
+function panelInfo() {
+  if (G.scene !== 'play' || !canLoad() || !G.menu) return null;
+  if (G.menu === 'shop') return { sprite: 'Shop', x: 170, y: 30 };
+  if (G.menu === 'rebirth') return { sprite: 'Rebirth Menu', costume: Math.min(G.rebirths, 6) - 1, x: 0, y: 0 };
+  return { sprite: 'Biome menu', x: 0, y: 0 };
+}
+function panelRect() {
+  const p = panelInfo();
+  return p ? btnRect({ sprite: p.sprite, costume: p.costume || 0, x: p.x, y: p.y }, 400) : null;
+}
+function buttonAt(x, y) {
+  const list = buttons();
+  for (let i = list.length - 1; i >= 0; i--) {
+    const bt = list[i], st = G.btn[bt.id];
+    if (inRect(btnRect(bt, st ? st.size : (bt.size || 100)), x, y)) return bt;
+  }
+  return null;
+}
+function pointerOnUI() {
+  const m = G.mouse;
+  if (buttonAt(m.x, m.y)) return true;
+  const p = panelRect();
+  return !!(p && inRect(p, m.x, m.y));
+}
+function updateButtonTargets() {
+  const list = buttons(), hot = G.mouse.over ? buttonAt(G.mouse.x, G.mouse.y) : null, seen = {};
+  for (const bt of list) {
+    const base = bt.size || 100, hov = bt.hover || 92;
+    seen[bt.id] = 1;
+    if (!G.btn[bt.id]) G.btn[bt.id] = { size: base, target: base, flash: 0 };
+    G.btn[bt.id].target = hot && hot.id === bt.id ? hov : base;
+  }
+  for (const k in G.btn) if (!seen[k]) delete G.btn[k];   // like his clones getting deleted
+}
+
+function buy(kind) {
+  const u = SHOP[kind], key = LVL_KEY[kind], lvl = G[key];
+  if (lvl >= u.costs.length) { toast('SOLD OUT'); return; }
+  const cost = u.costs[lvl];
+  if (G.creditz < cost) { toast('You need ' + fmt(cost) + ' Creditz'); sfx('pop', 0.5, 0.4); return; }
+  G.creditz -= cost;
+  G[key] = lvl + 1;
+  sfx('pop2', 1.3, 0.8);
+  burst(170, u.y, 12, '#ffd84a', 3);
+  save();
+}
+function click(bt) {
+  const st = G.btn[bt.id];
+  if (st) st.flash = 0.1;     // his "set brightness to -20, wait 0.1"
+  sfx('pop', 1, 0.6);
+  if (bt.id === 'play') { G.confirmNew = 0; startGame(false); }
+  else if (bt.id === 'new') { if (G.confirmNew > 0) { G.confirmNew = 0; startGame(true); } else G.confirmNew = 3; }
+  else if (bt.id === 'shopBtn') G.menu = G.menu === 'shop' ? null : 'shop';
+  else if (bt.id === 'rebirthBtn') G.menu = G.menu === 'rebirth' ? null : 'rebirth';
+  else if (bt.id === 'biomesBtn') { if (canLoad()) G.menu = G.menu === 'biomes' ? null : 'biomes'; }
+  else if (bt.shop) buy(bt.shop);
+  else if (bt.id === 'confirm') tryRebirth();
+  else if (bt.biome !== undefined) teleport(bt.biome);
+}
+// His biomes NEED Creditz but never take them: you just have to have that much.
+function teleport(i) {
+  if (!canLoad()) return;
+  if (G.creditz < BIOMES[i].req) { toast('You need ' + fmt(BIOMES[i].req) + ' Creditz to go there'); return; }
+  loadBiome(i);
+  save();
+}
+function tryRebirth() {
+  if (G.creditz < rebirthCost()) { toast('You need ' + fmt(rebirthCost()) + ' Creditz to Rebirth'); return; }
+  // "change RebirthMultiplier by RebirthMultiplier" = it doubles every time
+  G.rebirthMult *= 2;
+  G.rebirths++;
+  G.creditz = 0; G.cmLevel = 0; G.spLevel = 0; G.bombLevel = 0; G.autoLevel = 0;
+  G.menu = null;
+  loadBiome(0);
+  toast('REBIRTH! Now every mineral is worth x' + fmt(G.rebirthMult));
+  burst(0, 0, 60, '#ffd84a', 7);
+  sfx('pop2', 0.6, 1);
+  save();
+}
+function startGame(fresh) {
+  if (fresh) {
+    wipeSave();
+    Object.assign(G, { creditz: 0, high: 0, cmLevel: 0, spLevel: 0, bombLevel: 0, autoLevel: 0, rebirths: 1, rebirthMult: 1, biome: 0 });
+  } else loadSave();
+  G.scene = 'play';
+  G.bombs = []; G.drills = [];
+  loadBiome(G.biome);
+  save();
+}
+
+// ============================================================
+//  SOUND  (his two "pop" sounds, played at different pitches)
+// ============================================================
+const SOUNDS = { pop: 'assets/83a9787d4cb6f3b7632b4ddfebf74367.wav', pop2: 'assets/b3626a864aa4e573a00837e6d2a7ad0f.wav' };
+const sndPool = {};
+function sfx(name, rate, vol) {
+  if (typeof Audio === 'undefined') return;
+  try {
+    const pool = sndPool[name] || (sndPool[name] = { list: [], i: 0 });
+    if (pool.list.length < 8) { const a = new Audio(SOUNDS[name]); a.preload = 'auto'; pool.list.push(a); }
+    const a = pool.list[pool.i++ % pool.list.length];
+    a.preservesPitch = false; a.mozPreservesPitch = false; a.webkitPreservesPitch = false;
+    a.playbackRate = Math.max(0.25, Math.min(4, rate || 1));
+    a.volume = Math.max(0, Math.min(1, (vol == null ? 1 : vol) * 0.7));
+    a.currentTime = 0;
+    const p = a.play(); if (p && p.catch) p.catch(() => {});
+  } catch (e) {}
+}
+
+// ============================================================
+//  DRAWING
+// ============================================================
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+const HAS_FILTER = typeof ctx.filter === 'string';
+let SCALE = 1, OFFX = 0, OFFY = 0, CSS_SCALE = 1;
+const IMG = {};
+const rasterCache = new Map();
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  const w = window.innerWidth, h = window.innerHeight;
+  CSS_SCALE = Math.min(w / 480, h / 360);
+  const cw = Math.floor(480 * CSS_SCALE), ch = Math.floor(360 * CSS_SCALE);
+  cv.style.width = cw + 'px'; cv.style.height = ch + 'px';
+  cv.style.left = Math.floor((w - cw) / 2) + 'px'; cv.style.top = Math.floor((h - ch) / 2) + 'px';
+  cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr);
+  SCALE = cv.width / 480;
+  rasterCache.clear();
+}
+
+// SVGs get turned into a bitmap once per size, so they stay sharp at any window size
+function raster(file, w, h, s) {
+  const img = IMG[file];
+  if (!img || !img.complete || !img.naturalWidth) return null;
+  const px = s * SCALE;
+  const key = file + '@' + Math.round(px * 40);
+  let c = rasterCache.get(key);
+  if (!c) {
+    if (rasterCache.size > 700) rasterCache.clear();
+    c = document.createElement('canvas');
+    c.width = Math.max(1, Math.ceil(w * px)); c.height = Math.max(1, Math.ceil(h * px));
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    rasterCache.set(key, c);
+  }
+  return c;
+}
+// effects use Scratch's ranges: brightness -100..100, color 0..200 (one full rainbow), ghost 0..100
+function fx(o) {
+  const f = [];
+  if (o.hue) f.push('hue-rotate(' + ((o.hue % 200) * 1.8).toFixed(1) + 'deg)');
+  if (o.bright) f.push('brightness(' + Math.max(0, 1 + o.bright / 100).toFixed(2) + ')');
+  return f.length ? f.join(' ') : 'none';
+}
+const sx = x => 240 + x, sy = y => 180 - y;
+
+function drawCostume(sprite, idx, x, y, size, o) {
+  o = o || {};
+  const c = COSTUMES[sprite][idx];
+  if (!c) return;
+  const s = size / 100;
+  const bmp = raster(c[1], c[4], c[5], s);
+  if (!bmp) return;
+  ctx.save();
+  ctx.translate(sx(x), sy(y));
+  if (o.dir && o.dir !== 90) ctx.rotate((o.dir - 90) * Math.PI / 180);
+  if (o.ghost) ctx.globalAlpha = Math.max(0, 1 - o.ghost / 100);
+  if (HAS_FILTER && (o.hue || o.bright)) ctx.filter = fx(o);
+  if (o.pixelate) {
+    // his pixelate effect: draw small, then blow it up without smoothing
+    const block = 1 + o.pixelate / 9;
+    const tw = Math.max(1, Math.round(c[4] * s / block)), th = Math.max(1, Math.round(c[5] * s / block));
+    const t = pixCanvas(tw, th);
+    t.getContext('2d').clearRect(0, 0, tw, th);
+    t.getContext('2d').drawImage(bmp, 0, 0, tw, th);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(t, 0, 0, tw, th, -c[2] * s, -c[3] * s, c[4] * s, c[5] * s);
+  } else {
+    ctx.drawImage(bmp, -c[2] * s, -c[3] * s, c[4] * s, c[5] * s);
+  }
+  ctx.restore();
+}
+let _pix = null;
+function pixCanvas(w, h) {
+  if (!_pix) _pix = document.createElement('canvas');
+  if (_pix.width < w || _pix.height < h) { _pix.width = Math.max(w, _pix.width); _pix.height = Math.max(h, _pix.height); }
+  return _pix;
+}
+
+function text(str, x, y, size, col, align, outline) {
+  ctx.font = 'bold ' + size + 'px Arial, Helvetica, sans-serif';
+  ctx.textAlign = align || 'center';
+  ctx.textBaseline = 'middle';
+  if (outline !== false) { ctx.lineWidth = Math.max(2, size / 5); ctx.strokeStyle = '#000'; ctx.lineJoin = 'round'; ctx.strokeText(str, x, y); }
+  ctx.fillStyle = col || '#fff';
+  ctx.fillText(str, x, y);
+}
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+// a Scratch-style variable monitor (the little box showing a variable)
+function monitor(label, value, x, y, large) {
+  ctx.font = 'bold 12px Arial, Helvetica, sans-serif';
+  const vw = Math.max(40, ctx.measureText(value).width + 12);
+  if (large) {
+    ctx.font = 'bold 15px Arial, Helvetica, sans-serif';
+    const w = Math.max(48, ctx.measureText(value).width + 14);
+    roundRect(x, y, w, 24, 4); ctx.fillStyle = '#ff8c1a'; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
+    text(value, x + w / 2, y + 12.5, 15, '#fff', 'center', false);
+    return;
+  }
+  ctx.font = 'bold 12px Arial, Helvetica, sans-serif';
+  const lw = ctx.measureText(label).width;
+  const w = lw + vw + 18;
+  roundRect(x, y, w, 22, 4); ctx.fillStyle = '#e6f0ff'; ctx.fill(); ctx.strokeStyle = '#c4ccd9'; ctx.lineWidth = 1; ctx.stroke();
+  text(label, x + 6, y + 11.5, 12, '#575e75', 'left', false);
+  roundRect(x + lw + 12, y + 3, vw, 16, 4); ctx.fillStyle = '#ff8c1a'; ctx.fill();
+  text(value, x + lw + 12 + vw / 2, y + 11.5, 12, '#fff', 'center', false);
+}
+
+function drawDrill(d) {
+  const r = d.target;
+  if (!r) return;
+  const x = sx(r.x) + 14, y = sy(r.y) - 14 + Math.sin(G.time * 8 + d.spin) * 2;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(-0.7 + Math.sin(G.time * 18 + d.spin) * 0.25);
+  ctx.lineWidth = 1.2; ctx.strokeStyle = '#000';
+  // little auto miner pickaxe, flat like his art
+  ctx.fillStyle = '#8b5a2b'; ctx.fillRect(-1.6, -2, 3.2, 16); ctx.strokeRect(-1.6, -2, 3.2, 16);
+  ctx.beginPath(); ctx.moveTo(-10, 1); ctx.quadraticCurveTo(0, -7, 10, 1); ctx.lineTo(8, 2); ctx.quadraticCurveTo(0, -3, -8, 2); ctx.closePath();
+  ctx.fillStyle = '#c9d2d9'; ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
+function render() {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, 0, 480, 360); ctx.clip();
+  const b = BIOMES[G.biome];
+
+  if (G.scene === 'loading') {
+    ctx.fillStyle = '#2a2a2a'; ctx.fillRect(0, 0, 480, 360);
+    text('Loading... ' + G.loaded + ' / ' + G.toLoad, 240, 180, 16, '#fff');
+    ctx.restore(); return;
+  }
+
+  // backdrop
+  drawCostume('Stage', G.scene === 'title' ? 0 : G.biome, 0, 0, 100, { hue: b.rainbow ? G.stageHue : 0 });
+
+  if (G.scene === 'title') { renderTitle(); ctx.restore(); return; }
+
+  // rocks + minerals
+  const hover = pointerOnUI() ? null : rockUnderMouse();
+  for (const r of G.rocks) {
+    if (r.state === 'rock') {
+      const pop = Math.min(1, (G.time - r.born) * 6);          // small grow-in when spawned
+      const jx = r.shake ? (Math.random() - 0.5) * r.shake : 0, jy = r.shake ? (Math.random() - 0.5) * r.shake : 0;
+      drawCostume(b.sprite, r.costume, r.x + jx, r.y + jy, 300 * (0.6 + 0.4 * pop), { dir: r.dir, bright: r.bright, hue: r.hue });
+    } else if (r.state === 'gem') {
+      const o = {};
+      const f = r.fadeN;
+      if (b.fade === 'ghost10') o.ghost = f * 10;
+      else if (b.fade === 'pixelate') o.pixelate = f * 5;
+      else if (b.fade === 'darkghost') { o.bright = -f; o.ghost = f * 5; }
+      else if (b.fade === 'rainbow') { o.hue = f * 10; o.ghost = f * 5; }
+      else o.ghost = f * 5;
+      const bounce = r.gemT < 0.25 ? 1 + Math.sin(r.gemT / 0.25 * Math.PI) * 0.15 : 1;
+      drawCostume(b.sprite, 5 + r.gem, r.x, r.y, 300 * bounce, o);
+    }
+  }
+  // hover outline + crack timer for slow rocks (so a 3-minute Cryo crack doesn't look broken)
+  if (hover && G.scene === 'play') {
+    ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(sx(hover.x) - 25, sy(hover.y) - 25, 50, 50);
+    if (hover.spawnT > 0 || (hover.cool > 0.4 && hover.coolMax > 0.6)) {
+      const frac = hover.spawnT > 0 ? 1 - hover.spawnT / 2 : 1 - hover.cool / hover.coolMax;
+      ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(sx(hover.x) - 20, sy(hover.y) + 17, 40, 5);
+      ctx.fillStyle = hover.spawnT > 0 ? '#9ad' : '#ffd84a'; ctx.fillRect(sx(hover.x) - 20, sy(hover.y) + 17, 40 * frac, 5);
+      if (hover.cool > 3) text(Math.ceil(hover.cool) + 's', sx(hover.x), sy(hover.y) + 8, 10, '#fff');
+    }
+  }
+  for (const d of G.drills) drawDrill(d);
+  // bombs
+  for (const bo of G.bombs) drawCostume('Bomb', bo.costume, bo.x, bo.y, bo.size, { dir: bo.dir, ghost: bo.ghost });
+  // particles
+  for (const p of G.parts) { ctx.globalAlpha = Math.min(1, p.life / 10); ctx.fillStyle = p.col; ctx.fillRect(sx(p.x) - p.s / 2, sy(p.y) - p.s / 2, p.s, p.s); }
+  ctx.globalAlpha = 1;
+  for (const f of G.floats) { ctx.globalAlpha = Math.min(1, (1.4 - f.t) * 2); text(f.text, sx(f.x), sy(f.y), f.size, f.col); }
+  ctx.globalAlpha = 1;
+
+  // panels (Biome menu, Shop, Rebirth Menu)
+  const p = panelInfo();
+  if (p) {
+    drawCostume(p.sprite, p.costume || 0, p.x, p.y, 400);
+    if (G.menu === 'rebirth') {
+      const ok = G.creditz >= rebirthCost();
+      text('Rebirths: ' + (G.rebirths - 1) + '    Now: x' + fmt(G.rebirthMult) + '  ->  x' + fmt(G.rebirthMult * 2), 240, 180 + 82, 11, ok ? '#b6ff7a' : '#fff');
+    }
+    if (G.menu === 'shop') {
+      text('SHOP', sx(170), sy(166), 13, '#fff');
+      text('x' + fmt(creditzMult() * G.rebirthMult) + ' Creditz', sx(170), sy(-30), 10, '#ffd84a');
+      text(miningSpeed() + 's per crack', sx(170), sy(-44), 10, '#fff');
+      text('Space = Bomb', sx(170), sy(-58), 10, G.bombLevel ? '#ffb000' : '#aaa');
+      text('Auto miners: ' + G.autoLevel, sx(170), sy(-72), 10, '#fff');
+    }
+    if (G.menu === 'biomes') text('Biomes', sx(60), sy(110), 18, '#fff');
+  }
+  // buttons
+  for (const bt of buttons()) {
+    const st = G.btn[bt.id] || { size: bt.size, flash: 0 };
+    const o = {};
+    if (st.flash > 0) o.bright = -20;
+    if (bt.biome !== undefined) {
+      if (BIOMES[bt.biome].rainbow) o.hue = (G.time * 30) % 200;     // his Crystal Cave button cycles colour
+      if (G.creditz < BIOMES[bt.biome].req) o.bright = -45;
+    }
+    if (bt.shop) {
+      const lvl = G[LVL_KEY[bt.shop]], cost = SHOP[bt.shop].costs[lvl];
+      if (cost !== undefined && G.creditz < cost) o.bright = -35;
+    }
+    if (bt.id === 'confirm' && G.creditz < rebirthCost()) o.bright = -40;
+    drawCostume(bt.sprite, bt.costume, bt.x, bt.y, st.size, o);
+    if (bt.biome === G.biome) {
+      const r = btnRect(bt, st.size);
+      text('< you are here', sx(r.r) + 6, sy(bt.y), 10, '#9f9', 'left');
+    }
+  }
+
+  // HUD: his visible monitors (Creditz and the big Biome readout) + the HIGHSCORE one
+  monitor('Creditz', fmt(G.creditz), 6, 283);
+  monitor('', b.name, 6, 307, true);
+  monitor('HIGHSCORE', fmt(G.high), 4, 4);
+  if (G.rebirthMult > 1) text('Rebirth x' + fmt(G.rebirthMult), 474, 13, 11, '#ffd84a', 'right');
+  if (G.bombLevel > 0) {
+    const ready = G.bombCD <= 0;
+    text(ready ? 'BOMB READY (space)' : 'bomb ' + Math.ceil(G.bombCD) + 's', 474, G.rebirthMult > 1 ? 28 : 13, 10, ready ? '#ffb000' : '#aaa', 'right');
+  }
+
+  // loading circle (his Sprite1 spinning 15 degrees a frame)
+  if (G.loading > 0) {
+    ctx.fillStyle = 'rgba(0,0,0,' + Math.min(0.35, G.loading / 60) + ')'; ctx.fillRect(0, 0, 480, 360);
+    drawCostume('Sprite1', 0, 0, 0, 300, { dir: G.spinDir });
+  }
+  // toasts
+  G.toasts.forEach((t, i) => {
+    ctx.globalAlpha = Math.min(1, (2.4 - t.t) * 2.5);
+    ctx.font = 'bold 13px Arial, Helvetica, sans-serif';
+    const w = ctx.measureText(t.text).width + 20, y = 40 + i * 26;
+    roundRect(240 - w / 2, y - 11, w, 22, 5); ctx.fillStyle = 'rgba(30,30,30,0.85)'; ctx.fill();
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
+    text(t.text, 240, y, 13, '#fff', 'center', false);
+  });
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+// the title screen: his Common Caverns backdrop, some of his rocks and minerals floating around
+const TITLE_DECO = [];
+function renderTitle() {
+  if (!TITLE_DECO.length) for (let i = 0; i < 14; i++) TITLE_DECO.push({ b: rnd(0, 5), k: rnd(0, 9), x: rnd(-230, 230), y: rnd(-170, 170), v: 0.2 + Math.random() * 0.5, a: Math.random() * 6 });
+  for (const d of TITLE_DECO) {
+    d.y += d.v * 0.5; d.a += 0.01;
+    if (d.y > 200) { d.y = -200; d.x = rnd(-230, 230); }
+    const sp = BIOMES[d.b].sprite, n = COSTUMES[sp].length;
+    const idx = d.k < 5 ? d.k : Math.min(n - 1, 5 + (d.k - 5));
+    ctx.globalAlpha = 0.45;
+    drawCostume(sp, idx, d.x, d.y, 200, { dir: idx < 5 ? 90 + Math.round(d.a / 1.57) * 90 : 90 });
+  }
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, 0, 480, 360);
+  const bob = Math.sin(G.time * 2) * 3;
+  text('Just Mine', 240, 92 + bob, 54, '#e8e8e8');
+  text('©', 372, 72 + bob, 22, '#ffd84a');
+  text('Hold the mouse on rocks to mine them', 240, 140, 12, '#ddd');
+  text('Space = Bomb  •  6 biomes  •  Rebirth for double Creditz', 240, 158, 11, '#bbb');
+  for (const bt of buttons()) {
+    const st = G.btn[bt.id] || { size: 100, flash: 0 };
+    const r = btnRect(bt, st.size);
+    roundRect(sx(r.l), sy(r.t), r.r - r.l, r.t - r.b, 3);
+    ctx.fillStyle = bt.small ? '#555' : '#6f6f6f'; ctx.fill(); ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5; ctx.stroke();
+    text(bt.text, sx(bt.x), sy(bt.y) + 1, (bt.small ? 13 : 20) * st.size / 100, bt.id === 'new' && G.confirmNew > 0 ? '#ff8a8a' : '#000', 'center', false);
+  }
+  if (G.high > 0) text('HIGHSCORE: ' + fmt(G.high), 240, 335, 11, '#ffd84a');
+  text('a game by Sixten', 474, 352, 9, '#999', 'right');
+}
+
+// ============================================================
+//  INPUT
+// ============================================================
+function toStage(e) {
+  const r = cv.getBoundingClientRect();
+  G.mouse.x = (e.clientX - r.left) / r.width * 480 - 240;
+  G.mouse.y = 180 - (e.clientY - r.top) / r.height * 360;
+  G.mouse.over = true;
+}
+cv.addEventListener('pointermove', e => toStage(e));
+cv.addEventListener('pointerdown', e => {
+  toStage(e);
+  try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+  G.mouse.down = true;
+  updateButtonTargets();
+  const bt = buttonAt(G.mouse.x, G.mouse.y);
+  if (bt) { click(bt); G.mouse.down = false; return; }
+  // click outside an open menu closes it (and doesn't mine)
+  const p = panelRect();
+  if (G.menu && !(p && inRect(p, G.mouse.x, G.mouse.y))) { G.menu = null; G.mouse.down = false; }
+});
+window.addEventListener('pointerup', () => { G.mouse.down = false; });
+cv.addEventListener('pointerleave', () => { G.mouse.over = false; });
+cv.addEventListener('contextmenu', e => e.preventDefault());
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space') { G.keys.Space = true; e.preventDefault(); }
+  if (e.code === 'Escape') G.menu = null;
+});
+window.addEventListener('keyup', e => { if (e.code === 'Space') G.keys.Space = false; });
+window.addEventListener('blur', () => { G.keys.Space = false; G.mouse.down = false; });
+window.addEventListener('resize', resize);
+window.addEventListener('beforeunload', () => { if (G.scene === 'play') save(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && G.scene === 'play') save(); });
+
+// ============================================================
+//  LOAD ASSETS + MAIN LOOP (fixed 30 fps logic like Scratch)
+// ============================================================
+G.toLoad = 0; G.loaded = 0;
+(function loadAll() {
+  const files = new Set();
+  for (const k in COSTUMES) for (const c of COSTUMES[k]) files.add(c[1]);
+  G.toLoad = files.size;
+  files.forEach(f => {
+    const img = new Image();
+    const done = () => { if (++G.loaded >= G.toLoad && G.scene === 'loading') { loadSave(); G.scene = 'title'; } };
+    img.onload = done; img.onerror = done;
+    img.src = 'assets/' + f + '.svg';
+    IMG[f] = img;
+  });
+})();
+resize();
+let last = 0, acc = 0;
+function frame(t) {
+  if (!last) last = t;
+  acc += Math.min(0.25, (t - last) / 1000);
+  last = t;
+  while (acc >= DT) { tick(); acc -= DT; }
+  render();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+if (typeof window !== 'undefined') window.__JM = { G, tick, render, miningSpeed, rebirthCost, canLoad, creditzMult, BIOMES, SHOP, startGame, buy, teleport, tryRebirth, loadBiome, click, buttons, buttonAt, pointerOnUI };
+</script>
+</body>
+</html>
