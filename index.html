@@ -76,7 +76,8 @@ const BIOMES = [
     minerals: [[4, 23000, 'Legendary'], [8, 53000, 'Mythical'], [14, 120000, 'Angelic'], [22, 270000, 'Transcendant'], [40, 600000, 'Acendant'], [60, 1300000, 'Celestial']] },
   { name: 'Prism Plateau', factor: 1950, req: 260000000000000000000, bonus: 89, bright: [-15, 10], amb: 'prism', style: 'block', accent: '#e0c8ff', isNew: true,
     minerals: [[4, 36000, 'Legendary'], [8, 83000, 'Mythical'], [14, 180000, 'Angelic'], [22, 410000, 'Transcendant'], [40, 930000, 'Acendant'], [60, 2100000, 'Celestial']] },
-  { name: 'Heart Hollow', factor: 2150, req: 3.1e+21, bonus: 91, bright: [-15, 10], amb: 'heart', style: 'block', accent: '#ff6a8a', isNew: true,
+  // Heart Hollow: hardness 10k (Sixten asked); bonus x4.65 so it still pays about the same per second as before
+  { name: 'Heart Hollow', factor: 10000, req: 3.1e+21, bonus: 423, bright: [-15, 10], amb: 'heart', style: 'block', accent: '#ff6a8a', isNew: true,
     minerals: [[4, 56000, 'Legendary'], [8, 130000, 'Mythical'], [14, 280000, 'Angelic'], [22, 640000, 'Transcendant'], [40, 1400000, 'Acendant'], [60, 3200000, 'Celestial']] },
 ];
 const BIOME_INDEX = name => BIOMES.findIndex(b => b.name === name);
