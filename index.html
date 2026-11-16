@@ -1604,15 +1604,16 @@ function liveSparks(r, bname, cols) {
   ctx.restore();
 }
 // a real-looking crack: his line, broken into small jagged steps that get thinner toward the end
-function crackPts(d) {
-  const t = d.match(/[MLml]|-?[d.]+/g), pts = []; let cmd = 'M', x = 0, y = 0;
+function crackPts(d) {   // reads M/L/H/V (absolute) and m/l/h/v (relative) path commands
+  const t = d.match(/[MLHVmlhv]|-?[\d.]+(?:e-?\d+)?/g) || [], pts = []; let cmd = 'M', x = 0, y = 0;
   for (let i = 0; i < t.length;) {
-    if (/[MLml]/.test(t[i])) { cmd = t[i++]; continue; }
-    const a = +t[i++], b = +t[i++];
-    if (cmd === 'l' || (cmd === 'm' && pts.length)) { x += a; y += b; } else { x = a; y = b; }
+    if (/[MLHVmlhv]/.test(t[i])) { cmd = t[i++]; continue; }
+    if (cmd === 'H') x = +t[i++]; else if (cmd === 'h') x += +t[i++];
+    else if (cmd === 'V') y = +t[i++]; else if (cmd === 'v') y += +t[i++];
+    else { const a = +t[i++], b = +t[i++]; if (cmd === 'l' || (cmd === 'm' && pts.length)) { x += a; y += b; } else { x = a; y = b; } }
     pts.push([x, y]); if (cmd === 'M') cmd = 'L'; if (cmd === 'm') cmd = 'l';
   }
-  return pts;
+  return pts.filter(p => isFinite(p[0]) && isFinite(p[1]));
 }
 const JAG = new Map();   // same crack line = same jagged shape in every crack stage
 function jaggedCrack(c, w, seed) {
