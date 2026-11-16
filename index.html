@@ -1626,10 +1626,12 @@ function jaggedCrack(c, w, seed) {
     }
     c.jag = out; JAG.set(c.d, out);
   }
-  const P = c.jag, N = P.length - 1;
-  for (let k = 1; k <= N; k++) {   // taper: thick where it starts, a hair at the tip
-    ctx.lineWidth = w * (1.15 - 0.85 * (k / N)); ctx.beginPath(); ctx.moveTo(P[k - 1][0], P[k - 1][1]); ctx.lineTo(P[k][0], P[k][1]); ctx.stroke();
-  }
+  // one even line for the whole crack (Sixten: same width all the way, no taper)
+  const P = c.jag;
+  ctx.lineWidth = w; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(P[0][0], P[0][1]);
+  for (let k = 1; k < P.length; k++) ctx.lineTo(P[k][0], P[k][1]);
+  ctx.stroke();
 }
 // his Heavy Hights style for the new biomes: three shades of one colour, bright / mid / dark
 const PAL_CACHE = {};
