@@ -83,7 +83,7 @@ const BIOME_INDEX = name => BIOMES.findIndex(b => b.name === name);
 // how each biome's rocks crack and break. crack/glow/hi colour the cracks, deco decorates them, brk is the break effect
 const BIOME_FX = {
   'Common Caverns': { brk: 'rock' },
-  'Magnetic Mountain': { hi: '#bcd0ff', deco: { shape: 'dot', col: ['#5a8aff', '#ff5a5a'] }, brk: 'sparks', bcol: ['#7fa8ff', '#ff6a6a'] },
+  'Magnetic Mountain': { hi: '#bcd0ff', liveSparks: ['#7fa8ff', '#ff6a6a'], brk: 'sparks', bcol: ['#7fa8ff', '#ff6a6a'] },
   'Heavy Hights': { hi: '#ff8a6a', deco: { shape: 'dot', col: ['#ff4a2a'] }, brk: 'heavy' },
   'Crystal Cave': { hi: '#ffffff', deco: { shape: 'facet', col: ['#ffffff'] }, brk: 'shards', bcol: 'rainbow' },
   'Red Ravines': { glow: '#ff3a1a', deco: { shape: 'dot', col: ['#ffb04a'] }, brk: 'embers' },
@@ -1400,7 +1400,7 @@ function drawAmbient(front) {
     else if (type === 'heavy') { ctx.globalAlpha = fa * 0.25; const s = 30 + p.s * 70; ctx.drawImage(soft('#6a3a30'), x - s / 2, y - s / 2, s, s); ctx.globalAlpha = fa * 0.6; ctx.fillStyle = '#a0705a'; ctx.fillRect(x, y, 2, 2); }
     else if (type === 'embers') { const fl = 0.6 + 0.4 * Math.sin(G.time * 12 + p.ph); ctx.globalAlpha = fa * fl; ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(soft('#ff6a1a'), x - 7, y - 7, 14, 14); ctx.fillStyle = '#ffd08a'; ctx.fillRect(x - 1, y - 1, 2, 2); ctx.globalCompositeOperation = 'source-over'; }
     else if (type === 'shimmer') { const tw = Math.max(0, Math.sin(p.t * 2 + p.ph)); ctx.globalAlpha = fa * tw; ctx.globalCompositeOperation = 'lighter'; star4(x, y, 3 + p.s * 6, hueShift('#ff4fd8', (p.ph * 60 + G.time * 40) % 360)); ctx.globalCompositeOperation = 'source-over'; }
-    else if (type === 'sparks') { ctx.globalAlpha = fa * (0.5 + 0.5 * Math.sin(G.time * 20 + p.ph)); ctx.strokeStyle = p.s > 0.5 ? '#7fa8ff' : '#ff6a6a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - Math.cos(p.ph) * 8, y - Math.sin(p.ph) * 8); ctx.stroke(); }
+    else if (type === 'sparks') { const on = Math.sin(G.time * 20 + p.ph); if (on > -0.2) { ctx.globalAlpha = fa * (0.6 + 0.4 * on); ctx.globalCompositeOperation = 'lighter'; zap(x, y, p.ph * 3 + Math.floor(G.time * 10), 7 + p.s * 5, p.s > 0.5 ? '#7fa8ff' : '#ff6a6a', Math.floor(p.ph * 1000) + Math.floor(G.time * 12)); ctx.globalCompositeOperation = 'source-over'; } }
     else if (type === 'bubbles') { ctx.globalAlpha = fa * 0.7; ctx.strokeStyle = '#9dff5a'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x, y, 2 + p.s * 6, 0, 6.283); ctx.stroke(); ctx.fillStyle = 'rgba(157,255,90,0.12)'; ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillRect(x - p.s * 2, y - p.s * 3, 1.5, 1.5); }
     else if (AMB_X[type]) {
       const A = AMB_X[type], col = A.col[Math.floor(p.ph * 10) % A.col.length], sz = A.size * (0.6 + p.s * 0.8);
@@ -1542,6 +1542,7 @@ function drawRock(r, bname) {
   ctx.translate(x, y); ctx.scale(grow, grow);
   ctx.globalAlpha = born;
   ctx.drawImage(r.spr, -ROCK_BOX / 2, -ROCK_BOX / 2, ROCK_BOX, ROCK_BOX);
+  { const fx = BIOME_FX[bname]; if (fx && fx.liveSparks && !QUALITY.low) liveSparks(r, bname, fx.liveSparks); }
   if (r.golden) {
     const sx = ((G.time * 40 + r.seed) % 90) - 45;
     ctx.save(); rr(-q, -q, q * 2, q * 2, 7); ctx.clip();
@@ -1554,6 +1555,38 @@ function drawRock(r, bname) {
   ctx.restore();
 }
 
+// a real electric spark: a flickering zigzag bolt with a white-hot core (Sixten: "actual sparks, not dots")
+function zap(x, y, ang, len, col, seed) {
+  const R = seeded(seed), n = 4;
+  const pts = [[x, y]];
+  for (let k = 1; k <= n; k++) { const d = len * k / n, j = k === n ? 0 : (R() - 0.5) * len * 0.55; pts.push([x + Math.cos(ang) * d - Math.sin(ang) * j, y + Math.sin(ang) * d + Math.cos(ang) * j]); }
+  const line = () => { ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); };
+  ctx.strokeStyle = col; ctx.lineWidth = 2.2; ctx.globalAlpha *= 0.55; line(); ctx.stroke();
+  ctx.globalAlpha /= 0.55; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 0.9; line(); ctx.stroke();
+  // a little fork off the middle
+  if (R() < 0.6) { const m = pts[2], fa = ang + (R() < 0.5 ? 0.9 : -0.9), fl = len * 0.45;
+    ctx.strokeStyle = col; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(m[0], m[1]); ctx.lineTo(m[0] + Math.cos(fa) * fl * 0.5 + (R() - 0.5) * 2, m[1] + Math.sin(fa) * fl * 0.5 + (R() - 0.5) * 2); ctx.lineTo(m[0] + Math.cos(fa) * fl, m[1] + Math.sin(fa) * fl); ctx.stroke(); }
+}
+// sparks crackling out of the ends of a rock's cracks (drawn live so they flicker)
+function liveSparks(r, bname, cols) {
+  const art = ART.rocks[bname] && ART.rocks[bname][r.costume];
+  if (!art || !art.cracks.length) return;
+  const s = 23, sc = (s * 2 + 4) / art.w, rot = (r.dir - 90) * Math.PI / 180, cx = art.ox + art.w / 2, cy = art.oy + art.w / 2;
+  const tick = Math.floor(G.time * 14);   // the bolts change shape ~14 times a second
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  art.cracks.forEach((c, i) => {
+    const e = crackEnds(c)[i % 2];
+    if (!isFinite(e[0]) || !isFinite(e[1])) return;
+    const seed = Math.floor(r.seed * 1000) + i * 97 + tick * 13;
+    if (seeded(seed + 5)() < 0.35) return;   // each spark blinks on and off
+    const lx = (e[0] - cx) * sc, ly = (e[1] - cy) * sc;
+    const x = lx * Math.cos(rot) - ly * Math.sin(rot), y = lx * Math.sin(rot) + ly * Math.cos(rot);
+    const out = Math.atan2(y, x), col = cols[i % cols.length];
+    ctx.globalAlpha = 0.9; ctx.drawImage(soft(col), x - 6, y - 6, 12, 12);
+    for (let k = 0; k < 2; k++) zap(x, y, out + (seeded(seed + k)() - 0.5) * 1.6, 5 + seeded(seed + 9 + k)() * 5, col, seed + k * 31);
+  });
+  ctx.restore();
+}
 // little decorations along the cracks (sparks, frost, spores...), in his crack coordinates (0..16)
 function crackEnds(c) {
   if (!c.ends) { const n = c.d.match(/-?[\d.]+/g).map(Number); c.ends = [[n[0], n[1]], [n[n.length - 2], n[n.length - 1]]]; }
