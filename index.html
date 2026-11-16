@@ -87,7 +87,7 @@ const BIOME_FX = {
   'Heavy Hights': { brk: 'heavy' },
   'Crystal Cave': { brk: 'shards', bcol: 'rainbow' },
   'Red Ravines': { brk: 'embers' },
-  'Cryo Cliffs': { brk: 'ice' },
+  'Cryo Cliffs': { brk: 'ice', jagged: 0.55, brighten: '#dff6ff' },   // thin jagged cracks; the rock gets brighter as you mine it
   'Sandy Spires': { crack: '#7a4a10', deco: { shape: 'grain', col: ['#f0d090'] }, brk: 'sand' },
   'Jungle Depths': { crack: '#1a3a0a', deco: { shape: 'leaf', col: ['#5fd03a', '#3f9a2a'] }, brk: 'leaves' },
   'Toxic Tunnels': { glow: '#8dff3a', crack: '#1a4a00', deco: { shape: 'drop', col: ['#a8ff4a'] }, brk: 'goo', bcol: ['#8dff3a', '#5fd000'] },
@@ -442,6 +442,8 @@ function recolor(rock) {
   c = rgbHex(rgb[0] + v, rgb[1] + v, rgb[2] + v);
   const l = hexRgb(c).reduce((a, x) => a + x, 0) / 3;
   if (l < 40) c = mix(c, BIOMES[G.biome].name === 'Heavy Hights' ? '#3a1a1a' : '#4a4650', 0.45);                               // keep near-black rocks readable
+  const fxb = BIOME_FX[BIOMES[G.biome].name];
+  if (fxb && fxb.brighten && rock.costume > 0) c = mix(c, fxb.brighten, [0, 0.12, 0.3, 0.48, 0.66][rock.costume] || 0);
   rock.col = rock.golden ? '#e8ae1c' : c;
 }
 const aliveRocks = () => { let n = 0; for (const r of G.rocks) if (r.state === 'rock') n++; return n; };
@@ -1516,12 +1518,18 @@ function rockBody(r, bname) {
     const pal = crackPalette(bname, col);
     art.cracks.forEach((c, i) => {
       const cc = c.c || pal[i % 3], w = (c.sw || 0.5) * 1.35, lum = hexRgb(cc).reduce((a, x) => a + x, 0) / 3;
+      if (fx.jagged) {   // thin, jagged, tapering cracks (Cryo Cliffs)
+        const jw = w * fx.jagged, sd = c.d.length * 131 + i;
+        if (lum > 90) { ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(cc, 0.18); jaggedCrack(c, jw * 3.2, sd); ctx.globalCompositeOperation = 'source-over'; }
+        ctx.globalAlpha = c.o || 1; ctx.strokeStyle = cc; jaggedCrack(c, jw, sd); ctx.globalAlpha = 1;
+        return;
+      }
       if (lum > 90) { ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(cc, 0.22); ctx.lineWidth = w * 3.6; ctx.stroke(path(c.d)); ctx.globalCompositeOperation = 'source-over'; }
       ctx.globalAlpha = c.o || 1; ctx.strokeStyle = cc; ctx.lineWidth = w; ctx.stroke(path(c.d)); ctx.globalAlpha = 1;
     });
     // a thin light edge under each crack so it looks chiselled into the rock
     ctx.translate(0.22, 0.28);
-    for (const c of art.cracks) { ctx.strokeStyle = rgba(lighten(col, 0.5), 0.22); ctx.lineWidth = (c.sw || 0.5) * 0.4; ctx.stroke(path(c.d)); }
+    if (!fx.jagged) for (const c of art.cracks) { ctx.strokeStyle = rgba(lighten(col, 0.5), 0.22); ctx.lineWidth = (c.sw || 0.5) * 0.4; ctx.stroke(path(c.d)); }
     ctx.translate(-0.22, -0.28);
     if (fx.deco) crackDeco(fx.deco, art.cracks);
     ctx.restore();
@@ -1594,6 +1602,33 @@ function liveSparks(r, bname, cols) {
     for (let k = 0; k < 2; k++) zap(x, y, out + (seeded(seed + k)() - 0.5) * 1.6, 5 + seeded(seed + 9 + k)() * 5, col, seed + k * 31);
   });
   ctx.restore();
+}
+// a real-looking crack: his line, broken into small jagged steps that get thinner toward the end
+function crackPts(d) {
+  const t = d.match(/[MLml]|-?[d.]+/g), pts = []; let cmd = 'M', x = 0, y = 0;
+  for (let i = 0; i < t.length;) {
+    if (/[MLml]/.test(t[i])) { cmd = t[i++]; continue; }
+    const a = +t[i++], b = +t[i++];
+    if (cmd === 'l' || (cmd === 'm' && pts.length)) { x += a; y += b; } else { x = a; y = b; }
+    pts.push([x, y]); if (cmd === 'M') cmd = 'L'; if (cmd === 'm') cmd = 'l';
+  }
+  return pts;
+}
+const JAG = new Map();   // same crack line = same jagged shape in every crack stage
+function jaggedCrack(c, w, seed) {
+  if (!c.jag) c.jag = JAG.get(c.d);
+  if (!c.jag) {
+    const P = crackPts(c.d), R = seeded(seed), out = [P[0]];
+    for (let k = 1; k < P.length; k++) {
+      const [x0, y0] = P[k - 1], [x1, y1] = P[k], dx = x1 - x0, dy = y1 - y0, len = Math.hypot(dx, dy) || 1, n = Math.max(2, Math.round(len / 0.9));
+      for (let j = 1; j <= n; j++) { const f = j / n, off = j === n ? 0 : (R() - 0.5) * 0.55; out.push([x0 + dx * f - dy / len * off, y0 + dy * f + dx / len * off]); }
+    }
+    c.jag = out; JAG.set(c.d, out);
+  }
+  const P = c.jag, N = P.length - 1;
+  for (let k = 1; k <= N; k++) {   // taper: thick where it starts, a hair at the tip
+    ctx.lineWidth = w * (1.15 - 0.85 * (k / N)); ctx.beginPath(); ctx.moveTo(P[k - 1][0], P[k - 1][1]); ctx.lineTo(P[k][0], P[k][1]); ctx.stroke();
+  }
 }
 // his Heavy Hights style for the new biomes: three shades of one colour, bright / mid / dark
 const PAL_CACHE = {};
