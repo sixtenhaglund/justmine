@@ -380,7 +380,7 @@ function save() {
       found: G.found, ach: G.ach, reachedNames: BIOMES.filter((b, i) => G.reached & (1 << i)).map(b => b.name), visitedNames: BIOMES.filter((b, i) => G.visited & (1 << i)).map(b => b.name), stats: G.stats,
       heartHP: G.heartHP, won: G.won, settings: G.settings, quests: G.quests, questsDone: G.questsDone, boostT: G.boostT, rate: G.rate || 0, savedAt: Date.now(),
       owner: G.owner || null,
-      drones: G.drones, slots: G.slots, slotsOpen: G.slotsOpen, skins: G.skins, hats: G.hats, crates: G.crates, pass: G.pass, codes: G.codes, nextId: G.nextId,
+      drones: G.drones, slots: G.slots, slotsOpen: G.slotsOpen, skins: G.skins, hats: G.hats, crates: G.crates, pass: G.pass, codes: G.codes, nextId: G.nextId, spins: G.spins || 0,
     }));
   } catch (e) {}
 }
@@ -445,6 +445,7 @@ function loadDrones(s) {
   if (s.pass && s.pass.claimed && typeof s.pass.claimed === 'object') { for (let l = 1; l <= PASS_MAX; l++) if (s.pass.claimed[l]) G.pass.claimed[l] = 1; }
   else for (let l = 1; l <= G.pass.lvl; l++) G.pass.claimed[l] = 1;   // older saves got these rewards automatically already
   G.codes = Array.isArray(s.codes) ? s.codes.filter(c => typeof c === 'string').slice(0, 20) : [];
+  G.spins = clamp(s.spins | 0, 0, 999);
 }
 function hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } }
 function wipeSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
@@ -2751,7 +2752,7 @@ function drawIcon(name, x, y, s, col) {
 // ====================================================================
 let lastRender = 0;
 function render() {
-  const now = performance.now(); tickScroll(lastRender ? Math.min(0.1, (now - lastRender) / 1000) : 0.016); lastRender = now;
+  const now = performance.now(), fdt = lastRender ? Math.min(0.1, (now - lastRender) / 1000) : 0.016; tickScroll(fdt); tickWheel(fdt); lastRender = now;
   UI.regions = []; UI.scrolls = []; UI.clip = null;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = '#07080c'; ctx.fillRect(0, 0, cv.width, cv.height);
@@ -2987,7 +2988,7 @@ function renderHUD() {
   }
   // dock
   const dock = [['biomes', 'Biomes', 'globe', '#2f8f6a'], ['book', 'Book', 'book', '#8a5a2e'], ['rebirth', 'Rebirth', 'rebirth', '#c48a12'], ['shop', 'Shop', 'shop', '#3a5fd0']];
-  renderPassBar(); renderPassButton(); renderDroneColumn(); setScreen();
+  renderPassBar(); renderPassButton(); renderWheelButton(); renderDroneColumn(); setScreen();
   const narrow = W < 560, gap = narrow ? 6 : 10;   // narrow screens: the bomb button sits above the dock instead of beside it
   const leftPad = narrow ? 8 : G.bombLevel > 0 ? 90 : 20;
   const bw = Math.min(150, (W - leftPad * 2 - (dock.length - 1) * gap) / dock.length), bh = 52, total = dock.length * bw + (dock.length - 1) * gap;
@@ -3150,7 +3151,7 @@ function renderSettings() {
   UI.live = true; setScreen(); ctx.globalAlpha = 1;
 }
 function renderMenus() {
-  renderShop(); renderBiomes(); renderRebirth(); renderBook(); renderDrones(); renderPass(); renderLeaders(); renderSettings();
+  renderShop(); renderBiomes(); renderRebirth(); renderBook(); renderDrones(); renderPass(); renderWheel(); renderLeaders(); renderSettings();
   UI.live = true;
   setScreen(); ctx.globalAlpha = 1;
 }
@@ -3717,7 +3718,7 @@ const PASS = (() => {
     23: ['crate', 'epic'], 25: ['drone', 'alien', 1], 27: ['hat', 'rings'], 30: ['crate', 'skin'], 33: ['crate', 'epic'], 35: ['skin', 'nebula'], 38: ['hat', 'crown'],
     40: ['crate', 'legendary'], 44: ['skin', 'abductor'], 47: ['crate', 'legendary'], 50: ['drone', 'alien', 5] };
   const empty = new Set([3, 7, 13, 19, 24, 29, 34, 39, 43]), out = [null]; let k = 0;
-  for (let l = 1; l <= PASS_MAX; l++) out.push(L[l] || (empty.has(l) ? null : ['cred', Number((5e4 * Math.pow(2.9, k++)).toPrecision(2))]));
+  for (let l = 1; l <= PASS_MAX; l++) out.push(L[l] || (empty.has(l) ? ['spin', 1] : ['cred', Number((5e4 * Math.pow(2.9, k++)).toPrecision(2))]));
   return out;
 })();
 function passRewardText(r) {
@@ -3728,6 +3729,7 @@ function passRewardText(r) {
     case 'skin': return SKINS[r[1]].name + ' skin';
     case 'crate': return CRATES[r[1]].name;
     case 'drone': return 'Alien Ship ' + RANK_NAMES[r[2]];
+    case 'spin': return r[1] + ' Wheel spin' + (r[1] > 1 ? 's' : '');
   }
   return '';
 }
@@ -3738,6 +3740,7 @@ function grantPass(r) {
     case 'skin': G.skins[r[1]] = (G.skins[r[1]] || 0) + 1; break;
     case 'crate': G.crates[r[1]] = (G.crates[r[1]] || 0) + 1; break;
     case 'drone': addDrone('alien', r[2]); break;
+    case 'spin': G.spins = (G.spins || 0) + r[1]; break;
   }
 }
 // rewards are claimed by hand in the pass (more fun than getting them silently)
@@ -4511,7 +4514,7 @@ function renderPassButton() {
   const P = G.pass; if (!P) return;
   const gridLeft = toScreen(-236, 0).x, room = gridLeft - 12, open = () => { AUDIO.sfx('click'); G.passPage = Math.min(4, Math.floor(P.lvl / 10)); openMenu('pass'); };
   if (room >= 70) {
-    const w = Math.min(118, room - 6), h = Math.round(w * 1.9), x = 10, y = H / 2 - h / 2 - 10, hot = UI.hot === 'passbig', u = h / 150;   // u = how much bigger than the old 150 px button
+    const w = Math.min(118, room - 6), h = Math.round(w * 1.9), x = 10, y = Math.max(TOP + 6, H / 2 - h / 2 - 62), hot = UI.hot === 'passbig', u = h / 150;   // u = how much bigger than the old 150 px button
     region('passbig', x, y, w, h, open);
     ctx.save();
     ctx.fillStyle = 'rgba(0,0,0,0.35)'; rr(x, y + 4, w, h, 14); ctx.fill();
@@ -4587,7 +4590,132 @@ function rewardIcon(r, x, y, s) {
     case 'skin': drawDrone({ id: 3, type: 'normal', rank: 1, skin: r[1], hat: null }, x, y, { scale: 1.3 * s }); break;
     case 'hat': drawDrone({ id: 4, type: 'normal', rank: 1, skin: null, hat: r[1] }, x, y + 3, { scale: 1.3 * s }); break;
     case 'drone': drawDrone({ id: 5, type: 'alien', rank: r[2], skin: null, hat: null }, x, y, { scale: 1.1 * s }); break;
+    case 'spin': drawWheelIcon(x, y, 22 * s, G.time * 0.6); break;
   }
+}
+// ====================================================================
+//  LUCKY WHEEL: spins come from the Alien Pass or you buy them. The prize is picked FIRST (by chance),
+//  then the wheel is aimed so it stops on that prize - the spin is just the show.
+// ====================================================================
+const WHEEL = [   // [name, weight, colour]
+  ['Creditz', 22, '#e8b21c'], ['Pass XP', 14, '#5ad02a'], ['Skin', 12, '#ff6ab0'], ['x2 Boost', 12, '#4ac0ff'], ['Big Creditz', 10, '#ff9a1a'],
+  ['Drone crate', 10, '#2eb0ff'], ['Skin crate', 8, '#ff8a3a'], ['Hat', 6, '#b05cff'], ['Extra spin', 4, '#7dff7a'], ['JACKPOT', 2, '#ff3a5a'],
+];
+const WSEG = 6.2832 / WHEEL.length;
+const WS = { ang: 0, from: 0, to: 0, t: 0, dur: 4.2, spinning: false, prize: -1, show: 0, msg: '', lastTick: -1 };
+const spinPrice = () => Math.min(1e12, 1e5 * Math.pow(4, G.biome));   // 100K in the first biome, at most 1T
+function drawWheelIcon(x, y, r, a) {   // a little wheel (buttons, pass card)
+  ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+  WHEEL.forEach((w, i) => { ctx.fillStyle = w[2]; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r, i * WSEG, (i + 1) * WSEG); ctx.closePath(); ctx.fill(); });
+  ctx.lineWidth = Math.max(1.5, r * 0.08); ctx.strokeStyle = '#0b0c12'; ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.283); ctx.stroke();
+  ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.arc(0, 0, r * 0.22, 0, 6.283); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+function spinWheel() {
+  if (WS.spinning) return;
+  if ((G.spins || 0) <= 0) { toast('No spins left: buy one or get them from the Alien Pass', '#ff8a8a'); AUDIO.sfx('deny'); return; }
+  G.spins--; save();
+  const w = {}; WHEEL.forEach((x, i) => { w[i] = x[1]; });
+  const prize = +pickW(w);
+  // aim: the pointer is at the top (-90 deg); land somewhere inside the prize slice, after 5-6 full turns
+  const inside = (0.15 + Math.random() * 0.7) * WSEG, target = -Math.PI / 2 - (prize * WSEG + inside);
+  const base = WS.ang - (WS.ang % 6.2832);
+  WS.from = WS.ang; WS.to = base + (5 + Math.floor(Math.random() * 2)) * 6.2832 + ((target % 6.2832) + 6.2832) % 6.2832;
+  WS.t = 0; WS.spinning = true; WS.prize = prize; WS.show = 0; WS.msg = '';
+  AUDIO.sfx('open');
+}
+function giveWheelPrize(i) {
+  const b = BIOMES[G.biome], rv = rockValue(b) * totalMult(); let msg = '';
+  switch (WHEEL[i][0]) {
+    case 'Creditz': { const a = rv * 30; giveCreditz(a, true); msg = '+' + fmt(a) + ' Creditz'; break; }
+    case 'Big Creditz': { const a = rv * 150; giveCreditz(a, true); msg = '+' + fmt(a) + ' Creditz!'; break; }
+    case 'Pass XP': addXP(150); msg = '+' + Math.round(150 * xpMult()) + ' Alien Pass XP'; break;
+    case 'Skin': { const sk = pickW(CRATES.skin.skins); G.skins[sk] = (G.skins[sk] || 0) + 1; msg = SKINS[sk].name + ' skin (' + SKINS[sk].rar + ')'; break; }
+    case 'Hat': { const ks = Object.keys(HATS), h = ks[rnd(0, ks.length - 1)]; G.hats[h] = (G.hats[h] || 0) + 1; msg = HATS[h].name + ' (hat)'; break; }
+    case 'x2 Boost': G.boostT = (G.boostT || 0) + 120; msg = 'x' + boostMult() + ' Creditz for 2 minutes'; break;
+    case 'Drone crate': { const k = Math.random() < 0.7 ? 'uncommon' : 'rare'; G.crates[k] = (G.crates[k] || 0) + 1; msg = 'A free ' + CRATES[k].name + ' (in the Drone Shop)'; break; }
+    case 'Skin crate': G.crates.skin = (G.crates.skin || 0) + 1; msg = 'A free Skin Crate (in the Drone Shop)'; break;
+    case 'Extra spin': G.spins = (G.spins || 0) + 1; msg = 'One more spin!'; break;
+    case 'JACKPOT': { const a = rv * 1000; giveCreditz(a, true); G.crates.epic = (G.crates.epic || 0) + 1; msg = 'JACKPOT! +' + fmt(a) + ' Creditz + an Epic Crate'; G.flash = 0.6; G.flashCol = '#ffd84a'; G.shake = Math.max(G.shake, 8); break; }
+  }
+  WS.msg = msg; WS.show = 1; G.hudPulse = 1;
+  AUDIO.sfx(WHEEL[i][0] === 'JACKPOT' ? 'victory' : 'quest'); save();
+}
+function tickWheel(dt) {
+  if (!WS.spinning) { if (WS.show > 0) WS.show = Math.max(0, WS.show - dt / 6); return; }
+  WS.t += dt; const f = Math.min(1, WS.t / WS.dur), e = 1 - Math.pow(1 - f, 4);   // fast start, slow stop
+  WS.ang = WS.from + (WS.to - WS.from) * e;
+  const seg = Math.floor(((-WS.ang - Math.PI / 2) % 6.2832 + 6.2832) % 6.2832 / WSEG);   // tick sound when a new slice passes the pointer
+  if (seg !== WS.lastTick) { WS.lastTick = seg; AUDIO.sfx('tick'); }
+  if (f >= 1) { WS.spinning = false; WS.ang = WS.to % 6.2832; giveWheelPrize(WS.prize); }
+}
+function renderWheel() {
+  const w = 640, h = 620;
+  const f = modalFrame('wheel', w, h); if (!f) return;
+  panel(0, 0, w, h, 'LUCKY WHEEL', '#e8b21c');
+  closeBtn(w - 46, 12);
+  const cx = w / 2, cy = 300, R = 210;
+  // rim with blinking bulbs
+  ctx.fillStyle = '#2a1a08'; ctx.beginPath(); ctx.arc(cx, cy, R + 18, 0, 6.283); ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = '#ffd84a'; ctx.stroke();
+  for (let k = 0; k < 20; k++) { const a = k / 20 * 6.283, on = (k + Math.floor(G.time * (WS.spinning ? 12 : 3))) % 2; ctx.fillStyle = on ? '#fff6c0' : '#8a6a1a'; ctx.beginPath(); ctx.arc(cx + Math.cos(a) * (R + 9), cy + Math.sin(a) * (R + 9), 4, 0, 6.283); ctx.fill(); }
+  // the slices
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(WS.ang);
+  WHEEL.forEach((wh, i) => {
+    const a0 = i * WSEG, a1 = a0 + WSEG, g = ctx.createRadialGradient(0, 0, 20, 0, 0, R);
+    g.addColorStop(0, lighten(wh[2], 0.3)); g.addColorStop(1, darken(wh[2], 0.25));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, R, a0, a1); ctx.closePath(); ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(11,12,18,0.8)'; ctx.stroke();
+    ctx.save(); ctx.rotate(a0 + WSEG / 2);
+    const ix = R * 0.72;
+    ctx.save(); ctx.translate(ix, 0); ctx.rotate(Math.PI / 2);
+    switch (wh[0]) {
+      case 'Creditz': case 'Big Creditz': drawIcon('gem', 0, 0, wh[0] === 'Big Creditz' ? 30 : 22, '#ffffff'); break;
+      case 'Pass XP': txt('XP', 0, 0, 18, '#ffffff', { stroke: 3 }); break;
+      case 'Skin': drawDrone({ id: 7, type: 'normal', rank: 1, skin: 'neon', hat: null }, 0, 0, { scale: 0.9 }); break;
+      case 'Hat': drawDrone({ id: 8, type: 'normal', rank: 1, skin: null, hat: 'crown' }, 0, 2, { scale: 0.9 }); break;
+      case 'x2 Boost': drawIcon('clock', 0, 0, 22, '#ffffff'); break;
+      case 'Drone crate': drawCrate(0, 0, 0.62, '#2eb0ff', G.time); break;
+      case 'Skin crate': drawCrate(0, 0, 0.62, '#ff8a3a', G.time); break;
+      case 'Extra spin': drawWheelIcon(0, 0, 11, -G.time); break;
+      case 'JACKPOT': ctx.globalCompositeOperation = 'lighter'; star4(0, 0, 13, '#fff6c0'); ctx.globalCompositeOperation = 'source-over'; break;
+    }
+    ctx.restore();
+    ctx.translate(R * 0.42, 0);
+    txt(wh[0], 0, 0, fitSize(wh[0], 13, 92), '#ffffff', { stroke: 3 });
+    ctx.restore();
+  });
+  ctx.restore();
+  // pointer at the top
+  ctx.fillStyle = '#ff3a3a'; ctx.beginPath(); ctx.moveTo(cx - 16, cy - R - 26); ctx.lineTo(cx + 16, cy - R - 26); ctx.lineTo(cx, cy - R + 8); ctx.closePath(); ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = '#0b0c12'; ctx.stroke();
+  // the hub = the SPIN button
+  const can = (G.spins || 0) > 0 && !WS.spinning, hub = 52;
+  region('wheelhub', cx - hub, cy - hub, hub * 2, hub * 2, () => spinWheel());
+  const hg = ctx.createRadialGradient(cx - 12, cy - 14, 4, cx, cy, hub); hg.addColorStop(0, can ? '#8aff8a' : '#8a90a0'); hg.addColorStop(1, can ? '#2a8a2a' : '#3a3f4c');
+  ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(cx, cy, hub * (can && UI.hot === 'wheelhub' ? 1.05 : 1), 0, 6.283); ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = '#0b0c12'; ctx.stroke();
+  txt(WS.spinning ? '...' : 'SPIN', cx, cy - 6, 24, '#ffffff', { stroke: 4 });
+  txt((G.spins || 0) + ' left', cx, cy + 18, 13, '#ffffff', { font: FB, weight: 900, stroke: 3 });
+  // prize message
+  if (WS.show > 0 && WS.msg) { const a = Math.min(1, WS.show * 4); ctx.globalAlpha *= a; ctx.fillStyle = 'rgba(8,10,16,0.92)'; rr(40, cy - 34, w - 80, 68, 16); ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = WHEEL[WS.prize][2]; ctx.stroke(); txt('YOU WON', w / 2, cy - 14, 13, WHEEL[WS.prize][2], { font: FB, weight: 900 }); txt(WS.msg, w / 2, cy + 12, fitSize(WS.msg, 22, w - 110), '#ffffff', { stroke: 4 }); ctx.globalAlpha = 1; }
+  // buy a spin
+  const price = spinPrice();
+  txt('Spins: ' + (G.spins || 0) + '   -   get more from the Alien Pass, or buy one:', w / 2, h - 82, 13, '#c9cfdc', { font: FB, weight: 800 });
+  btn('buyspin', w / 2 - 130, h - 64, 260, 44, 'Buy 1 spin: ' + fmt(price), { col: G.creditz >= price ? '#c48a12' : '#5a3a3a', size: 17, r: 12, fn: () => {
+    if (G.creditz < price) { toast('A spin costs ' + fmt(price) + ' Creditz here', '#ff8a8a'); AUDIO.sfx('deny'); return; }
+    G.creditz -= price; G.shown = G.creditz; G.spins = (G.spins || 0) + 1; AUDIO.sfx('buy'); save(); } });
+}
+// the round button under the PASS button
+function renderWheelButton() {
+  const gridLeft = toScreen(-236, 0).x, room = gridLeft - 12, n = G.spins || 0, open = () => { AUDIO.sfx('click'); openMenu('wheel'); };
+  let x, y, w, h;
+  if (room >= 70) { w = Math.min(118, room - 6); h = Math.round(w * 0.95); x = 10; const ph = Math.round(w * 1.9), py = Math.max(TOP + 6, H / 2 - ph / 2 - 62); y = py + ph + 12; if (y + h > H - 100) y = H - 100 - h; }
+  else { x = 12; y = 140; w = 164; h = 44; }
+  const hot = UI.hot === 'wheelbtn';
+  region('wheelbtn', x, y, w, h, open);
+  ctx.fillStyle = 'rgba(0,0,0,0.35)'; rr(x, y + 4, w, h, 14); ctx.fill();
+  const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, hot ? '#f0c040' : '#c48a12'); g.addColorStop(1, '#4a2a04'); ctx.fillStyle = g; rr(x, y, w, h, 14); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#ffe27a'; ctx.stroke();
+  if (room >= 70) { drawWheelIcon(x + w / 2, y + h * 0.42, Math.min(w, h) * 0.3, G.time * (n ? 1.2 : 0.3)); txt('SPIN', x + w / 2, y + h * 0.86, Math.min(20, w / 5), '#ffffff', { stroke: 3 }); }
+  else { drawWheelIcon(x + 22, y + h / 2, 15, G.time * (n ? 1.2 : 0.3)); txt('LUCKY WHEEL', x + 98, y + h / 2 + 0.5, 14, '#ffffff', { stroke: 2.5 }); }
+  if (n) { const pz = 1 + 0.08 * Math.sin(G.time * 6); ctx.fillStyle = '#e8402a'; ctx.beginPath(); ctx.arc(x + w - 6, y + 6, 12 * pz, 0, 6.283); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff'; ctx.stroke(); txt(String(n), x + w - 6, y + 6.5, 12, '#ffffff', { shadow: false }); }
 }
 const PASSUI = { was: false, info: false };
 function renderPass() {
