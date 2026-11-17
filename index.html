@@ -164,7 +164,7 @@ const SHOP = {
     costs: [200, 1000, 5000, 15000, 1e6, 3e7, 3e8, 3e9, 3e10, 3e11],
     desc: l => 'Cracks every ' + BOMB_STRENGTH[l + 1] + 's in the blast (SPACE / right-click)' },
   auto: { title: 'Auto miner', name: l => 'Auto miner level ' + (l + 1), icon: 'robot', col: '#7be05a',
-    costs: [500, 2000, 6000, 20000, 80000, 1.2e6, 9e6, 7.5e7, 6e8, 4.5e9, 3.6e10, 3e11, 3e12, 3e13],
+    costs: [500, 2000, 6000, 20000, 80000, 1.2e6],
     desc: l => (l + 1) + ' robot' + (l ? 's' : '') + ' that mine rocks for you' },
   luck: { title: 'Luck', name: l => 'Luck ' + (l + 1), icon: 'clover', col: '#3fd27a', isNew: true,
     costs: [5000, 50000, 5e5, 5e6, 5e7, 1.5e9, 1.5e10, 1.5e11, 5e11, 5e12, 5e13, 5e14, 5e15, 5e16],
@@ -191,7 +191,7 @@ const SHOP = {
     costs: [5e4, 5e5, 5e6, 5e7, 5e8, 5e9, 5e10, 5e11],
     desc: l => 'Bomb cooldown -' + SHOPV.fuse[l] + 's (never below 1s)' },
   factory: { title: 'Robot factory', name: l => 'Robot factory ' + (l + 1), icon: 'robot', col: '#5ad0a0', isNew: true,
-    costs: [1e7, 6e7, 4e8, 2.5e9, 1.5e10, 1e11],
+    costs: [1e7, 6e7],
     desc: l => '+' + (l + 1) + ' extra robot' + (l ? 's' : '') + ' on top of Auto miner' },
   double: { title: 'Double drop', name: l => 'Double drop ' + (l + 1), icon: 'gem', col: '#7ad0ff', isNew: true,
     costs: [3e4, 3e5, 3e6, 3e7, 3e8, 3e9, 3e10, 3e11, 3e12, 3e13, 3e14, 3e15, 3e16, 3e17, 3e18],
@@ -241,7 +241,7 @@ const SHOPV = {
   speed: [1.125, 0.75, 0.375, 0.15, 0.01, 0.006, 0.004, 0.0025, 0.0015, 0.001, 0.0006, 0.0004, 0.00025, 0.00016, 0.0001, 0.00006, 0.00004],
   luck: [0.08, 0.15, 0.22, 0.3, 0.38, 0.45, 0.52, 0.6, 0.66, 0.72, 0.77, 0.81, 0.85, 0.88],
   regen: [1.6, 1.2, 0.9, 0.6, 0.4, 0.25, 0.15, 0.1],
-  robo: [5.4, 4.8, 4.2, 3.75, 3.3, 3.0, 2.4, 1.8, 1.35, 1.0, 0.85, 0.7],
+  robo: [8.6, 7.7, 6.7, 6, 5.3, 4.8, 3.8, 2.9, 2.2, 1.6, 1.36, 1.12],   // 2026-11-17: robots ~40% weaker again
   crit: [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75],
   value: [0.1, 0.2, 0.35, 0.5, 0.75, 1, 1.5, 2, 3, 4, 5, 6.5, 8],
   fuse: [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4],
@@ -278,7 +278,7 @@ const PERKS = [
   [10, 'Start every rebirth with +25% Mining speed'], [11, '+1 more free Auto miner'], [12, 'Gold Rush lasts twice as long'],
 ];
 let HEART_REBIRTHS = 10; const HEART_HP = 400;
-const AUTO_SLOW = 6;   // 2026-11-17: robots 3x weaker (drones are the strong helpers now)
+const AUTO_SLOW = 10;   // 2026-11-17: robots 3x weaker (drones are the strong helpers now)
 const FPS = 30, DT = 1 / FPS;
 
 const ACH = [
@@ -286,7 +286,7 @@ const ACH = [
   ['b1', 'Billionaire', 'Have 1B Creditz'], ['t1', 'Trillionaire', 'Have 1T Creditz'], ['explorer', 'Explorer', 'Visit all 22 biomes'],
   ['reb1', 'Born Again', 'Rebirth once'], ['reb5', 'Again and Again', 'Rebirth 5 times'], ['reb10', 'Rebirth Master', 'Rebirth 10 times'],
   ['speed', 'Speed Demon', 'Buy +100% Mining speed'], ['x100', 'x100!', 'Buy x100 Creditz'], ['x400', 'x400!!!', 'Buy every listed Creditz upgrade'],
-  ['boom', 'Demolition', 'Buy Bomb level 5'], ['robots', 'Robot Army', 'Have 12 Auto miners'], ['lucky', 'Four-Leaf', 'Max out Luck'],
+  ['boom', 'Demolition', 'Buy Bomb level 5'], ['robots', 'Robot Army', 'Max out Auto miner'], ['lucky', 'Four-Leaf', 'Max out Luck'],
   ['crusher', 'Rock Crusher', 'Break 1 000 rocks'], ['empty', 'So Empty...', 'Find 100 empty rocks'], ['kaboom', 'KABOOM', 'Crack 15 rocks with one bomb'],
   ['mythic', 'Mythical!', 'Find a Mythical mineral or rarer'], ['celestial', 'Celestial!', 'Find a Celestial mineral'], ['golden', 'Golden Touch', 'Break a golden rock'],
   ['star', 'Shooting Star', 'Find Starfallium in a meteor shower'], ['rush', 'Gold Fever', 'Survive a Gold Rush'], ['hard', 'Iron Breaker', 'Break 10 reinforced rocks'],
@@ -337,7 +337,8 @@ function costOf(kind, lvl) { const L = SHOP[kind].costs; const c = lvl < L.lengt
 const perk = n => rebirthsDone() >= n;
 const rebirthCost = () => { const i = G.rebirths - 1; return i < REBIRTH_COSTS.length ? REBIRTH_COSTS[i] : REBIRTH_COSTS[REBIRTH_COSTS.length - 1] * Math.pow(4, i - REBIRTH_COSTS.length + 1); };
 const bombCooldown = () => Math.max(1, (perk(8) ? 3 : perk(1) ? 4 : 5) - upv('fuse', 0));
-const drillCount = () => G.autoLevel + G.factoryLevel + (perk(4) ? 1 : 0) + (perk(11) ? 1 : 0) + (buffOn('robots') ? 5 : 0);
+const ROBOT_MAX = 8;   // never more than 8 auto miners at once
+const drillCount = () => Math.min(ROBOT_MAX, G.autoLevel + G.factoryLevel + (perk(4) ? 1 : 0) + (perk(11) ? 1 : 0) + (buffOn('robots') ? 3 : 0));
 const boostMult = () => upv('quest', 2);
 const canLoad = () => G.loading <= 0;
 const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
@@ -510,7 +511,7 @@ function spawnRock(x0, y0) {
   if (b.rainbow) { rock.hue = G.crystalHue; G.crystalHue = (G.crystalHue + 5) % 200; }
   if (Math.random() < (G.rush > 0 ? 1 / 8 : goldenChance())) rock.golden = true;
   else if (Math.random() < chestChance()) { const cr = Math.random(); rock.chest = cr < 0.12 ? 'golden' : cr < 0.4 ? 'iron' : 'orange'; rock.hpMax = rock.hp = { golden: 22, iron: 16, orange: 12 }[rock.chest]; }
-  else if (G.biome >= 1 && rnd(1, 12) === 1) {   // reinforced: extra armour layers to break first (higher tiers in later biomes)
+  else if (G.biome >= 1 && rnd(1, 5) === 1) {   // reinforced: extra armour layers to break first (higher tiers in later biomes)
     const maxT = Math.min(4, 1 + Math.floor(G.biome / 5));
     rock.tier = Math.max(1, maxT - Math.floor(Math.pow(Math.random(), 1.6) * maxT));
     rock.armor = rock.tier; rock.hard = true;
@@ -706,7 +707,7 @@ function openChest(r) {
     } else if (pick === 1) {   // a free bomb right here
       const keep = G.bombLevel, cd = G.bombCD; G.bombLevel = Math.max(3, keep); G.bombCD = 0; G.loading = 0; dropBomb(r.x, r.y); G.bombLevel = keep; G.bombCD = cd;
       toast(name + ': a bomb charge!', '#ff9a3a');
-    } else { G.buffs.robots = Math.max(G.buffs.robots || 0, 25); toast(name + ': robot burst! +5 robots for 25s', '#7be05a'); }
+    } else { G.buffs.robots = Math.max(G.buffs.robots || 0, 25); toast(name + ': robot burst! +3 robots for 25s', '#7be05a'); }
   }
 }
 // ---------- particles for the break effects ----------
@@ -2958,7 +2959,7 @@ function renderHUD() {
   btn('vol', W - 52, 12, 40, 36, '', { icon: 'speaker', col: G.settings.vol === 3 ? '#7a3030' : '#3a4a6a', r: 10, fn: () => { G.settings.vol = (G.settings.vol + 1) % 4; AUDIO.applyVolume(); AUDIO.sfx('click'); save(); } });
   setScreen();
   if (G.settings.vol < 3) { ctx.fillStyle = '#ffffff'; for (let k = 0; k < 3 - G.settings.vol; k++) ctx.fillRect(W - 24 + k * 4, 38 - k * 4, 3, 4 + k * 4); } else txt('x', W - 22, 36, 13, '#ff8a8a', { font: FB, weight: 900 });
-  if (W >= 600) btn('lbbtn', W - 190, 12, 40, 36, '', { icon: 'trophy', col: G.menu === 'leaders' ? '#8a6a1a' : '#5a4a1a', r: 10, fn: () => { AUDIO.sfx('click'); openLeaders(); } });
+  if (ONLINE_UI && W >= 600) btn('lbbtn', W - 190, 12, 40, 36, '', { icon: 'trophy', col: G.menu === 'leaders' ? '#8a6a1a' : '#5a4a1a', r: 10, fn: () => { AUDIO.sfx('click'); openLeaders(); } });
   btn('gear', W - 144, 12, 40, 36, '', { icon: 'gear', col: G.menu === 'settings' ? '#5a6a8a' : '#3a4a6a', r: 10, fn: () => { AUDIO.sfx('click'); openSettings(); } });
   btn('music', W - 98, 12, 40, 36, '', { icon: 'note', col: G.settings.music ? '#3a4a6a' : '#7a3030', r: 10, fn: () => { G.settings.music = !G.settings.music; AUDIO.applyVolume(); AUDIO.sfx('click'); save(); } });
   // next biome chip (right side, under the best score)
@@ -3014,7 +3015,7 @@ function renderHUD() {
   }
   // chest buffs with timers
   let bi = 0;
-  for (const [k, lab, col] of [['cash', 'x2 Creditz', '#ffe27a'], ['speed', 'x2 Speed', '#36c2ff'], ['luck', 'Luck +', '#3fd27a'], ['robots', '+5 Robots', '#7be05a']]) {
+  for (const [k, lab, col] of [['cash', 'x2 Creditz', '#ffe27a'], ['speed', 'x2 Speed', '#36c2ff'], ['luck', 'Luck +', '#3fd27a'], ['robots', '+3 Robots', '#7be05a']]) {
     const tl = G.buffs[k] || 0; if (tl <= 0) continue;
     const y = H - 92 + bi * 18, x = W - 106; bi++;
     ctx.fillStyle = 'rgba(10,12,18,0.8)'; rr(x, y, 98, 16, 8); ctx.fill(); ctx.fillStyle = rgba(col, 0.35); rr(x, y, 98 * clamp(tl / 60, 0, 1), 16, 8); ctx.fill();
@@ -3421,42 +3422,87 @@ function renderOverlays() {
 
 // ---------------- title screen ----------------
 const DECO = [];
+// the logo is drawn once into its own picture (3D depth + gold), then a shine sweeps over a copy every frame
+const TITLE = { key: '', logo: null, tmp: null };
+function titleLogo(sz) {
+  const key = sz + '|' + DPR; if (TITLE.key === key) return TITLE.logo;
+  const c = document.createElement('canvas'), x = c.getContext('2d');
+  x.font = sz + 'px ' + FH; const tw = x.measureText('JUST MINE').width, w = tw + sz * 0.7, h = sz * 1.55;
+  c.width = Math.ceil(w * DPR); c.height = Math.ceil(h * DPR); x.scale(DPR, DPR);
+  x.font = sz + 'px ' + FH; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
+  const cx = w / 2, cy = h * 0.42, d = sz * 0.018;
+  x.lineWidth = sz * 0.17; x.strokeStyle = '#0b0c12'; x.strokeText('JUST MINE', cx, cy + d * 9);   // outline of the deepest layer
+  for (let k = 9; k >= 1; k--) { x.fillStyle = k > 6 ? '#3a1a02' : k > 3 ? '#5a2a04' : '#7a3a08'; x.fillText('JUST MINE', cx, cy + d * k); }   // 3D depth
+  x.lineWidth = sz * 0.15; x.strokeText('JUST MINE', cx, cy);
+  const g = x.createLinearGradient(0, cy - sz / 2, 0, cy + sz / 2); g.addColorStop(0, '#fff8c8'); g.addColorStop(0.45, '#ffcc2a'); g.addColorStop(1, '#d0620a');
+  x.fillStyle = g; x.fillText('JUST MINE', cx, cy);
+  x.lineWidth = sz * 0.025; x.strokeStyle = 'rgba(255,255,255,0.55)'; x.strokeText('JUST MINE', cx, cy - sz * 0.03);
+  x.font = (sz * 0.33) + 'px ' + FH; x.lineWidth = 4; x.strokeStyle = '#0b0c12'; x.strokeText('©', cx + tw / 2 + sz * 0.13, cy - sz * 0.3); x.fillStyle = '#ffe27a'; x.fillText('©', cx + tw / 2 + sz * 0.13, cy - sz * 0.3);
+  TITLE.logo = { c, w, h, tw, cy }; TITLE.key = key; TITLE.tmp = null; return TITLE.logo;
+}
 function renderTitle() {
   setScreen();
-  if (!DECO.length) for (let i = 0; i < 16; i++) DECO.push({ b: rnd(0, BIOMES.length - 1), g: Math.random(), x: Math.random(), y: Math.random(), v: 0.2 + Math.random() * 0.6, r: Math.random() * 6 });
-  for (const d of DECO) {
+  if (!DECO.length) for (let i = 0; i < 14; i++) DECO.push({ b: rnd(0, BIOMES.length - 1), g: Math.random(), x: Math.random(), y: Math.random(), v: 0.2 + Math.random() * 0.6, r: Math.random() * 6 });
+  for (const d of DECO) {   // minerals drifting down in the background
     d.y += d.v * 0.0008; d.r += 0.004;
     if (d.y > 1.15) { d.y = -0.15; d.x = Math.random(); }
     const list = ART.gems[BIOMES[d.b].name], art = list[Math.floor(d.g * list.length)];
-    drawGem(art, d.x * W, d.y * H, 34 + d.v * 30, { alpha: 0.5, rot: d.r, glow: '#ffd27a' });
+    drawGem(art, d.x * W, d.y * H, 26 + d.v * 26, { alpha: 0.35, rot: d.r, glow: '#ffd27a' });
   }
-  const cy = H * 0.3, bob = Math.sin(G.time * 2) * 4;
-  ctx.save(); ctx.translate(W / 2, cy + bob);
-  const sz = Math.min(110, W / 6.5);
-  ctx.font = sz + 'px ' + FH; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.lineJoin = 'round'; ctx.lineWidth = sz * 0.16; ctx.strokeStyle = '#0b0c12'; ctx.strokeText('JUST MINE', 0, 0);
-  const g = ctx.createLinearGradient(0, -sz / 2, 0, sz / 2); g.addColorStop(0, '#fff3b0'); g.addColorStop(0.5, '#ffc21a'); g.addColorStop(1, '#c0620a');
-  ctx.fillStyle = g; ctx.fillText('JUST MINE', 0, 0);
-  ctx.font = sz * 0.35 + 'px ' + FH; const w = ctx.measureText('JUST MINE').width;
-  ctx.font = sz + 'px ' + FH; const ww = ctx.measureText('JUST MINE').width;
-  txt('©', ww / 2 + sz * 0.22, -sz * 0.3, sz * 0.35, '#ffe27a', { stroke: 4 });
-  ctx.save(); ctx.translate(-ww / 2 - sz * 0.45, 0); ctx.rotate(Math.sin(G.time * 3) * 0.2); drawIcon('pick', 0, 0, sz * 0.8, '#d6dde4'); ctx.restore();
+  // ---- logo with a moving shine ----
+  const sz = Math.min(112, W / 6.8, H / 5.2), L = titleLogo(sz), cy = Math.max(H * 0.22, sz * 1.25), lx = W / 2 - L.w / 2, ly = cy - L.h * 0.42 + Math.sin(G.time * 2) * 3;
+  if (!TITLE.tmp) TITLE.tmp = document.createElement('canvas');
+  const T = TITLE.tmp; if (T.width !== L.c.width || T.height !== L.c.height) { T.width = L.c.width; T.height = L.c.height; }
+  const tx = T.getContext('2d'); tx.globalCompositeOperation = 'copy'; tx.drawImage(L.c, 0, 0);
+  const sp = ((G.time * 0.45) % 1.8 - 0.4) * T.width, sg = tx.createLinearGradient(sp - T.width * 0.12, 0, sp + T.width * 0.12, T.height);
+  sg.addColorStop(0, 'rgba(255,255,255,0)'); sg.addColorStop(0.5, 'rgba(255,255,255,0.75)'); sg.addColorStop(1, 'rgba(255,255,255,0)');
+  tx.globalCompositeOperation = 'source-atop'; tx.fillStyle = sg; tx.fillRect(0, 0, T.width, T.height);
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.3; ctx.drawImage(soft('#ffb02a'), W / 2 - L.w * 0.6, cy - L.h * 0.6, L.w * 1.2, L.h * 1.1); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  ctx.drawImage(T, lx, ly, L.w, L.h);
+  // ---- the pickaxe striking the J (with sparks) ----
+  const ph = (G.time % 1.9) / 1.9, strikeAt = 0.62, k = sz / 30;
+  const target = [lx + sz * 0.38, ly + L.h * 0.42 - sz * 0.2];
+  const swing = ph < strikeAt ? ease(ph / strikeAt) * 0.9 : ph < strikeAt + 0.06 ? 0.9 * (1 - (ph - strikeAt) / 0.06) : 0;
+  const rot = PICK_STRIKE + swing, c0 = Math.cos(PICK_STRIKE), s0 = Math.sin(PICK_STRIKE);
+  // mirrored (-k): the hand is on the LEFT of the J, so the swing goes up-left instead of off the top of the screen
+  const hx = target[0] + (PICK_TIP[0] * c0 - PICK_TIP[1] * s0) * k, hy = target[1] - (PICK_TIP[0] * s0 + PICK_TIP[1] * c0) * k;
+  ctx.save(); ctx.translate(hx, hy); ctx.scale(-k, k); ctx.rotate(rot); ironPick(false); ctx.restore();
+  const since = ph - (strikeAt + 0.06);
+  if (since >= 0 && since < 0.22) { const f = since / 0.22; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1 - f;
+    for (let q = 0; q < 9; q++) { const a = -2.6 + q * 0.42, r1 = sz * 0.1 + f * sz * 0.5; ctx.strokeStyle = q % 2 ? '#ffffff' : '#ffd27a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(target[0] + Math.cos(a) * r1 * 0.6, target[1] + Math.sin(a) * r1 * 0.6); ctx.lineTo(target[0] + Math.cos(a) * r1, target[1] + Math.sin(a) * r1); ctx.stroke(); }
+    ctx.drawImage(soft('#ffe27a'), target[0] - sz * 0.3, target[1] - sz * 0.3, sz * 0.6, sz * 0.6); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+  const how = TOUCH ? 'Hold your finger on rocks. Find rare minerals. Rebirth. Go deeper.' : 'Hold the mouse on rocks. Find rare minerals. Rebirth. Go deeper.';
+  txt(how, W / 2, cy + L.h * 0.5, fitSize(how, 16, W - 40, FB), '#d6dbe6', { font: FB, weight: 800 });
+  // ---- the card: Play / Continue, your save, New game + Settings ----
+  const save = hasSave(), u = clamp(H / 760, 0.72, 1.1), pw = Math.min(440, W - 32), py = cy + L.h * 0.5 + 26 * u, phH = (save ? 236 : 168) * u, px = W / 2 - pw / 2;
+  ctx.fillStyle = 'rgba(0,0,0,0.35)'; rr(px, py + 6, pw, phH, 22 * u); ctx.fill();
+  ctx.fillStyle = 'rgba(14,17,26,0.82)'; rr(px, py, pw, phH, 22 * u); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,200,80,0.45)'; ctx.stroke();
+  let y = py + 18 * u;
+  if (save) {
+    const info = BIOMES[G.biome].name + '   -   Rebirth ' + rebirthsDone() + '   -   Pass Lv ' + (G.pass ? G.pass.lvl : 0);
+    txt('YOUR MINE', W / 2, y + 6 * u, 12 * u, '#ffd84a', { font: FB, weight: 900 });
+    txt(info, W / 2, y + 26 * u, fitSize(info, 15 * u, pw - 30, FB), '#ffffff', { font: FB, weight: 900 });
+    txt('Best ' + fmt(G.high) + ' Creditz   -   ' + G.drones.length + ' drone' + (G.drones.length === 1 ? '' : 's'), W / 2, y + 46 * u, 12 * u, '#c9cfdc', { font: FB, weight: 800 });
+    y += 64 * u;
+  }
+  const pulse = 1 + 0.03 * Math.sin(G.time * 4), bw = pw - 50, bh = 66 * u;
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25 + 0.15 * Math.sin(G.time * 4); ctx.drawImage(soft('#5aff6a'), W / 2 - bw * 0.65, y - bh * 0.4, bw * 1.3, bh * 1.8); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  ctx.save(); ctx.translate(W / 2, y + bh / 2); ctx.scale(pulse, pulse); ctx.translate(-W / 2, -(y + bh / 2));
+  btn('play', W / 2 - bw / 2, y, bw, bh, save ? 'CONTINUE' : 'PLAY', { col: '#3aa04a', size: 32 * u, r: 16, icon: 'pick', fn: () => { AUDIO.init(); AUDIO.sfx('click'); G.confirmNew = 0; startGame(false); } });
   ctx.restore();
-  const how = TOUCH ? 'Hold your finger on rocks to mine them. Find rare minerals. Rebirth. Go deeper.' : 'Hold the mouse on rocks to mine them. Find rare minerals. Rebirth. Go deeper.';
-  txt(how, W / 2, cy + sz * 0.75, fitSize(how, 16, W - 40, FB), '#d6dbe6', { font: FB, weight: 800 });
-  const save = hasSave(), bw = 240, by = H * 0.56;
-  btn('play', W / 2 - bw / 2, by, bw, 60, save ? 'Continue' : 'Play', { col: '#3aa04a', size: 28, fn: () => { AUDIO.init(); AUDIO.sfx('click'); G.confirmNew = 0; startGame(false); } });
-  if (save) btn('new', W / 2 - bw / 2 + 30, by + 74, bw - 60, 40, G.confirmNew > 0 ? (TOUCH ? 'Sure? Tap again' : 'Sure? Click again') : 'New game', { col: G.confirmNew > 0 ? '#b03a3a' : '#4a5470', size: 17,
+  y += bh + 16 * u;
+  const sw = (bw - 12) / 2, sh = 46 * u;
+  if (save) btn('new', W / 2 - bw / 2, y, sw, sh, G.confirmNew > 0 ? (TOUCH ? 'Sure? Tap again' : 'Sure? Click again') : 'New game', { col: G.confirmNew > 0 ? '#b03a3a' : '#4a5470', size: 17 * u, r: 12,
     fn: () => { AUDIO.init(); AUDIO.sfx('click'); if (G.confirmNew > 0) { G.confirmNew = 0; startGame(true); } else G.confirmNew = 3; } });
+  btn('titleset', save ? W / 2 + 6 : W / 2 - sw / 2, y, sw, sh, 'Settings', { col: '#3a4a6a', size: 17 * u, r: 12, icon: 'gear', fn: () => { AUDIO.init(); AUDIO.sfx('click'); openSettings(); } });
+  if (ONLINE_UI) {
+    btn('lbtitle', W - 108, 14, 44, 40, '', { icon: 'trophy', col: '#5a4a1a', r: 10, fn: () => { AUDIO.init(); AUDIO.sfx('click'); openLeaders(); } });
+    btn('acctitle', W - 244, 14, 128, 40, NET.user ? NET.name : 'Log in', { col: NET.user ? '#2a6a3a' : '#3a5fd0', size: 15, r: 10, fn: () => { AUDIO.init(); AUDIO.sfx('click'); openAccount(); } });
+  }
   setScreen();
-  const keys = TOUCH ? 'Bomb: tap the bomb button, then tap a rock    -    Settings: the gear button' : 'SPACE or right-click = Bomb    B Biomes  -  S Shop  -  R Rebirth  -  K Book  -  D Drones  -  P Pass  -  L Leaderboard  -  M mute';
-  btn('gear', W - 56, 14, 44, 40, '', { icon: 'gear', col: '#3a4a6a', r: 10, fn: () => { AUDIO.init(); AUDIO.sfx('click'); openSettings(); } });
-  btn('lbtitle', W - 108, 14, 44, 40, '', { icon: 'trophy', col: '#5a4a1a', r: 10, fn: () => { AUDIO.init(); AUDIO.sfx('click'); openLeaders(); } });
-  btn('acctitle', W - 244, 14, 128, 40, NET.user ? NET.name : 'Log in', { col: NET.user ? '#2a6a3a' : '#3a5fd0', size: 15, r: 10, fn: () => { AUDIO.init(); AUDIO.sfx('click'); openAccount(); } });
-  setScreen();
-  txt(keys, W / 2, H - 52, fitSize(keys, 13, W - 30, FB), '#9aa3b5', { font: FB, weight: 800 });
-  if (G.high > 0) txt('BEST  ' + fmt(G.high) + ' Creditz', W / 2, H - 76, 15, '#ffd84a', { font: FB, weight: 900 });
-  txt('a game by Sixten', W - 16, H - 20, 13, '#8a90a0', { align: 'right', font: FB, weight: 800 });
+  const keys = TOUCH ? 'Bomb: tap the bomb button, then a rock' : 'SPACE / right-click = Bomb   -   B Biomes   S Shop   R Rebirth   K Book   D Drones   P Pass   M mute';
+  if (H > 420) txt(keys, W / 2, H - 46, fitSize(keys, 12.5, W - 30, FB), '#8a93a6', { font: FB, weight: 800 });
+  txt('a game by Sixten', W - 16, H - 18, 13, '#8a90a0', { align: 'right', font: FB, weight: 800 });
 }
 
 // ====================================================================
@@ -4630,6 +4676,7 @@ function renderPass() {
 //  The "key" below is meant to be public. What keeps the data safe are the rules in setup.sql
 //  ("Row Level Security": everybody may READ the leaderboard, but you may only change YOUR OWN row).
 // ====================================================================
+const ONLINE_UI = false;   // log in + leaderboard buttons: hidden until the game server exists
 const CLOUD = { url: '', key: '' };   // filled in after the Supabase project exists (see SETUP-ONLINE.md)
 const cloudOn = () => !!(CLOUD.url && CLOUD.key);
 const NET = { sb: null, user: null, name: null, err: '', board: {}, boardT: {}, me: {}, busy: {}, lastPush: 0, ready: false };
@@ -4917,7 +4964,7 @@ window.addEventListener('keydown', e => {
   if (G.scene === 'play' && !e.repeat) {
     const m = { KeyB: 'biomes', KeyS: 'shop', KeyR: 'rebirth', KeyK: 'book', KeyD: 'drones', KeyP: 'pass' }[e.code];
     if (m) { AUDIO.sfx('click'); openMenu(m); }
-    if (e.code === 'KeyL') { AUDIO.sfx('click'); openLeaders(); }
+    if (ONLINE_UI && e.code === 'KeyL') { AUDIO.sfx('click'); openLeaders(); }
   }
 });
 window.addEventListener('keyup', e => { if (e.code === 'Space') G.keys.Space = false; });
