@@ -296,6 +296,12 @@ const ACH = [
   ['mega', 'Team Effort', 'Break a Mega Rock'], ['rain50', 'Crystal Catcher', 'Catch 50 crystals in Crystal Rain'], ['curator', 'Curator', 'Finish 11 Book pages'],
   ['page', 'Collector', 'Complete a whole biome page in the Book'], ['all', 'Completionist', 'Find every mineral in the game'], ['heart', 'Heart of the Mountain', 'Break the Heart of the Mountain'],
 ];
+// every trophy has its own medal: a tier (how hard it is) + its own little picture
+const ACH_TIER = { first: 0, k1: 0, reb1: 0, speed: 0, golden: 0, chest10: 0, empty: 0, boom: 0, rain50: 0,
+  m1: 1, reb5: 1, x100: 1, robots: 1, lucky: 1, crusher: 1, kaboom: 1, mythic: 1, rush: 1, hard: 1, quest10: 1, star: 1, mega: 1, page: 1,
+  b1: 2, t1: 2, reb10: 2, x400: 2, chest50: 2, sphinx: 2, firefly: 2, tempest: 2, phoenix: 2, pure: 2, curator: 2, explorer: 2,
+  celestial: 3, goldall: 3, all: 3, heart: 3 };
+const TIERS = [['Bronze', '#d0884a', '#7a4a1e'], ['Silver', '#d8e0ea', '#6a7484'], ['Gold', '#ffd84a', '#a8740a'], ['Legend', '#c87aff', '#5a1a8a']];
 const FIND_ACH = { Sphinxium: 'sphinx', Fireflium: 'firefly', Tempestium: 'tempest', Phoenixium: 'phoenix' };
 
 // ---------------- state ----------------
@@ -1112,9 +1118,9 @@ function tick() {
   for (const g of G.rings) g.t += DT; compact(G.rings, g => g.t < 0.45);
   if (G.xpPops) { for (const p of G.xpPops) p.t += DT; G.xpPops = G.xpPops.filter(p => p.t < 1.6); }
   if (G.crateFx) G.crateFx.t += DT; if (G.mergeFx) G.mergeFx.t += DT;
-  if (G.biomeFx && (G.biomeFx.t += DT) > 3.4) G.biomeFx = null;
+  if (G.biomeFx && (G.biomeFx.t += DT) > 5.5) G.biomeFx = null;
   // enough Creditz for the next biome? show the banner once for that biome
-  if (G.scene === 'play') { const nb = nextBiome(); if (nb > 0 && G.creditz >= BIOMES[nb].req && !(G.nbShown & (1 << nb))) { G.nbShown = (G.nbShown || 0) | (1 << nb); if (!(G.reached & (1 << nb))) { G.biomeFx = { i: nb, t: 0 }; AUDIO.sfx('quest'); } } }
+  if (G.scene === 'play') { const nb = nextBiome(); if (nb > 0 && G.creditz >= BIOMES[nb].req && !(G.nbShown & (1 << nb))) { G.nbShown = (G.nbShown || 0) | (1 << nb); if (!(G.reached & (1 << nb))) { G.biomeFx = { i: nb, t: 0 }; AUDIO.sfx('ach'); G.flash = Math.max(G.flash, 0.25); G.flashCol = BIOMES[nb].accent; } } }
   for (const l of G.lights) l.life -= DT;
   compact(G.lights, l => l.life > 0);
   if (G.lights.length > 40) G.lights.splice(0, G.lights.length - 40);
@@ -2611,6 +2617,77 @@ function panel(x, y, w, h, title, accent) {
 }
 function closeBtn(x, y) { btn('close', x, y, 34, 34, '', { icon: 'x', col: '#c0392b', r: 17, fn: () => { G.menu = null; AUDIO.sfx('click'); } }); }
 
+// ---------------- achievement medals ----------------
+const gemByName = n => { for (const k in ART.gems) { const g = ART.gems[k].find(x => x.name === n); if (g) return g; } return null; };
+function achMedal(id, x, y, size, got) {
+  const tier = TIERS[ACH_TIER[id] || 0], k = size / 24;
+  ctx.save(); ctx.translate(x, y); ctx.scale(k, k); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  // ribbon tails
+  ctx.fillStyle = got ? (ACH_TIER[id] === 3 ? '#7a2ac8' : '#c0392b') : '#2a2e38';
+  ctx.beginPath(); ctx.moveTo(-6, 6); ctx.lineTo(-9, 15); ctx.lineTo(-6, 13); ctx.lineTo(-3, 16); ctx.lineTo(-1, 7); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(6, 6); ctx.lineTo(9, 15); ctx.lineTo(6, 13); ctx.lineTo(3, 16); ctx.lineTo(1, 7); ctx.fill();
+  // the medal
+  const g = ctx.createRadialGradient(-3, -4, 0, 0, 0, 11);
+  if (got) { g.addColorStop(0, lighten(tier[1], 0.45)); g.addColorStop(0.6, tier[1]); g.addColorStop(1, tier[2]); } else { g.addColorStop(0, '#3a3f4c'); g.addColorStop(1, '#1c1f28'); }
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 10.5, 0, 6.283); ctx.fill();
+  ctx.lineWidth = 1.4; ctx.strokeStyle = got ? tier[2] : '#0b0c12'; ctx.stroke();
+  ctx.lineWidth = 0.8; ctx.strokeStyle = got ? rgba(lighten(tier[1], 0.6), 0.8) : '#2a2e38'; ctx.beginPath(); ctx.arc(0, 0, 8.3, 0, 6.283); ctx.stroke();
+  if (got && ACH_TIER[id] === 3) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35 + 0.2 * Math.sin(G.time * 3); ctx.drawImage(soft(tier[1]), -16, -16, 32, 32); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+  // the picture
+  ctx.save(); if (!got) ctx.globalAlpha = 0.35;
+  achPicture(id, got);
+  ctx.restore();
+  if (!got) drawIcon('lock', 6.5, 6.5, 8, '#8a90a0');
+  ctx.restore();
+}
+function achPicture(id, got) {
+  const ink = '#1a1208', W2 = '#ffffff';
+  const coins = (letter) => { for (let k = 0; k < 3; k++) { ctx.fillStyle = '#ffd84a'; ctx.strokeStyle = '#7a5a0a'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.ellipse(0, 3 - k * 2.6, 5.5, 2, 0, 0, 6.283); ctx.fill(); ctx.stroke(); } txt(letter, 0, -4.5, 6.5, '#7a3a00', { shadow: false, stroke: 1.5, strokeCol: '#fff6c0' }); };
+  const rock = (col, cracked) => { rr(-5.5, -5.5, 11, 11, 2.5); ctx.fillStyle = col; ctx.fill(); ctx.lineWidth = 0.9; ctx.strokeStyle = ink; ctx.stroke(); if (cracked) { ctx.strokeStyle = ink; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(-3, -5.5); ctx.lineTo(-1, -1); ctx.lineTo(-4, 2); ctx.moveTo(-1, -1); ctx.lineTo(3, 1); ctx.lineTo(2, 5.5); ctx.stroke(); } };
+  const gem = (name, sz) => { const a = gemByName(name); if (a) drawGem(a, 0, 0, sz || 13, { nocache: true }); };
+  const num = n => txt(String(n), 4.5, 4.5, 6, W2, { stroke: 1.6, strokeCol: ink, shadow: false });
+  switch (id) {
+    case 'first': gem('Glassium'); break;
+    case 'k1': coins('K'); break;
+    case 'm1': coins('M'); break;
+    case 'b1': coins('B'); break;
+    case 't1': coins('T'); break;
+    case 'explorer': drawIcon('globe', 0, 0, 15, '#4ad0ff'); break;
+    case 'reb1': drawIcon('rebirth', -1, -1, 13, '#ffb36a'); num(1); break;
+    case 'reb5': drawIcon('rebirth', -1, -1, 13, '#ffb36a'); num(5); break;
+    case 'reb10': drawIcon('rebirth', -1, -1, 13, '#ff7a3a'); num(10); break;
+    case 'speed': ctx.strokeStyle = '#4ad0ff'; ctx.lineWidth = 1.2; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.moveTo(-7, -2 + k * 3); ctx.lineTo(-3, -2 + k * 3); ctx.stroke(); } drawIcon('pick', 2, 0, 13, '#d6dde4'); break;
+    case 'x100': txt('x100', 0, 0.5, 6.5, '#ffe27a', { stroke: 2, strokeCol: ink, shadow: false }); break;
+    case 'x400': txt('x400', 0, 0.5, 6.5, '#ff7ae0', { stroke: 2, strokeCol: ink, shadow: false }); break;
+    case 'boom': drawIcon('bomb', 0, 1, 14, '#2a2d36'); break;
+    case 'robots': drawIcon('robot', 0, 0, 14, '#c9d2d9'); break;
+    case 'lucky': drawIcon('clover', 0, 0, 14, '#3fd27a'); break;
+    case 'crusher': rock('#8a8a90', true); break;
+    case 'empty': ctx.setLineDash([2, 1.5]); rr(-5.5, -5.5, 11, 11, 2.5); ctx.lineWidth = 1; ctx.strokeStyle = '#5a6070'; ctx.stroke(); ctx.setLineDash([]); txt('...', 0, -0.5, 7, '#5a6070', { shadow: false }); break;
+    case 'kaboom': { ctx.beginPath(); for (let k = 0; k < 16; k++) { const a = k / 16 * 6.283, r = k % 2 ? 4 : 8.5; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.closePath(); ctx.fillStyle = '#ff7a1a'; ctx.fill(); ctx.lineWidth = 0.8; ctx.strokeStyle = '#7a2a00'; ctx.stroke(); ctx.fillStyle = '#ffe27a'; ctx.beginPath(); ctx.arc(0, 0, 3, 0, 6.283); ctx.fill(); break; }
+    case 'mythic': drawIcon('gem', 0, 0, 14, RCOL.Mythical); break;
+    case 'celestial': drawIcon('gem', 0, 0, 13, RCOL.Celestial); ctx.globalCompositeOperation = 'lighter'; star4(-5, -5, 2.2, '#ffffff'); star4(5, -3, 1.6, '#ffffff'); ctx.globalCompositeOperation = 'source-over'; break;
+    case 'golden': rock('#ffc21a', false); ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.moveTo(-3, -5); ctx.lineTo(0, -5); ctx.lineTo(-5, 3); ctx.lineTo(-5, 0); ctx.fill(); break;
+    case 'star': ctx.strokeStyle = '#ffb04a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-7, 6); ctx.lineTo(1, -1); ctx.stroke(); ctx.globalCompositeOperation = 'lighter'; star4(2, -2, 6, '#ffe27a'); ctx.globalCompositeOperation = 'source-over'; break;
+    case 'rush': ctx.save(); ctx.translate(-3, 1); coins(''); ctx.restore(); ctx.save(); ctx.translate(4, 3); ctx.scale(0.7, 0.7); coins(''); ctx.restore(); break;
+    case 'hard': rock('#6a7484', false); ctx.fillStyle = '#c9d2d9'; ctx.fillRect(-5.5, -1.5, 11, 3); ctx.fillStyle = ink; for (const xx of [-4, 0, 4]) { ctx.beginPath(); ctx.arc(xx, 0, 0.7, 0, 6.283); ctx.fill(); } break;
+    case 'quest10': drawIcon('scroll', 0, 0, 14, '#fff2d0'); break;
+    case 'chest10': case 'chest50': { const gold = id === 'chest50'; rr(-6, -3, 12, 8, 1.5); ctx.fillStyle = gold ? '#ffd84a' : '#c8741a'; ctx.fill(); ctx.lineWidth = 0.8; ctx.strokeStyle = ink; ctx.stroke(); rr(-6, -6.5, 12, 4, 1.5); ctx.fillStyle = gold ? '#ffe9a0' : '#d9822b'; ctx.fill(); ctx.stroke(); ctx.fillStyle = gold ? '#a8740a' : '#4a3a2a'; ctx.fillRect(-1, -4, 2, 3.5); break; }
+    case 'sphinx': gem('Sphinxium'); break;
+    case 'firefly': gem('Fireflium'); break;
+    case 'tempest': gem('Tempestium'); break;
+    case 'phoenix': gem('Phoenixium'); break;
+    case 'goldall': ctx.save(); ctx.translate(-4, 2); drawIcon('gem', 0, 0, 9, '#ffd84a'); ctx.restore(); ctx.save(); ctx.translate(4, 2); drawIcon('gem', 0, 0, 9, '#ffd84a'); ctx.restore(); drawIcon('gem', 0, -3, 10, '#fff2a0'); break;
+    case 'pure': gem(ART.gems.Pure[0].name, 13); ctx.globalCompositeOperation = 'lighter'; star4(5, -5, 2, '#ffffff'); ctx.globalCompositeOperation = 'source-over'; break;
+    case 'mega': rr(-7, -7, 14, 14, 3); ctx.fillStyle = '#a07a5a'; ctx.fill(); ctx.lineWidth = 0.9; ctx.strokeStyle = ink; ctx.stroke(); ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(0, -7); ctx.lineTo(0, 7); ctx.moveTo(-7, 0); ctx.lineTo(7, 0); ctx.stroke(); break;
+    case 'rain50': for (const [dx, dy] of [[-4, -3], [1, 1], [5, -4]]) { ctx.strokeStyle = 'rgba(160,220,255,0.7)'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(dx, dy - 5); ctx.lineTo(dx, dy - 1.5); ctx.stroke(); ctx.fillStyle = '#9ad8ff'; ctx.beginPath(); ctx.moveTo(dx, dy - 1.5); ctx.lineTo(dx + 1.8, dy + 1); ctx.lineTo(dx, dy + 3.5); ctx.lineTo(dx - 1.8, dy + 1); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#1a4a6a'; ctx.stroke(); } break;
+    case 'curator': drawIcon('book', 0, 0, 14, '#8a5a2e'); break;
+    case 'page': drawIcon('book', -1, 0, 13, '#c8a06a'); drawIcon('check', 4, 4, 8, '#7dff7a'); break;
+    case 'all': ctx.beginPath(); ctx.moveTo(-7, 4); ctx.lineTo(-7, -3); ctx.lineTo(-3.5, 0); ctx.lineTo(0, -6); ctx.lineTo(3.5, 0); ctx.lineTo(7, -3); ctx.lineTo(7, 4); ctx.closePath(); ctx.fillStyle = '#ffd84a'; ctx.fill(); ctx.lineWidth = 0.9; ctx.strokeStyle = '#7a4a00'; ctx.stroke(); for (const [cx, c] of [[-3.5, '#ff4a6a'], [0, '#4ad0ff'], [3.5, '#7dff7a']]) { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(cx, 2, 1.1, 0, 6.283); ctx.fill(); } break;
+    case 'heart': drawIcon('heart', 0, 0, 14, '#ff3a4a'); break;
+    default: drawIcon('trophy', 0, 0, 14, '#ffd84a');
+  }
+}
 // ---------------- icons ----------------
 function drawIcon(name, x, y, s, col) {
   ctx.save(); ctx.translate(x, y); ctx.scale(s / 24, s / 24);
@@ -2951,9 +3028,10 @@ function renderHUD() {
     const u = H < 520 ? 0.65 : 1;
     const w = Math.min(260 * u, W - 30), x = W - (w + 14) * slide, yy = TOP + 14 * u + i * 70 * u;
     ctx.save(); ctx.translate(x, yy); ctx.scale(u, u); const ww = w / u;
-    ctx.fillStyle = 'rgba(16,18,28,0.95)'; rr(0, 0, ww, 60, 12); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#ffd84a'; ctx.stroke();
-    drawIcon('trophy', 30, 30, 30, '#ffd84a');
-    txt('Achievement!', 56, 18, 12, '#ffd84a', { align: 'left', font: FB, weight: 900 });
+    const tier = TIERS[ACH_TIER[p.id] || 0];
+    ctx.fillStyle = 'rgba(16,18,28,0.95)'; rr(0, 0, ww, 60, 12); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = tier[1]; ctx.stroke();
+    achMedal(p.id, 30, 28, 38, true);
+    txt(tier[0] + ' trophy!', 56, 18, 12, tier[1], { align: 'left', font: FB, weight: 900 });
     txt(a[1], 56, 37, fitSize(a[1], 18, ww - 66), '#ffffff', { align: 'left' });
     ctx.restore();
   });
@@ -3267,10 +3345,11 @@ function renderBook() {
   } else if (T === BOOK_QUESTS + 1) {
     const done = ACH.filter(a => G.ach[a[0]]).length;
     txt('Trophies  ' + done + ' / ' + ACH.length, 360, Y + 6, 16, '#ffffff');
+    TIERS.forEach((t, k) => { const n = ACH.filter(a => (ACH_TIER[a[0]] || 0) === k), g = n.filter(a => G.ach[a[0]]).length; txt(t[0] + ' ' + g + '/' + n.length, 360 + (k - 1.5) * 120, Y + 24, 11, t[1], { font: FB, weight: 900 }); });
     ACH.forEach((a, i) => {
-      const x = 26 + (i % 4) * 168, y = Y + 22 + Math.floor(i / 4) * 39, got = G.ach[a[0]];
-      ctx.fillStyle = got ? 'rgba(255,216,74,0.1)' : 'rgba(255,255,255,0.03)'; rr(x, y, 162, 37, 9); ctx.fill();
-      drawIcon(a[0] === 'heart' ? 'heart' : 'trophy', x + 18, y + 20, 20, got ? '#ffd84a' : '#4a5060');
+      const x = 26 + (i % 4) * 168, y = Y + 36 + Math.floor(i / 4) * 38, got = G.ach[a[0]], tc = TIERS[ACH_TIER[a[0]] || 0][1];
+      ctx.fillStyle = got ? rgba(tc, 0.12) : 'rgba(255,255,255,0.03)'; rr(x, y, 162, 36, 9); ctx.fill(); if (got) { ctx.lineWidth = 1; ctx.strokeStyle = rgba(tc, 0.45); ctx.stroke(); }
+      achMedal(a[0], x + 18, y + 17, 26, !!got);
       txt(a[1], x + 34, y + 13, fitSize(a[1], 13, 124), got ? '#ffffff' : '#7a8090', { align: 'left' });
       txt(a[2], x + 34, y + 29, fitSize(a[2], 9.5, 124, FB), got ? '#c9cfdc' : '#6a7080', { align: 'left', font: FB, weight: 800 });
     });
@@ -4314,16 +4393,28 @@ function renderBiomeFx() {
   const F = G.biomeFx; if (F && !GFX.splash) { G.biomeFx = null; return; }
   if (!F || G.crateFx || G.mergeFx || G.menu) return;
   setScreen();
-  const b = BIOMES[F.i], t = F.t, a = Math.min(1, t * 4, (3.4 - t) * 2.5), slide = ease(Math.min(1, t * 3));
-  const bh = Math.min(120, H * 0.18), y = H * 0.42 - bh / 2;
-  ctx.save(); ctx.globalAlpha = a * 0.85;
-  const g = ctx.createLinearGradient(0, 0, W, 0); g.addColorStop(0, 'rgba(8,10,16,0)'); g.addColorStop(0.2, 'rgba(8,10,16,0.75)'); g.addColorStop(0.8, 'rgba(8,10,16,0.75)'); g.addColorStop(1, 'rgba(8,10,16,0)');
+  const b = BIOMES[F.i], t = F.t, a = Math.min(1, t * 4, (5.5 - t) * 2), slide = ease(Math.min(1, t * 2.5)), pop = easeBack(Math.min(1, t / 0.4));
+  const bh = Math.min(200, Math.max(130, H * 0.28)), cy = H * 0.42, y = cy - bh / 2;
+  ctx.save(); ctx.globalAlpha = a;
+  // turning light rays behind the band, in the biome's colour
+  ctx.save(); ctx.translate(W / 2, cy); ctx.rotate(G.time * 0.4); ctx.globalCompositeOperation = 'lighter';
+  for (let k = 0; k < 12; k++) { ctx.rotate(Math.PI / 6); ctx.globalAlpha = a * 0.08; ctx.fillStyle = b.accent; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-40, -Math.max(W, H) * 0.6); ctx.lineTo(40, -Math.max(W, H) * 0.6); ctx.closePath(); ctx.fill(); }
+  ctx.restore(); ctx.globalAlpha = a;
+  // the band: dark in the middle, the biome colour at the edges
+  const g = ctx.createLinearGradient(0, 0, W, 0); g.addColorStop(0, 'rgba(8,10,16,0)'); g.addColorStop(0.12, 'rgba(8,10,16,0.88)'); g.addColorStop(0.88, 'rgba(8,10,16,0.88)'); g.addColorStop(1, 'rgba(8,10,16,0)');
   ctx.fillStyle = g; ctx.fillRect(0, y, W, bh);
-  ctx.fillStyle = rgba(b.accent, 0.8); ctx.fillRect(W * 0.2, y, W * 0.6, 2); ctx.fillRect(W * 0.2, y + bh - 2, W * 0.6, 2);
-  ctx.globalAlpha = a; const dx = (1 - slide) * 60;
-  txt('NEXT BIOME UNLOCKED', W / 2 - dx, y + bh * 0.3, Math.min(17, bh * 0.15), '#ffffff', { font: FB, weight: 900 });
-  txt(b.name, W / 2 + dx, y + bh * 0.62, fitSize(b.name, Math.min(46, bh * 0.4), W - 60), b.accent, { stroke: 5 });
-  txt('Open Biomes to go there', W / 2, y + bh * 0.88, Math.min(12, bh * 0.1), '#c9cfdc', { font: FB, weight: 800, shadow: false });
+  const eg = ctx.createLinearGradient(0, 0, W, 0); eg.addColorStop(0, rgba(b.accent, 0)); eg.addColorStop(0.5, rgba(b.accent, 1)); eg.addColorStop(1, rgba(b.accent, 0));
+  ctx.fillStyle = eg; ctx.fillRect(0, y, W, 4); ctx.fillRect(0, y + bh - 4, W, 4);
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a * (0.35 + 0.2 * Math.sin(G.time * 5)); ctx.drawImage(soft(b.accent), W / 2 - W * 0.4, cy - bh * 0.8, W * 0.8, bh * 1.6); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = a;
+  // sparkles flying out from the middle
+  for (let k = 0; k < 10; k++) { const f = (t * 0.6 + k / 10) % 1, ang = k * 2.4; ctx.globalAlpha = a * (1 - f); ctx.globalCompositeOperation = 'lighter'; star4(W / 2 + Math.cos(ang) * f * W * 0.38, cy + Math.sin(ang) * f * bh * 0.6, 4 + (1 - f) * 4, k % 2 ? '#ffffff' : b.accent); }
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = a;
+  const dx = (1 - slide) * 90;
+  txt('NEXT BIOME UNLOCKED!', W / 2 - dx, y + bh * 0.24, Math.min(26, bh * 0.16), '#ffffff', { stroke: 4 });
+  ctx.save(); ctx.translate(W / 2 + dx, y + bh * 0.58); ctx.scale(0.7 + 0.3 * pop, 0.7 + 0.3 * pop);
+  txt(b.name, 0, 0, fitSize(b.name, Math.min(78, bh * 0.42), W - 60), b.accent, { stroke: 7 });
+  ctx.restore();
+  txt('Biome ' + (F.i + 1) + '  -  Creditz x' + b.bonus + '  -  open Biomes to go there', W / 2, y + bh * 0.87, fitSize('Biome 00  -  Creditz x000  -  open Biomes to go there', Math.min(15, bh * 0.08), W - 60, FB), '#e8ecf4', { font: FB, weight: 900, shadow: false });
   ctx.restore();
 }
 // big pop-ups: opening a crate, and merging two drones
@@ -4368,21 +4459,21 @@ function renderPassButton() {
   const P = G.pass; if (!P) return;
   const gridLeft = toScreen(-236, 0).x, room = gridLeft - 12, open = () => { AUDIO.sfx('click'); G.passPage = Math.min(4, Math.floor(P.lvl / 10)); openMenu('pass'); };
   if (room >= 70) {
-    const w = Math.min(84, room - 6), h = 150, x = 10, y = H / 2 - h / 2 - 10, hot = UI.hot === 'passbig';
+    const w = Math.min(118, room - 6), h = Math.round(w * 1.9), x = 10, y = H / 2 - h / 2 - 10, hot = UI.hot === 'passbig', u = h / 150;   // u = how much bigger than the old 150 px button
     region('passbig', x, y, w, h, open);
     ctx.save();
     ctx.fillStyle = 'rgba(0,0,0,0.35)'; rr(x, y + 4, w, h, 14); ctx.fill();
     const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, hot ? '#5ad02a' : '#3a9a1a'); g.addColorStop(1, '#14400a'); ctx.fillStyle = g; rr(x, y, w, h, 14); ctx.fill();
     ctx.lineWidth = 2; ctx.strokeStyle = '#9aff4a'; ctx.stroke();
-    drawDrone({ id: 9, type: 'alien', rank: 5, skin: null, hat: null }, x + w / 2, y + 34 + Math.sin(G.time * 2) * 3, { scale: w / 50 });
-    txt('PASS', x + w / 2, y + 72, Math.min(20, w / 3.4), '#ffffff', { stroke: 3 });
-    txt('Lv ' + P.lvl, x + w / 2, y + 96, 15, '#c8ff9a', { stroke: 3 });
-    ctx.fillStyle = 'rgba(0,0,0,0.4)'; rr(x + 8, y + 110, w - 16, 7, 3.5); ctx.fill(); ctx.fillStyle = '#9aff4a'; rr(x + 8, y + 110, (w - 16) * (P.lvl >= PASS_MAX ? 1 : clamp(P.xp / xpNeed(P.lvl + 1), 0, 1)), 7, 3.5); ctx.fill();
-    txt(seasonText(), x + w / 2, y + 134, fitSize(seasonText(), 10, w - 8, FB), '#ffffff', { font: FB, weight: 900, shadow: false });
+    drawDrone({ id: 9, type: 'alien', rank: 5, skin: null, hat: null }, x + w / 2, y + 34 * u + Math.sin(G.time * 2) * 3, { scale: w / 46 });
+    txt('PASS', x + w / 2, y + 74 * u, Math.min(28, w / 3.6), '#ffffff', { stroke: 3.5 });
+    txt('Lv ' + P.lvl, x + w / 2, y + 98 * u, Math.min(22, 15 * u), '#c8ff9a', { stroke: 3 });
+    ctx.fillStyle = 'rgba(0,0,0,0.4)'; rr(x + 8, y + 112 * u, w - 16, 9, 4.5); ctx.fill(); ctx.fillStyle = '#9aff4a'; rr(x + 8, y + 112 * u, (w - 16) * (P.lvl >= PASS_MAX ? 1 : clamp(P.xp / xpNeed(P.lvl + 1), 0, 1)), 9, 4.5); ctx.fill();
+    txt(seasonText(), x + w / 2, y + 136 * u, fitSize(seasonText(), Math.min(13, 10 * u), w - 8, FB), '#ffffff', { font: FB, weight: 900, shadow: false });
     const un = passUnclaimed(); if (un) { const pz = 1 + 0.08 * Math.sin(G.time * 6); ctx.fillStyle = '#e8402a'; ctx.beginPath(); ctx.arc(x + w - 6, y + 6, 13 * pz, 0, 6.283); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff'; ctx.stroke(); txt(String(un), x + w - 6, y + 6.5, 13, '#ffffff', { shadow: false }); }
     ctx.restore();
   } else {
-    const x = 12, y = 88, w = 150, h = 38;
+    const x = 12, y = 88, w = 164, h = 44;
     region('passbig', x, y, w, h, open);
     ctx.fillStyle = UI.hot === 'passbig' ? '#5ad02a' : '#2a7a1a'; rr(x, y, w, h, 10); ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = '#9aff4a'; ctx.stroke();
     drawDrone({ id: 9, type: 'alien', rank: 5, skin: null, hat: null }, x + 24, y + 20, { scale: 0.85 });
