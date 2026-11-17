@@ -314,7 +314,7 @@ const G = Object.assign({
   mouse: { x: -1, y: -1, down: false, over: false, onUI: false, swing: 0 },
   keys: {}, confirmNew: 0, bookTab: 0, settings: { vol: 0, music: true },
   // drones + alien pass (kept through rebirths)
-  drones: [], slots: [null, null, null, null, null, null, null, null, null, null], slotsOpen: 3, skins: {}, hats: {}, crates: {}, pass: { xp: 0, lvl: 0, pt: 0 }, codes: [], nextId: 1,
+  drones: [], slots: [null, null, null, null, null, null, null, null, null, null], slotsOpen: 3, skins: {}, hats: {}, crates: {}, pass: { xp: 0, lvl: 0, pt: 0, claimed: {} }, codes: [], nextId: 1,
   dbombs: [], dproj: [], rings: [], droneSel: null, mergeSel: null, crateFx: null, mergeFx: null,
 }, LEVEL_DEFAULTS);
 // Creditz levels past the list never end: each one is a bit more for a bit more
@@ -434,7 +434,9 @@ function loadDrones(s) {
   G.slots = Array.from({ length: 10 }, (_, k) => Array.isArray(s.slots) && G.drones.some(d => d.id === s.slots[k]) ? s.slots[k] : null);
   const counts = (o, ok) => { const r = {}; if (o && typeof o === 'object') for (const k in o) if (ok(k)) r[k] = clamp(o[k] | 0, 0, 999); return r; };
   G.skins = counts(s.skins, k => !!SKINS[k]); G.hats = counts(s.hats, k => !!HATS[k]); G.crates = counts(s.crates, k => !!CRATES[k]);
-  G.pass = { xp: num(+(s.pass && s.pass.xp), 0), lvl: clamp((s.pass && s.pass.lvl) | 0, 0, PASS_MAX), pt: 0 };
+  G.pass = { xp: num(+(s.pass && s.pass.xp), 0), lvl: clamp((s.pass && s.pass.lvl) | 0, 0, PASS_MAX), pt: 0, claimed: {} };
+  if (s.pass && s.pass.claimed && typeof s.pass.claimed === 'object') { for (let l = 1; l <= PASS_MAX; l++) if (s.pass.claimed[l]) G.pass.claimed[l] = 1; }
+  else for (let l = 1; l <= G.pass.lvl; l++) G.pass.claimed[l] = 1;   // older saves got these rewards automatically already
   G.codes = Array.isArray(s.codes) ? s.codes.filter(c => typeof c === 'string').slice(0, 20) : [];
 }
 function hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } }
@@ -1319,7 +1321,7 @@ const AUDIO = (() => {
     master = ac.createGain(); master.gain.value = VOLS[G.settings.vol];
     const comp = ac.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
     master.connect(comp); comp.connect(ac.destination);
-    musicBus = ac.createGain(); musicBus.gain.value = G.settings.music ? 0.28 : 0; musicBus.connect(master);
+    musicBus = ac.createGain(); musicBus.gain.value = G.settings.music ? 0.28 * MUSICV() : 0; musicBus.connect(master);
     sfxBus = ac.createGain(); sfxBus.gain.value = 0.75; sfxBus.connect(master);
     delay = ac.createDelay(1); delay.delayTime.value = 0.33;
     const fb = ac.createGain(); fb.gain.value = 0.32; const dl = ac.createGain(); dl.gain.value = 0.5;
@@ -1378,7 +1380,7 @@ const AUDIO = (() => {
     const t = ac.currentTime;
     musicBus.gain.cancelScheduledValues(t);
     musicBus.gain.setValueAtTime(musicBus.gain.value, t); musicBus.gain.linearRampToValueAtTime(0, t + 0.35);
-    setTimeout(() => { song = i; step = 0; const t2 = ac.currentTime; musicBus.gain.setValueAtTime(0, t2); musicBus.gain.linearRampToValueAtTime(G.settings.music ? 0.28 : 0, t2 + 0.8); }, 380);
+    setTimeout(() => { song = i; step = 0; const t2 = ac.currentTime; musicBus.gain.setValueAtTime(0, t2); musicBus.gain.linearRampToValueAtTime(G.settings.music ? 0.28 * MUSICV() : 0, t2 + 0.8); }, 380);
   }
   function pop(name, rate, vol) {
     if (typeof Audio === 'undefined' || VOLS[G.settings.vol] === 0) return;
@@ -1454,7 +1456,7 @@ const AUDIO = (() => {
   function applyVolume() {
     if (!ac) return;
     master.gain.setTargetAtTime(VOLS[G.settings.vol], ac.currentTime, 0.05);
-    musicBus.gain.setTargetAtTime(G.settings.music ? 0.28 : 0, ac.currentTime, 0.1);
+    musicBus.gain.setTargetAtTime(G.settings.music ? 0.28 * MUSICV() : 0, ac.currentTime, 0.1);
   }
   return { init, sfx, setSong, applyVolume, VOLS };
 })();
@@ -1485,7 +1487,13 @@ const GFX_ROWS = [
   ['auto', 'Auto quality', ['Off', 'On']],
   ['fps', 'Show FPS', ['Off', 'On']],
   ['ui', 'Menu size', ['Auto', 'Small', 'Normal', 'Big']],
+  ['musicVol', 'Music volume', ['Quiet', 'Medium', 'Loud']],
+  ['floats', 'Floating numbers', ['Off', 'On']],
+  ['gemNames', 'Mineral names', ['Off', 'On']],
+  ['pickSize', 'Pickaxe size', ['Small', 'Normal', 'Big']],
+  ['splash', 'New biome screen', ['Off', 'On']],
 ];
+const MUSICV = () => [0.35, 0.65, 1][GFX.musicVol === undefined ? 2 : GFX.musicVol];
 const GFX_PRESETS = [   // Low, Medium, High, Ultra
   { res: 1, light: 0, bloom: 0, shadows: 1, bg: 0, parts: 0, amb: 1, grade: 0, grain: 0, trail: 0 },
   { res: 2, light: 1, bloom: 0, shadows: 1, bg: 1, parts: 1, amb: 2, grade: 1, grain: 0, trail: 1 },
@@ -1493,7 +1501,7 @@ const GFX_PRESETS = [   // Low, Medium, High, Ultra
   { res: 4, light: 2, bloom: 2, shadows: 2, bg: 2, parts: 3, amb: 2, grade: 1, grain: 1, trail: 1 },
 ];
 const GFX_KEY = 'justmine.gfx.v1';
-function gfxDefaults() { const p = TOUCH ? 1 : 2; return Object.assign({ preset: p, shake: 2, fpsCap: 2, auto: 1, fps: 0, ui: 0 }, GFX_PRESETS[p]); }
+function gfxDefaults() { const p = TOUCH ? 1 : 2; return Object.assign({ preset: p, shake: 2, fpsCap: 2, auto: 1, fps: 0, ui: 0, musicVol: 2, floats: 1, gemNames: 1, pickSize: 1, splash: 1 }, GFX_PRESETS[p]); }
 const GFX = gfxDefaults();
 try { const s = JSON.parse(localStorage.getItem(GFX_KEY) || 'null'); if (s) for (const [k, , opts] of GFX_ROWS) if (typeof s[k] === 'number' && s[k] >= 0 && s[k] < opts.length) GFX[k] = s[k] | 0; } catch (e) {}
 function setGfx(key, v) {
@@ -1501,6 +1509,7 @@ function setGfx(key, v) {
   if (key === 'preset') { if (v < 4) Object.assign(GFX, GFX_PRESETS[v]); }
   else if (key in GFX_PRESETS[0]) GFX.preset = 4;   // you changed one thing yourself: now it's Custom
   QUALITY.drop = 0; QUALITY.show = !!GFX.fps;
+  if (key === 'musicVol') AUDIO.applyVolume();
   try { localStorage.setItem(GFX_KEY, JSON.stringify(GFX)); } catch (e) {}
   resize();
 }
@@ -2437,7 +2446,7 @@ function drawDrill(d) {   // the Shop's auto miner: a little round robot with tw
 // ---------------- the player's pickaxe cursor ----------------
 function drawCursor(mx, my) {
   setScreen();
-  const rot = -0.5 + G.mouse.swing * 1.1 - (G.mouse.down ? 0.25 : 0), sc = Math.max(0.9, K * 0.5);
+  const rot = -0.5 + G.mouse.swing * 1.1 - (G.mouse.down ? 0.25 : 0), sc = Math.max(0.9, K * 0.5) * [0.75, 1, 1.35][GFX.pickSize === undefined ? 1 : GFX.pickSize];
   // swing trail: faint copies of the pickaxe where it just was (like motion blur)
   if (GFX.trail && G.mouse.swing > 0.12) {
     ctx.save(); ctx.translate(mx, my); ctx.scale(sc, sc); ctx.globalCompositeOperation = 'lighter';
@@ -2476,21 +2485,51 @@ function hitSparks(rock) {
 // ====================================================================
 //  UI: immediate-mode buttons (drawn and registered every frame)
 // ====================================================================
-const UI = { regions: [], hot: null, frame: { x: 0, y: 0, s: 1 }, live: true };
+const UI = { regions: [], scrolls: [], clip: null, hot: null, frame: { x: 0, y: 0, s: 1 }, live: true };
+// A scroll area remembers where it is (pos) and where it's going (target); pos slides towards target every frame.
+const SCR = {};
+function scrollArea(id, x, y, w, h, axis, content) {
+  const sa = SCR[id] || (SCR[id] = { pos: 0, target: 0, vel: 0 }), f = UI.frame;
+  sa.max = Math.max(0, content - (axis === 'x' ? w : h)); sa.axis = axis; sa.k = f.s;
+  if (!sa.drag && !sa.vel) sa.target = clamp(sa.target, 0, sa.max);
+  if (UI.live) UI.scrolls.push({ id, x: f.x + x * f.s, y: f.y + y * f.s, w: w * f.s, h: h * f.s });
+  return sa;
+}
+function tickScroll(dt) {
+  const k = Math.min(1, dt * 60);
+  for (const id in SCR) {
+    const sa = SCR[id]; if (sa.drag) continue;
+    if (sa.vel) { sa.target += sa.vel * k; sa.vel *= Math.pow(0.9, k); if (Math.abs(sa.vel) < 0.2) sa.vel = 0; }
+    if (sa.target < 0 || sa.target > (sa.max || 0)) { sa.vel = 0; sa.target = clamp(sa.target, 0, sa.max || 0); }
+    sa.pos += (sa.target - sa.pos) * (1 - Math.pow(0.78, k)); if (Math.abs(sa.target - sa.pos) < 0.3) sa.pos = sa.target;
+  }
+}
+const scrollAt = (x, y) => { for (let i = UI.scrolls.length - 1; i >= 0; i--) { const a = UI.scrolls[i]; if (x >= a.x && x <= a.x + a.w && y >= a.y && y <= a.y + a.h) return a; } return null; };
+// clip drawing AND clicks to a box (things scrolled out of view can't be clicked)
+function clipBox(x, y, w, h) { ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); const f = UI.frame; UI.clip = { x: f.x + x * f.s, y: f.y + y * f.s, w: w * f.s, h: h * f.s }; }
+function unclip() { UI.clip = null; ctx.restore(); }
+// smooth tab changes: a value 0 -> 1 over 0.22 s after the tab changed
+const TABT = {};
+function tabFade(key, val) { const t = TABT[key]; if (!t || t.v !== val) TABT[key] = { v: val, t0: performance.now() }; return ease(Math.min(1, (performance.now() - TABT[key].t0) / 220)); }
+const BTNH = new Map();   // how "hovered" each button is (0..1), so hover grows smoothly
 function uiFrame(x, y, s) { UI.frame = { x, y, s }; ctx.setTransform(DPR * s, 0, 0, DPR * s, DPR * x, DPR * y); }
 function region(id, x, y, w, h, fn) {
   if (!UI.live) return;   // a menu that is closing can't be clicked
   const f = UI.frame;
-  UI.regions.push({ id, x: f.x + x * f.s, y: f.y + y * f.s, w: w * f.s, h: h * f.s, fn });
+  let rx = f.x + x * f.s, ry = f.y + y * f.s, rw = w * f.s, rh = h * f.s;
+  if (UI.clip) { const c = UI.clip, x2 = Math.min(rx + rw, c.x + c.w), y2 = Math.min(ry + rh, c.y + c.h); rx = Math.max(rx, c.x); ry = Math.max(ry, c.y); rw = x2 - rx; rh = y2 - ry; if (rw <= 0 || rh <= 0) return; }
+  UI.regions.push({ id, x: rx, y: ry, w: rw, h: rh, fn });
 }
 const btnGrads = new Map();
 function btn(id, x, y, w, h, label, o) {
   o = o || {};
   region(id, x, y, w, h, o.disabled && !o.clickDisabled ? null : o.fn);
   const hot = UI.hot === id && !o.disabled, press = hot && G.mouse.down;
+  const hv0 = BTNH.get(id) || 0, hv = hv0 + ((hot ? 1 : 0) - hv0) * 0.25; if (BTNH.size > 600) BTNH.clear(); BTNH.set(id, hv);
   const base = o.disabled ? '#4a4f5c' : (o.col || '#4b6bd8');
   const lift = press ? 1 : 0;
   ctx.save();
+  if (hv > 0.01) { const cx = x + w / 2, cy = y + h / 2, kk = 1 + hv * 0.04 - (press ? 0.03 : 0); ctx.translate(cx, cy); ctx.scale(kk, kk); ctx.translate(-cx, -cy); }
   ctx.fillStyle = darken(base, 0.55); rr(x, y + 3, w, h, o.r || 10); ctx.fill();
   const gk = y + '|' + h + '|' + base + '|' + hot;
   let g = btnGrads.get(gk);
@@ -2578,8 +2617,10 @@ function drawIcon(name, x, y, s, col) {
 // ====================================================================
 //  RENDER
 // ====================================================================
+let lastRender = 0;
 function render() {
-  UI.regions = [];
+  const now = performance.now(); tickScroll(lastRender ? Math.min(0.1, (now - lastRender) / 1000) : 0.016); lastRender = now;
+  UI.regions = []; UI.scrolls = []; UI.clip = null;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = '#07080c'; ctx.fillRect(0, 0, cv.width, cv.height);
   if (G.scene === 'loading') { setScreen(); txt('Loading...', W / 2, H / 2, 28, '#ffffff'); return; }
@@ -2661,7 +2702,7 @@ function renderWorld(shx, shy) {
       for (let k = 0; k < (r.gemKey === 'Pure' ? 5 : 3); k++) { const a2 = G.time * 2 + k * 2.1, tw = Math.max(0, Math.sin(G.time * 6 + k * 1.7)); ctx.globalAlpha = alpha * tw; star4(x + Math.cos(a2) * sz * 0.6, y + Math.sin(a2) * sz * 0.6, 2 + tw * 3, '#fff6c0'); }
       ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
     }
-    if (r.gemT < 2 && gsc() >= 0.6) {
+    if (r.gemT < 2 && gsc() >= 0.6 && GFX.gemNames) {
       const la = clamp((r.gemT - 0.15) * 4, 0, 1) * clamp((2 - r.gemT) * 4, 0, 1);
       ctx.globalAlpha = la;
       txt(art.name, r.x, wy(r.y) + 13, fitSize(art.name, 7.5, 44), '#ffffff', { stroke: 2.2 });
@@ -2728,7 +2769,7 @@ function renderWorld(shx, shy) {
   const lk = 0.7 * Math.min(1, 10 / Math.max(1, G.lights.length));
   for (const l of G.lights) { ctx.globalAlpha = (l.life / l.max) * lk; ctx.drawImage(soft(l.col), l.x - l.r, wy(l.y) - l.r, l.r * 2, l.r * 2); }
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-  for (const f of G.floats) { ctx.globalAlpha = clamp((1.5 - f.t) * 2, 0, 1); const sc = f.t < 0.15 ? easeBack(f.t / 0.15) : 1; const fz = Math.max(0.5, gsc()); txt(f.text, f.x, wy(f.y), f.size * sc * fz, f.col, { stroke: 3 * fz }); }
+  if (GFX.floats) for (const f of G.floats) { ctx.globalAlpha = clamp((1.5 - f.t) * 2, 0, 1); const sc = f.t < 0.15 ? easeBack(f.t / 0.15) : 1; const fz = Math.max(0.5, gsc()); txt(f.text, f.x, wy(f.y), f.size * sc * fz, f.col, { stroke: 3 * fz }); }
   ctx.globalAlpha = 1;
   // the Heart's health bar
   if (G.heart) {
@@ -2939,32 +2980,39 @@ const SOUND_ROWS = [
   ['vol', 'Volume', ['Loud', 'Medium', 'Quiet', 'Off'], () => G.settings.vol, v => { G.settings.vol = v; AUDIO.applyVolume(); }],
   ['music', 'Music', ['Off', 'On'], () => G.settings.music ? 1 : 0, v => { G.settings.music = !!v; AUDIO.applyVolume(); }],
 ];
+const SET_TABS = [
+  ['Graphics', 'How sharp and fancy the picture is', ['preset', 'res', 'light', 'bloom', 'shadows', 'bg']],
+  ['Effects', 'Particles, weather and screen effects', ['parts', 'amb', 'grade', 'grain', 'trail', 'shake']],
+  ['Speed', 'Make the game run smoother', ['fpsCap', 'auto', 'fps']],
+  ['Sound', 'Volume and music', ['vol', 'music', 'musicVol']],
+  ['Game', 'Menus, text and the pickaxe', ['ui', 'floats', 'gemNames', 'pickSize', 'splash']],
+];
 function renderSettings() {
-  const two = W > H * 1.05;   // landscape: two columns, portrait (phones): one long column
-  const rows = GFX_ROWS.map(r => [r[0], r[1], r[2], () => GFX[r[0]], v => setGfx(r[0], v)]).concat(SOUND_ROWS);
-  const colW = 410, rowH = 34, perCol = two ? Math.ceil(rows.length / 2) : rows.length;
-  const w = two ? colW * 2 + 50 : colW + 40, h = 96 + perCol * rowH + 64;
+  const w = 600, h = 500;
   const f = modalFrame('settings', w, h); if (!f) return;
   panel(0, 0, w, h, 'SETTINGS', '#6a7a9a');
   closeBtn(w - 46, 12);
-  const pre = GFX_ROWS[0][2][GFX.preset];
-  txt(QUALITY.drop ? 'Auto quality has turned things down a bit because the game was running slow' : 'Preset: ' + pre + (TOUCH ? '  -  phone/tablet' : '') + '   (' + Math.round(QUALITY.fps) + ' FPS)', w / 2, 44, 12, QUALITY.drop ? '#ffb36a' : '#9aa3b5', { font: FB, weight: 800 });
-  rows.forEach((r, i) => {
-    const col = two ? Math.floor(i / perCol) : 0, k = two ? i % perCol : i;
-    const x = 22 + col * (colW + 6), y = 66 + k * rowH;
-    if (i === GFX_ROWS.length) { ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(x, y - 3, colW - 4, 1); }
-    const [key, label, opts, get, set] = r, cur = get();
-    txt(label, x + 4, y + 13, fitSize(label, 13, 118, FB), '#dfe4ee', { align: 'left', font: FB, weight: 900, shadow: false });
-    const sx = x + 124, sw = (colW - 130) / opts.length;
-    opts.forEach((o, j) => {
-      const on = cur === j;
-      btn('set_' + key + j, sx + j * sw, y, sw - 3, 27, o, { col: on ? (key === 'preset' ? '#c48a12' : '#3a9a4a') : '#343c50', size: 12, r: 7, fn: () => { if (cur !== j) { set(j); AUDIO.sfx('click'); if (G.scene === 'play') save(); } } });
-    });
+  G.setTab = clamp(G.setTab || 0, 0, SET_TABS.length - 1);
+  const tw = (w - 40) / SET_TABS.length;
+  SET_TABS.forEach(([name], i) => btn('stab' + i, 20 + i * tw, 34, tw - 6, 36, name, { col: G.setTab === i ? '#4a6ad0' : '#2e3446', size: 15, r: 10, fn: () => { G.setTab = i; AUDIO.sfx('click'); } }));
+  const [, about, keys] = SET_TABS[G.setTab], ta = tabFade('settings', G.setTab);
+  const all = GFX_ROWS.map(r => [r[0], r[1], r[2], () => GFX[r[0]], v => setGfx(r[0], v)]).concat(SOUND_ROWS);
+  ctx.save(); ctx.globalAlpha *= ta; ctx.translate((1 - ta) * 16, 0);
+  txt(about, w / 2, 90, 13, '#9aa3b5', { font: FB, weight: 800 });
+  if (G.setTab === 0) txt(QUALITY.drop ? 'Auto quality turned things down a bit (the game was slow)' : 'Preset ' + GFX_ROWS[0][2][GFX.preset] + (TOUCH ? ' (phone)' : '') + '  -  ' + Math.round(QUALITY.fps) + ' FPS', w / 2, 108, 11, QUALITY.drop ? '#ffb36a' : '#7a8296', { font: FB, weight: 800 });
+  keys.forEach((key, i) => {
+    const row = all.find(r => r[0] === key); if (!row) return;
+    const [, label, opts, get, set] = row, cur = get(), y = 124 + i * 46;
+    ctx.fillStyle = i % 2 ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.06)'; rr(20, y - 5, w - 40, 40, 10); ctx.fill();
+    txt(label, 36, y + 15, fitSize(label, 14, 150, FB), '#e8ecf4', { align: 'left', font: FB, weight: 900, shadow: false });
+    const sx = 196, sw = (w - 40 - 196 + 20) / opts.length;
+    opts.forEach((o, j) => btn('set_' + key + j, sx + j * sw, y, sw - 4, 30, o, { col: cur === j ? (key === 'preset' ? '#c48a12' : '#3a9a4a') : '#343c50', size: 12.5, r: 8, fn: () => { if (cur !== j) { set(j); AUDIO.sfx('click'); if (G.scene === 'play') save(); } } }));
   });
-  const by = 66 + perCol * rowH + 12;
-  btn('set_code', w / 2 - 214, by, 136, 36, 'Codes', { col: '#1a8a4a', size: 15, r: 9, icon: 'gem', fn: () => { AUDIO.sfx('click'); openCodeBox(); } });
-  if (fsOk()) btn('set_fs', w / 2 - 68, by, 136, 36, isFs() ? 'Exit full' : 'Fullscreen', { col: '#3a5fd0', size: 15, r: 9, fn: () => { AUDIO.sfx('click'); toggleFullscreen(); } });
-  btn('set_reset', w / 2 + 78, by, 136, 36, 'Reset gfx', { col: '#5a4a6a', size: 15, r: 9, fn: () => { const d = gfxDefaults(); for (const k in d) GFX[k] = d[k]; setGfx('preset', GFX.preset); AUDIO.sfx('click'); } });
+  ctx.restore();
+  const by = h - 58;
+  btn('set_code', w / 2 - 214, by, 136, 38, 'Codes', { col: '#1a8a4a', size: 15, r: 10, icon: 'gem', fn: () => { AUDIO.sfx('click'); openCodeBox(); } });
+  if (fsOk()) btn('set_fs', w / 2 - 68, by, 136, 38, isFs() ? 'Exit full' : 'Fullscreen', { col: '#3a5fd0', size: 15, r: 10, fn: () => { AUDIO.sfx('click'); toggleFullscreen(); } });
+  btn('set_reset', w / 2 + 78, by, 136, 38, 'Reset gfx', { col: '#5a4a6a', size: 15, r: 10, fn: () => { const d = gfxDefaults(); for (const k in d) GFX[k] = d[k]; setGfx('preset', GFX.preset); AUDIO.sfx('click'); } });
   UI.live = true; setScreen(); ctx.globalAlpha = 1;
 }
 function renderMenus() {
@@ -2999,6 +3047,7 @@ function renderShop() {
     if (keys.some(affordable)) { ctx.fillStyle = '#7dff7a'; ctx.beginPath(); ctx.arc(tx + tw - 14, 72, 4.5, 0, 6.283); ctx.fill(); }
   });
   // the upgrade cards of this tab: 2 columns x 3 rows max
+  const sta = tabFade('shop', G.shopTab); ctx.save(); ctx.globalAlpha *= sta; ctx.translate(0, (1 - sta) * 14);
   SHOP_TABS[G.shopTab][2].forEach((k, i) => {
     const u = SHOP[k], lvl = G[LVL_KEY[k]], max = u.costs.length, sold = lvl >= max && !u.endless, cost = costOf(k, lvl);
     const cx = 14 + (i % 2) * 300, cy = 116 + Math.floor(i / 2) * 150, cwid = 292, ch = 140;
@@ -3017,6 +3066,7 @@ function renderShop() {
     if (lvl > max) txt('+' + (lvl - max) + ' bonus levels', cx + cwid - 14, cy + 93, 10, '#ffd84a', { align: 'right', font: FB, weight: 900, shadow: false });
     btn('buy_' + k, cx + cwid - 132, cy + 104, 120, 28, sold ? 'MAX' : fmt(cost), { col: sold ? '#4a4f5c' : G.creditz >= cost ? '#3aa04a' : '#7a4040', disabled: sold, size: 15, r: 8, fn: () => buy(k) });
   });
+  ctx.restore();
   ctx.globalAlpha = 1;
 }
 // the biome map: a numbered path 1 -> 12 (row one left to right, row two right to left)
@@ -3115,6 +3165,7 @@ function renderBook() {
     txt(short, x + tw / 2 - 2, y + 24, fitSize(short, 11, tw - 8, FB), on ? '#ffffff' : '#aeb6c6', { font: FB, weight: 900, shadow: false });
   });
   const T = G.bookTab, Y = 160;
+  ctx.globalAlpha *= tabFade('book', T);
   if (T <= BIOMES.length) {
     const isEv = T === BIOMES.length, b = BIOMES[T];
     const key = isEv ? 'Event' : b.name, list = isEv ? EVENT_MINERALS.map(e => [0, 0, e[1], e[0], e[2]]) : b.minerals;
@@ -3434,7 +3485,7 @@ const PASS_MAX = 50;
 const SEASON_END = Date.UTC(2026, 11, 1, 0, 0, 0);   // Season 1 (Alien) ends 1 December 2026
 const seasonLeft = () => SEASON_END - Date.now();
 function seasonText() { const ms = seasonLeft(); if (ms <= 0) return 'Season over'; const d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5); return d > 0 ? d + 'd ' + h + 'h left' : h + 'h ' + Math.floor(ms % 36e5 / 6e4) + 'm left'; }
-const xpNeed = l => Math.round(100 * Math.pow(1.1, l - 1) / 10) * 10;   // XP to reach level l (level 1 = 100)
+const xpNeed = l => Math.round(250 * Math.pow(1.12, l - 1) / 10) * 10;   // XP to reach level l (level 1 = 250, level 50 = ~64K)
 const xpMult = () => 1 + upv('xpboost', 0);
 const PASS = (() => {
   const L = { 2: ['hat', 'helmet'], 5: ['crate', 'common'], 9: ['skin', 'alien'], 11: ['crate', 'uncommon'], 15: ['hat', 'antenna'], 17: ['crate', 'rare'], 20: ['skin', 'chrome'],
@@ -3455,16 +3506,24 @@ function passRewardText(r) {
   }
   return '';
 }
-function passReward(l) {
-  const r = PASS[l];
-  if (r) switch (r[0]) {
+function grantPass(r) {
+  switch (r[0]) {
     case 'cred': giveCreditz(r[1], true); G.hudPulse = 1; break;
     case 'hat': G.hats[r[1]] = (G.hats[r[1]] || 0) + 1; break;
     case 'skin': G.skins[r[1]] = (G.skins[r[1]] || 0) + 1; break;
     case 'crate': G.crates[r[1]] = (G.crates[r[1]] || 0) + 1; break;
     case 'drone': addDrone('alien', r[2]); break;
   }
-  toast('ALIEN PASS level ' + l + '!' + (r ? '  ' + passRewardText(r) : ''), '#7dff3a'); AUDIO.sfx('level');
+}
+// rewards are claimed by hand in the pass (more fun than getting them silently)
+function claimPass(l) {
+  const P = G.pass, r = PASS[l]; if (!r || l > P.lvl || P.claimed[l]) return;
+  P.claimed[l] = 1; grantPass(r);
+  toast('Claimed: ' + passRewardText(r), '#7dff3a'); AUDIO.sfx('buy'); save();
+}
+const passUnclaimed = () => { let n = 0; for (let l = 1; l <= G.pass.lvl; l++) if (PASS[l] && !G.pass.claimed[l]) n++; return n; };
+function passReward(l) {
+  toast('ALIEN PASS level ' + l + '!' + (PASS[l] ? '  Claim: ' + passRewardText(PASS[l]) : ''), '#7dff3a'); AUDIO.sfx('level');
 }
 function addXP(n) {
   const P = G.pass; if (!P || P.lvl >= PASS_MAX || G.scene !== 'play' || seasonLeft() <= 0) return;
@@ -4013,6 +4072,7 @@ function renderDrones() {
   closeBtn(w - 46, 12);
   if (G.droneTab === undefined) G.droneTab = 0;
   ['My Drones', 'Drone Shop'].forEach((n, i) => btn('dtab' + i, 30 + i * 200, 28, 190, 34, n, { col: G.droneTab === i ? '#2a8aa8' : '#343c50', size: 16, r: 9, icon: i ? 'shop' : 'drone', fn: () => { G.droneTab = i; G.mergeSel = null; AUDIO.sfx('click'); } }));
+  ctx.globalAlpha *= tabFade('drones', G.droneTab);
   if (G.droneTab === 1) { renderDroneShop(w, h); return; }
   // --- the 10 slots ---
   txt('SLOTS  (' + droneSlotsUsed() + ' / ' + G.slotsOpen + ' in use)', 30, 80, 13, '#9ad8ff', { align: 'left', font: FB, weight: 900 });
@@ -4036,15 +4096,13 @@ function renderDrones() {
   }
   // --- your drones (not in a slot) ---
   const inv = G.drones.filter(d => slotOf(d) < 0 || slotOf(d) >= G.slotsOpen).sort((a, c) => c.rank - a.rank || a.type.localeCompare(c.type));
-  const per = 16, pages = Math.max(1, Math.ceil(inv.length / per)); G.dronePage = clamp(G.dronePage || 0, 0, pages - 1);
   txt('YOUR DRONES  (' + inv.length + ')', 30, 204, 13, '#9ad8ff', { align: 'left', font: FB, weight: 900 });
-  if (pages > 1) {
-    btn('dpgL', w - 150, 192, 40, 24, '<', { col: '#343c50', size: 14, r: 7, fn: () => { G.dronePage = Math.max(0, G.dronePage - 1); AUDIO.sfx('click'); } });
-    txt((G.dronePage + 1) + '/' + pages, w - 85, 204, 12, '#c9cfdc', { font: FB, weight: 900 });
-    btn('dpgR', w - 64, 192, 40, 24, '>', { col: '#343c50', size: 14, r: 7, fn: () => { G.dronePage = Math.min(pages - 1, G.dronePage + 1); AUDIO.sfx('click'); } });
-  }
+  if (inv.length > 16) txt('scroll for more', w - 30, 204, 11, '#8a90a0', { align: 'right', font: FB, weight: 800 });
+  const isa = scrollArea('dinv', 20, 214, w - 40, 192, 'y', Math.ceil(inv.length / 8) * 94);
+  clipBox(20, 214, w - 40, 192);
+  inv.forEach((d, i) => { const yy = 218 + Math.floor(i / 8) * 94 - isa.pos; if (yy > 120 && yy < 410) cardDrone(d, 26 + (i % 8) * 102, yy, 96, 88, 'inv' + d.id); });
+  unclip();
   if (!inv.length) txt(G.drones.length ? 'All your drones are working in slots!' : 'No drones yet. Buy a crate in the Drone Shop!', w / 2, 290, 15, '#8a90a0', { font: FB, weight: 800 });
-  inv.slice(G.dronePage * per, G.dronePage * per + per).forEach((d, i) => cardDrone(d, 26 + (i % 8) * 102, 218 + Math.floor(i / 8) * 94, 96, 88, 'inv' + d.id));
   // --- selected drone ---
   const y0 = 412;
   ctx.fillStyle = 'rgba(255,255,255,0.04)'; rr(20, y0, w - 40, h - y0 - 18, 12); ctx.fill();
@@ -4076,12 +4134,13 @@ function renderDrones() {
   btn('dmerge', 382, y0 + 112, 150, 34, 'Merge...', { col: '#3a8a4a', size: 15, fn: () => { G.mergeSel = d.id; AUDIO.sfx('click'); } });
   // skins + hats: white boxes showing how THIS drone would look (one owned copy = one drone at a time)
   const hats = G.dressTab === 1, list = [null].concat(hats ? Object.keys(HATS).filter(id => G.hats[id] > 0) : Object.keys(SKINS).filter(id => G.skins[id] > 0));
-  btn('dress0', 560, y0 + 10, 84, 26, 'Skins', { col: hats ? '#343c50' : '#4a5ad0', size: 13, r: 7, fn: () => { G.dressTab = 0; G.dressPage = 0; AUDIO.sfx('click'); } });
-  btn('dress1', 650, y0 + 10, 84, 26, 'Hats', { col: hats ? '#7a4ad0' : '#343c50', size: 13, r: 7, fn: () => { G.dressTab = 1; G.dressPage = 0; AUDIO.sfx('click'); } });
-  const dpages = Math.max(1, Math.ceil(list.length / 6)); G.dressPage = clamp(G.dressPage || 0, 0, dpages - 1);
-  if (dpages > 1) { btn('dressL', 744, y0 + 10, 38, 26, '<', { col: '#343c50', size: 13, r: 7, fn: () => { G.dressPage = Math.max(0, G.dressPage - 1); AUDIO.sfx('click'); } }); btn('dressR', 788, y0 + 10, 38, 26, '>', { col: '#343c50', size: 13, r: 7, fn: () => { G.dressPage = Math.min(dpages - 1, G.dressPage + 1); AUDIO.sfx('click'); } }); }
-  list.slice(G.dressPage * 6, G.dressPage * 6 + 6).forEach((id, i) => {
-    const x = 562 + (i % 3) * 90, y = y0 + 44 + Math.floor(i / 3) * 80, tw = 84, th = 74, id2 = 'dress_' + (id || 'none');
+  btn('dress0', 560, y0 + 10, 84, 26, 'Skins', { col: hats ? '#343c50' : '#4a5ad0', size: 13, r: 7, fn: () => { G.dressTab = 0; if (SCR.dress) SCR.dress.target = SCR.dress.pos = 0; AUDIO.sfx('click'); } });
+  btn('dress1', 650, y0 + 10, 84, 26, 'Hats', { col: hats ? '#7a4ad0' : '#343c50', size: 13, r: 7, fn: () => { G.dressTab = 1; if (SCR.dress) SCR.dress.target = SCR.dress.pos = 0; AUDIO.sfx('click'); } });
+  const dsa = scrollArea('dress', 558, y0 + 40, 274, 160, 'y', Math.ceil(list.length / 3) * 80);
+  clipBox(558, y0 + 40, 274, 160);
+  list.forEach((id, i) => {
+    const x = 562 + (i % 3) * 90, y = y0 + 44 + Math.floor(i / 3) * 80 - dsa.pos, tw = 84, th = 74, id2 = 'dress_' + (id || 'none');
+    if (y < y0 - 40 || y > y0 + 210) return;
     const on = hats ? d.hat === id : d.skin === id, ok = !id || on || (hats ? hatFree(id) : skinFree(id)) > 0;
     region(id2, x, y, tw, th, () => { if (!ok) { toast('That one is on another drone already', '#ff8a8a'); AUDIO.sfx('deny'); return; } if (hats) d.hat = id; else d.skin = id; AUDIO.sfx('click'); save(); });
     rr(x, y, tw, th, 9); ctx.fillStyle = UI.hot === id2 ? '#ffffff' : '#eef1f6'; ctx.fill();
@@ -4094,6 +4153,8 @@ function renderDrones() {
     if (!ok) txt('in use', x + tw / 2, y + 12, 10, '#c0392b', { font: FB, weight: 900, shadow: false });
     const cnt = id ? (hats ? G.hats[id] : G.skins[id]) : 0; if (cnt > 1) txt('x' + cnt, x + tw - 8, y + 11, 10, '#4a5470', { align: 'right', font: FB, weight: 900, shadow: false });
   });
+  unclip();
+  if (list.length > 6) txt('scroll', 828, y0 + 23, 10, '#8a90a0', { align: 'right', font: FB, weight: 800 });
   if (list.length === 1) txt(hats ? 'Hats come from the Alien Pass' : 'Skins come from the Skin Crate + the Alien Pass', 562, y0 + 140, 11, '#8a90a0', { align: 'left', font: FB, weight: 800 });
 }
 function drawCrate(x, y, s, col, t, shake) {
@@ -4121,7 +4182,8 @@ function renderDroneShop(w, h) {
 }
 // NEW BIOME: nearly full screen, the biome's colour, its minerals; closes by itself or with a click
 function renderBiomeFx() {
-  const F = G.biomeFx; if (!F || G.crateFx || G.mergeFx) return;
+  const F = G.biomeFx; if (F && !GFX.splash) { G.biomeFx = null; return; }
+  if (!F || G.crateFx || G.mergeFx) return;
   setScreen();
   const b = BIOMES[F.i], t = F.t, a = Math.min(1, t * 3, (7 - t) * 2), pop = easeBack(Math.min(1, t / 0.45));
   ctx.globalAlpha = a; ctx.fillStyle = 'rgba(3,4,8,0.8)'; ctx.fillRect(0, 0, W, H);
@@ -4194,6 +4256,7 @@ function renderPassButton() {
     txt('Lv ' + P.lvl, x + w / 2, y + 96, 15, '#c8ff9a', { stroke: 3 });
     ctx.fillStyle = 'rgba(0,0,0,0.4)'; rr(x + 8, y + 110, w - 16, 7, 3.5); ctx.fill(); ctx.fillStyle = '#9aff4a'; rr(x + 8, y + 110, (w - 16) * (P.lvl >= PASS_MAX ? 1 : clamp(P.xp / xpNeed(P.lvl + 1), 0, 1)), 7, 3.5); ctx.fill();
     txt(seasonText(), x + w / 2, y + 134, fitSize(seasonText(), 10, w - 8, FB), '#ffffff', { font: FB, weight: 900, shadow: false });
+    const un = passUnclaimed(); if (un) { const pz = 1 + 0.08 * Math.sin(G.time * 6); ctx.fillStyle = '#e8402a'; ctx.beginPath(); ctx.arc(x + w - 6, y + 6, 13 * pz, 0, 6.283); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff'; ctx.stroke(); txt(String(un), x + w - 6, y + 6.5, 13, '#ffffff', { shadow: false }); }
     ctx.restore();
   } else {
     const x = 12, y = 88, w = 118, h = 28;
@@ -4201,6 +4264,7 @@ function renderPassButton() {
     ctx.fillStyle = UI.hot === 'passbig' ? '#5ad02a' : '#2a7a1a'; rr(x, y, w, h, 10); ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = '#9aff4a'; ctx.stroke();
     drawDrone({ id: 9, type: 'alien', rank: 5, skin: null, hat: null }, x + 18, y + 15, { scale: 0.65 });
     txt('PASS  Lv ' + P.lvl, x + 72, y + 14.5, 13, '#ffffff', { stroke: 2.5 });
+    const un = passUnclaimed(); if (un) { ctx.fillStyle = '#e8402a'; ctx.beginPath(); ctx.arc(x + w - 4, y + 4, 9, 0, 6.283); ctx.fill(); txt(String(un), x + w - 4, y + 4.5, 10, '#ffffff', { shadow: false }); }
   }
 }
 function renderDroneColumn() {
@@ -4258,48 +4322,84 @@ function rewardIcon(r, x, y, s) {
     case 'drone': drawDrone({ id: 5, type: 'alien', rank: r[2], skin: null, hat: null }, x, y, { scale: 1.1 * s }); break;
   }
 }
+const PASSUI = { was: false, info: false };
 function renderPass() {
-  const w = 880, h = 470;
-  const f = modalFrame('pass', w, h); if (!f) return;
+  const w = 920, h = 548;
+  const f = modalFrame('pass', w, h); if (!f) { PASSUI.was = false; return; }
   panel(0, 0, w, h, 'ALIEN PASS', '#5ad02a');
   closeBtn(w - 46, 12);
-  const P = G.pass, need = xpNeed(P.lvl + 1);
-  // a few alien stars + a UFO in the corner, for the theme
-  for (let k = 0; k < 18; k++) { ctx.fillStyle = 'rgba(180,255,150,' + (0.2 + 0.2 * Math.sin(G.time * 2 + k)) + ')'; ctx.fillRect((k * 137) % (w - 40) + 20, (k * 71) % 60 + 40, 2, 2); }
-  drawDrone({ id: 9, type: 'alien', rank: 5, skin: null, hat: null }, 70, 58 + Math.sin(G.time * 2) * 4, { scale: 1.4 });
-  txt('Level ' + P.lvl + ' / ' + PASS_MAX, w / 2, 48, 22, '#9aff4a', { stroke: 3 });
-  txt('Season 1  -  ' + seasonText(), w - 70, 46, 12, seasonLeft() > 0 ? '#c8ff9a' : '#ff8a8a', { align: 'right', font: FB, weight: 900 });
-  const bw = 420, bx = w / 2 - bw / 2;
-  ctx.fillStyle = 'rgba(0,0,0,0.5)'; rr(bx, 66, bw, 16, 8); ctx.fill();
-  ctx.fillStyle = '#7dff3a'; rr(bx, 66, Math.max(16, bw * (P.lvl >= PASS_MAX ? 1 : clamp(P.xp / need, 0, 1))), 16, 8); ctx.fill();
-  txt(P.lvl >= PASS_MAX ? 'COMPLETE!' : Math.floor(P.xp) + ' / ' + need + ' XP', w / 2, 74.5, 11, '#0b1a08', { font: FB, weight: 900, shadow: false });
-  // 10 levels per page
-  G.passPage = clamp(G.passPage || 0, 0, 4);
-  const p0 = G.passPage * 10;
-  btn('ppL', 16, 216, 34, 60, '<', { col: G.passPage ? '#3a6a2a' : '#2a2e38', size: 20, r: 9, fn: () => { G.passPage = Math.max(0, G.passPage - 1); AUDIO.sfx('click'); } });
-  btn('ppR', w - 50, 216, 34, 60, '>', { col: G.passPage < 4 ? '#3a6a2a' : '#2a2e38', size: 20, r: 9, fn: () => { G.passPage = Math.min(4, G.passPage + 1); AUDIO.sfx('click'); } });
-  const nx = k => 96 + k * 76;
-  ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.beginPath(); ctx.moveTo(nx(0), 300); ctx.lineTo(nx(9), 300); ctx.stroke();
-  const doneTo = clamp(P.lvl - p0, 0, 10); if (doneTo > 0) { ctx.strokeStyle = '#7dff3a'; ctx.beginPath(); ctx.moveTo(nx(0), 300); ctx.lineTo(nx(Math.min(9, doneTo - 1)), 300); ctx.stroke(); }
-  for (let k = 0; k < 10; k++) {
-    const l = p0 + k + 1, r = PASS[l], got = P.lvl >= l, next = P.lvl + 1 === l, x = nx(k);
+  const P = G.pass, maxed = P.lvl >= PASS_MAX, need = xpNeed(P.lvl + 1), frac = maxed ? 1 : clamp(P.xp / need, 0, 1), over = seasonLeft() <= 0;
+  // ---- header: your level, the XP bar, what comes next, the timer ----
+  ctx.fillStyle = 'rgba(90,208,42,0.1)'; rr(20, 34, w - 40, 112, 16); ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(125,255,58,0.35)'; ctx.stroke();
+  ctx.fillStyle = '#163a0e'; ctx.beginPath(); ctx.arc(84, 90, 42, 0, 6.283); ctx.fill();
+  ctx.lineWidth = 7; ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.arc(84, 90, 42, 0, 6.283); ctx.stroke();
+  ctx.strokeStyle = '#9aff4a'; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(84, 90, 42, -Math.PI / 2, -Math.PI / 2 + 6.283 * Math.max(0.01, frac)); ctx.stroke(); ctx.lineCap = 'butt';
+  txt('LEVEL', 84, 72, 12, '#c8ff9a', { font: FB, weight: 900, shadow: false });
+  txt(String(P.lvl), 84, 98, 34, '#ffffff', { stroke: 4 });
+  txt('Season 1: Alien Invasion', 146, 58, 19, '#ffffff', { align: 'left', stroke: 3 });
+  const bx = 146, bw = w - 146 - 230, by = 76;
+  ctx.fillStyle = 'rgba(0,0,0,0.45)'; rr(bx, by, bw, 26, 13); ctx.fill();
+  const g = ctx.createLinearGradient(bx, 0, bx + bw, 0); g.addColorStop(0, '#3aa01a'); g.addColorStop(1, '#b4ff5a'); ctx.fillStyle = g; rr(bx, by, Math.max(26, bw * frac), 26, 13); ctx.fill();
+  txt(maxed ? 'MAX LEVEL!' : fmt(Math.floor(P.xp)) + ' / ' + fmt(need) + ' XP', bx + bw / 2, by + 13.5, 14, '#ffffff', { stroke: 3 });
+  let nl = 0; for (let l = P.lvl + 1; l <= PASS_MAX; l++) if (PASS[l]) { nl = l; break; }
+  const nextTxt = maxed ? 'You finished the pass!' : nl ? 'Next reward: ' + passRewardText(PASS[nl]) + ' at level ' + nl : '';
+  txt(nextTxt, bx, 122, fitSize(nextTxt, 13, bw, FB), '#c8ff9a', { align: 'left', font: FB, weight: 900 });
+  ctx.fillStyle = over ? 'rgba(255,90,90,0.25)' : 'rgba(0,0,0,0.35)'; rr(w - 216, 46, 176, 30, 15); ctx.fill();
+  txt((over ? '' : 'Ends in ') + seasonText().replace(' left', ''), w - 128, 61.5, 13, over ? '#ff9a9a' : '#ffffff', { font: FB, weight: 900, shadow: false });
+  const un = passUnclaimed();
+  btn('passall', w - 216, 88, 176, 40, un ? 'Claim all (' + un + ')' : 'Nothing to claim', { col: un ? '#3aa04a' : '#3a4256', disabled: !un, size: 15, r: 12, fn: () => { for (let l = 1; l <= P.lvl; l++) claimPass(l); } });
+  // ---- the reward track (scrolls sideways) ----
+  const cw = 132, gap = 14, tx = 44, ty = 156, tw = w - 88, th = 330, step = cw + gap;
+  const sa = scrollArea('passtrack', tx, ty, tw, th, 'x', PASS_MAX * step + 10);
+  if (G.menu === 'pass' && !PASSUI.was) { sa.target = sa.pos = clamp(Math.max(0, P.lvl - 1) * step - (tw / 2 - cw / 2), 0, sa.max); sa.vel = 0; }
+  PASSUI.was = G.menu === 'pass';
+  clipBox(tx, ty, tw, th);
+  const lineY = ty + th - 46;
+  ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.beginPath(); ctx.moveTo(tx + cw / 2 - sa.pos, lineY); ctx.lineTo(tx + (PASS_MAX - 1) * step + cw / 2 - sa.pos, lineY); ctx.stroke();
+  const fillTo = Math.min(PASS_MAX - 1, P.lvl - 1 + (maxed ? 0 : frac));
+  if (fillTo > 0) { ctx.strokeStyle = '#7dff3a'; ctx.beginPath(); ctx.moveTo(tx + cw / 2 - sa.pos, lineY); ctx.lineTo(tx + fillTo * step + cw / 2 - sa.pos, lineY); ctx.stroke(); }
+  ctx.lineCap = 'butt';
+  for (let l = 1; l <= PASS_MAX; l++) {
+    const x = tx + (l - 1) * step - sa.pos; if (x < tx - cw - 10 || x > tx + tw + 10) continue;
+    const r = PASS[l], got = P.lvl >= l, claimed = !!P.claimed[l], can = got && r && !claimed, cy = ty + 18, ch = 228;
+    const col = !r ? '#5a6070' : r[0] === 'cred' ? '#ffc21a' : r[0] === 'crate' ? CRATES[r[1]].col : r[0] === 'skin' ? RCOL[SKINS[r[1]].rar] : r[0] === 'hat' ? '#b05cff' : '#7dff3a';
+    ctx.save();
+    if (can) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35 + 0.2 * Math.sin(G.time * 5 + l); ctx.drawImage(soft('#7dff3a'), x - 30, cy - 30, cw + 60, ch + 60); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+    const cg = ctx.createLinearGradient(0, cy, 0, cy + ch);
+    cg.addColorStop(0, got ? rgba(col, can ? 0.5 : 0.22) : 'rgba(255,255,255,0.07)'); cg.addColorStop(1, got ? 'rgba(14,24,12,0.95)' : 'rgba(14,16,24,0.95)');
+    rr(x, cy, cw, ch, 16); ctx.fillStyle = cg; ctx.fill(); ctx.lineWidth = can ? 3 : 1.5; ctx.strokeStyle = can ? '#9aff4a' : got ? rgba(col, 0.7) : 'rgba(255,255,255,0.14)'; ctx.stroke();
+    // level badge on top
+    ctx.fillStyle = got ? '#3aa01a' : '#2a2f3a'; ctx.beginPath(); ctx.arc(x + cw / 2, cy, 17, 0, 6.283); ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = got ? '#c8ff9a' : '#4a5060'; ctx.stroke();
+    txt(String(l), x + cw / 2, cy + 1, 15, '#ffffff', { stroke: 3 });
     if (r) {
-      ctx.fillStyle = got ? 'rgba(125,255,58,0.12)' : 'rgba(255,255,255,0.05)'; rr(x - 34, 120, 68, 150, 10); ctx.fill();
-      ctx.lineWidth = 1; ctx.strokeStyle = r[0] === 'drone' ? '#7dff3a' : got ? 'rgba(125,255,58,0.5)' : 'rgba(255,255,255,0.12)'; ctx.stroke();
-      ctx.save(); if (!got) ctx.globalAlpha = 0.75; rewardIcon(r, x, 178, 1); ctx.restore();
-      const lab = passRewardText(r); txt(lab, x, 246, fitSize(lab, 10, 64, FB), got ? '#c8ff9a' : '#c9cfdc', { font: FB, weight: 900, shadow: false });
-      if (got) drawIcon('check', x + 24, 130, 16, '#7dff7a');
+      if (!got) ctx.globalAlpha = 0.55;
+      rewardIcon(r, x + cw / 2, cy + 82, 1.45);
+      ctx.globalAlpha = 1;
+      const nm = passRewardText(r);
+      txt(nm, x + cw / 2, cy + 146, fitSize(nm, 14, cw - 14), got ? '#ffffff' : '#aab0c0', { stroke: 3 });
+      if (claimed) { txt('CLAIMED', x + cw / 2, cy + 196, 14, '#7dff7a', { font: FB, weight: 900 }); drawIcon('check', x + cw - 18, cy + 22, 18, '#7dff7a'); }
+      else if (can) btn('pclaim' + l, x + 14, cy + 178, cw - 28, 36, 'CLAIM', { col: '#3aa04a', size: 17, r: 11, fn: () => claimPass(l) });
+      else { drawIcon('lock', x + cw / 2 - 30, cy + 196, 15, '#8a90a0'); txt('Level ' + l, x + cw / 2 + 8, cy + 196.5, 13, '#8a90a0', { font: FB, weight: 900 }); }
+    } else {
+      txt('Bonus level', x + cw / 2, cy + 100, 14, '#8a90a0', { font: FB, weight: 900 });
+      txt('no reward', x + cw / 2, cy + 120, 11, '#6a7080', { font: FB, weight: 800 });
     }
-    const R0 = next ? 13 + Math.sin(G.time * 5) * 1.5 : 11;
-    ctx.fillStyle = got ? '#7dff3a' : next ? '#ffd84a' : '#2a2e38'; ctx.beginPath(); ctx.arc(x, 300, R0, 0, 6.283); ctx.fill();
-    ctx.lineWidth = 2; ctx.strokeStyle = '#0b0c12'; ctx.stroke();
-    txt(String(l), x, 300.5, 11, got ? '#0b1a08' : '#ffffff', { font: FB, weight: 900, shadow: false });
+    ctx.restore();
+    // node on the line + the XP it takes
+    ctx.fillStyle = got ? '#7dff3a' : '#2a2f3a'; ctx.beginPath(); ctx.arc(x + cw / 2, lineY, 9, 0, 6.283); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#0b0c12'; ctx.stroke();
+    txt(fmt(xpNeed(l)) + ' XP', x + cw / 2, lineY + 24, 11, got ? '#c8ff9a' : '#8a90a0', { font: FB, weight: 900, shadow: false });
   }
-  const xl1 = 'XP:  rocks +1  -  quests 100-900  -  REBIRTH 300+  -  new biome 60+  -  achievement 75  -  Mega Rock 150';
-  const xl2 = 'chests 25/60  -  golden rock 20  -  Legendary+ minerals 4+  -  merge 40  -  crate 15  -  crystal 2  -  playing +1 / 10s';
-  txt(xl1, w / 2, 344, fitSize(xl1, 13, w - 50, FB), '#c9cfdc', { font: FB, weight: 800 }); txt(xl2, w / 2, 362, fitSize(xl2, 13, w - 50, FB), '#c9cfdc', { font: FB, weight: 800 });
-  txt('Level 25: Alien Ship I   -   Level 50: Alien Ship V', w / 2, 384, 14, '#9aff4a', { font: FB, weight: 900 });
-  for (let k = 0; k < 5; k++) btn('ppg' + k, w / 2 - 125 + k * 52, 400, 46, 30, (k * 10 + 1) + '-' + (k * 10 + 10), { col: G.passPage === k ? '#5ad02a' : '#343c50', size: 11, r: 8, fn: () => { G.passPage = k; AUDIO.sfx('click'); } });
+  // the little alien ship shows where you are
+  if (!maxed) drawDrone({ id: 9, type: 'alien', rank: 5, skin: null, hat: null }, tx + fillTo * step + cw / 2 - sa.pos, lineY - 20 + Math.sin(G.time * 3) * 2, { scale: 0.75 });
+  unclip();
+  // arrows glide 4 cards at a time
+  btn('passL', 6, ty + 90, 32, 70, '<', { col: sa.target > 1 ? '#3a7a2a' : '#2a2e38', size: 20, r: 10, fn: () => { sa.vel = 0; sa.target = clamp(sa.target - step * 4, 0, sa.max); AUDIO.sfx('click'); } });
+  btn('passR', w - 38, ty + 90, 32, 70, '>', { col: sa.target < sa.max - 1 ? '#3a7a2a' : '#2a2e38', size: 20, r: 10, fn: () => { sa.vel = 0; sa.target = clamp(sa.target + step * 4, 0, sa.max); AUDIO.sfx('click'); } });
+  // ---- how to get XP (always visible, short) ----
+  const ways = [['Rock', '+1'], ['Quest', '+100-900'], ['Rebirth', '+300'], ['New biome', '+60'], ['Trophy', '+75'], ['Mega Rock', '+150'], ['Chest', '+25'], ['Playing', '+1 / 10s']];
+  txt('HOW TO GET XP', 44, ty + th + 22, 13, '#9aff4a', { align: 'left', font: FB, weight: 900 });
+  ways.forEach(([a, b], i) => { const x = 160 + i * ((w - 200) / ways.length), y = ty + th + 10, pw = (w - 200) / ways.length - 8; ctx.fillStyle = 'rgba(255,255,255,0.06)'; rr(x, y, pw, 24, 12); ctx.fill(); txt(a + ' ' + b, x + pw / 2, y + 12.5, fitSize(a + ' ' + b, 11.5, pw - 10, FB), '#dfe4ee', { font: FB, weight: 900, shadow: false }); });
+  if (xpMult() > 1) txt('Your Pass XP boost: x' + xpMult().toFixed(2), w - 44, ty + th + 52, 11, '#c8ff9a', { align: 'right', font: FB, weight: 900 });
 }
 
 // ====================================================================
@@ -4534,14 +4634,19 @@ function setMouse(e) { G.mouse.x = e.clientX; G.mouse.y = e.clientY; G.mouse.ove
 function hitRegion(x, y) { for (let i = UI.regions.length - 1; i >= 0; i--) { const r = UI.regions[i]; if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return r; } return null; }
 // TOUCH: a finger has no "hover", so buttons fire when you LIFT your finger (and only if it didn't slide),
 // which lets you drag big menus around without pressing a button by accident. Mouse buttons still fire on press.
-const PTR = { id: null, sx: 0, sy: 0, moved: false, region: null, px: 0, py: 0 };
+const PTR = { id: null, sx: 0, sy: 0, moved: false, region: null, px: 0, py: 0, touch: false, scroll: null, st: 0, vel: 0, lx: 0, ly: 0 };
 cv.addEventListener('pointermove', e => {
   if (e.pointerType === 'touch' && PTR.id !== e.pointerId) return;   // a second finger doesn't move the pickaxe
   setMouse(e);
-  if (PTR.id === e.pointerId && PTR.region) {
+  if (PTR.id === e.pointerId) {
     const dx = e.clientX - PTR.sx, dy = e.clientY - PTR.sy;
-    if (!PTR.moved && Math.hypot(dx, dy) > 12) PTR.moved = true;
-    if (PTR.moved && G.menu) { PAN.x = PTR.px + dx; PAN.y = PTR.py + dy; }
+    if (!PTR.moved && Math.hypot(dx, dy) > 10) PTR.moved = true;
+    const sa = PTR.scroll && SCR[PTR.scroll];
+    if (PTR.moved && sa) {   // dragging a list: it follows the finger, a bit of stretch past the ends
+      sa.drag = true; const d = sa.axis === 'x' ? dx : dy, step = sa.axis === 'x' ? e.clientX - PTR.lx : e.clientY - PTR.ly;
+      sa.target = sa.pos = clamp(PTR.st - d / sa.k, -50, sa.max + 50); PTR.vel = -step / sa.k;
+    } else if (PTR.moved && G.menu && PTR.region) { PAN.x = PTR.px + dx; PAN.y = PTR.py + dy; }
+    PTR.lx = e.clientX; PTR.ly = e.clientY;
   }
 });
 cv.addEventListener('pointerdown', e => {
@@ -4552,10 +4657,16 @@ cv.addEventListener('pointerdown', e => {
   AUDIO.init();
   try { cv.setPointerCapture(e.pointerId); } catch (err) {}
   const r = hitRegion(G.mouse.x, G.mouse.y);
+  const sa = scrollAt(G.mouse.x, G.mouse.y);
+  const grab = { id: e.pointerId, sx: e.clientX, sy: e.clientY, lx: e.clientX, ly: e.clientY, moved: false, px: PAN.x, py: PAN.y, scroll: sa ? sa.id : null, st: sa ? SCR[sa.id].target : 0, vel: 0 };
+  if (sa && SCR[sa.id]) SCR[sa.id].vel = 0;   // a touch stops a list that is still gliding
   if (touch) {
-    Object.assign(PTR, { id: e.pointerId, sx: e.clientX, sy: e.clientY, moved: false, region: r, px: PAN.x, py: PAN.y });
+    Object.assign(PTR, grab, { region: r, touch: true });
     if (r) { G.mouse.onUI = true; G.mouse.down = false; return; }
-  } else if (r) { if (r.fn) r.fn(); G.mouse.onUI = true; G.mouse.down = false; return; }
+  } else if (r) {
+    if (sa && (!r.fn || r.id === 'backdrop')) { Object.assign(PTR, grab, { region: null, touch: false }); G.mouse.onUI = true; G.mouse.down = false; return; }   // mouse: grab an empty spot of a list to drag it
+    if (r.fn) r.fn(); G.mouse.onUI = true; G.mouse.down = false; return;
+  }
   if (G.scene !== 'play') return;
   if (G.bombArm || e.button === 2) { const w = toWorld(G.mouse.x, G.mouse.y); G.bombArm = false; dropBomb(w.x, w.y); return; }
   G.mouse.down = true;
@@ -4563,14 +4674,16 @@ cv.addEventListener('pointerdown', e => {
 function endPointer(e, fire) {
   G.mouse.down = false;
   if (PTR.id !== e.pointerId) return;
-  const r = PTR.region; PTR.id = null; PTR.region = null;
+  const sa = PTR.scroll && SCR[PTR.scroll];
+  if (sa && sa.drag) { sa.drag = false; sa.vel = clamp(PTR.vel, -45, 45); }   // let go: it keeps gliding, then slows down
+  const r = PTR.region, wasTouch = PTR.touch; PTR.id = null; PTR.region = null; PTR.scroll = null;
   if (fire && r && !PTR.moved) { const r2 = hitRegion(e.clientX, e.clientY); if (r2 && r2.id === r.id && r2.fn) r2.fn(); }
-  G.mouse.over = false; G.mouse.x = G.mouse.y = -999;   // finger lifted: no pickaxe, no hover
+  if (wasTouch) { G.mouse.over = false; G.mouse.x = G.mouse.y = -999; }   // finger lifted: no pickaxe, no hover
 }
 window.addEventListener('pointerup', e => endPointer(e, true));
 window.addEventListener('pointercancel', e => endPointer(e, false));
 cv.addEventListener('pointerleave', e => { if (e.pointerType === 'touch') return; G.mouse.over = false; G.mouse.down = false; });
-cv.addEventListener('wheel', e => { if (G.menu && PAN.can) { PAN.y -= e.deltaY; PAN.x -= e.deltaX; } }, { passive: true });
+cv.addEventListener('wheel', e => { const sa = scrollAt(e.clientX, e.clientY), S2 = sa && SCR[sa.id]; if (S2) { S2.vel = 0; S2.target = clamp(S2.target + ((S2.axis === 'x' ? (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY) : e.deltaY) / S2.k), 0, S2.max); return; } if (G.menu && PAN.can) { PAN.y -= e.deltaY; PAN.x -= e.deltaX; } }, { passive: true });
 window.addEventListener('orientationchange', () => setTimeout(resize, 200));
 if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
 cv.addEventListener('contextmenu', e => e.preventDefault());
