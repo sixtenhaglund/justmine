@@ -1104,7 +1104,9 @@ function tick() {
   for (const g of G.rings) g.t += DT; compact(G.rings, g => g.t < 0.45);
   if (G.xpPops) { for (const p of G.xpPops) p.t += DT; G.xpPops = G.xpPops.filter(p => p.t < 1.6); }
   if (G.crateFx) G.crateFx.t += DT; if (G.mergeFx) G.mergeFx.t += DT;
-  if (G.biomeFx && (G.biomeFx.t += DT) > 7) G.biomeFx = null;
+  if (G.biomeFx && (G.biomeFx.t += DT) > 3.4) G.biomeFx = null;
+  // enough Creditz for the next biome? show the banner once for that biome
+  if (G.scene === 'play') { const nb = nextBiome(); if (nb > 0 && G.creditz >= BIOMES[nb].req && !(G.nbShown & (1 << nb))) { G.nbShown = (G.nbShown || 0) | (1 << nb); if (!(G.reached & (1 << nb))) { G.biomeFx = { i: nb, t: 0 }; AUDIO.sfx('quest'); } } }
   for (const l of G.lights) l.life -= DT;
   compact(G.lights, l => l.life > 0);
   if (G.lights.length > 40) G.lights.splice(0, G.lights.length - 40);
@@ -1215,7 +1217,7 @@ function teleport(i) {
   const paid = isUnlocked(i);
   if (!paid && !canVisit(i)) { toast('Visit ' + BIOMES[i - 1].name + ' first'); AUDIO.sfx('deny'); return; }
   if (!paid && G.creditz < BIOMES[i].req) { toast('Unlocking ' + BIOMES[i].name + ' costs ' + fmt(BIOMES[i].req) + ' Creditz'); AUDIO.sfx('deny'); return; }
-  if (!paid) { G.biomeFx = { i, t: 0 }; G.creditz -= BIOMES[i].req; G.shown = G.creditz; toast('Unlocked ' + BIOMES[i].name + '!  +' + Math.round((60 + 40 * i) * xpMult()) + ' XP', BIOMES[i].accent); addXP(60 + 40 * i); }   // pay once, travel free after
+  if (!paid) { G.creditz -= BIOMES[i].req; G.shown = G.creditz; toast('Unlocked ' + BIOMES[i].name + '!  +' + Math.round((60 + 40 * i) * xpMult()) + ' XP', BIOMES[i].accent); addXP(60 + 40 * i); }   // pay once, travel free after
   loadBiome(i, true); fixQuests();
   AUDIO.sfx('teleport');
   checkAch(); save();
@@ -1493,7 +1495,7 @@ const GFX_ROWS = [
   ['floats', 'Floating numbers', ['Off', 'On']],
   ['gemNames', 'Mineral names', ['Off', 'On']],
   ['pickSize', 'Pickaxe size', ['Small', 'Normal', 'Big']],
-  ['splash', 'New biome screen', ['Off', 'On']],
+  ['splash', 'Next biome popup', ['Off', 'On']],
 ];
 const MUSICV = () => [0.35, 0.65, 1][GFX.musicVol === undefined ? 2 : GFX.musicVol];
 const GFX_PRESETS = [   // Low, Medium, High, Ultra
@@ -2446,35 +2448,39 @@ function drawDrill(d) {   // the Shop's auto miner: a little round robot with tw
   ctx.restore();
 }
 // ---------------- the player's pickaxe cursor ----------------
+// Pickaxe pointer: drawn with the hand at (0,0) and the handle going up. The hand sits beside the pointer,
+// placed so that at the end of a swing (STRIKE angle) the steel tip lands exactly on the pointer.
+const PICK_TIP = [-15, -26], PICK_STRIKE = -1.2;
 function drawCursor(mx, my) {
   setScreen();
-  const rot = -0.5 + G.mouse.swing * 1.1 - (G.mouse.down ? 0.25 : 0), sc = Math.max(0.9, K * 0.5) * [0.75, 1, 1.35][GFX.pickSize === undefined ? 1 : GFX.pickSize];
+  const sc = Math.max(0.9, K * 0.5) * [0.75, 1, 1.35][GFX.pickSize === undefined ? 1 : GFX.pickSize];
+  const rot = PICK_STRIKE + 0.5 * (1 - G.mouse.swing) + (G.mouse.down ? -0.08 : 0);   // resting = raised a bit, hit = down on the tip
+  const c = Math.cos(PICK_STRIKE), sn = Math.sin(PICK_STRIKE);
+  const hx = mx - (PICK_TIP[0] * c - PICK_TIP[1] * sn) * sc, hy = my - (PICK_TIP[0] * sn + PICK_TIP[1] * c) * sc;
   // swing trail: faint copies of the pickaxe where it just was (like motion blur)
   if (GFX.trail && G.mouse.swing > 0.12) {
-    ctx.save(); ctx.translate(mx, my); ctx.scale(sc, sc); ctx.globalCompositeOperation = 'lighter';
-    for (let k = 1; k <= 3; k++) { ctx.save(); ctx.rotate(rot + k * 0.22 * G.mouse.swing); ctx.globalAlpha = G.mouse.swing * (0.32 - k * 0.08); ironPick(true); ctx.restore(); }
+    ctx.save(); ctx.translate(hx, hy); ctx.scale(sc, sc); ctx.globalCompositeOperation = 'lighter';
+    for (let k = 1; k <= 3; k++) { ctx.save(); ctx.rotate(rot + k * 0.2 * G.mouse.swing); ctx.globalAlpha = G.mouse.swing * (0.32 - k * 0.08); ironPick(true); ctx.restore(); }
     ctx.restore();
   }
-  ctx.save(); ctx.translate(mx, my); ctx.rotate(rot); ctx.scale(sc, sc);
+  ctx.save(); ctx.translate(hx, hy); ctx.scale(sc, sc); ctx.rotate(rot);
   ironPick(false);
   ctx.restore();
 }
 // the iron pickaxe from the first version: brown handle, shiny steel head
 function ironPick(ghost) {
   ctx.lineJoin = 'round';
-  if (ghost) {
-    ctx.fillStyle = '#9ab8ff';
-    ctx.beginPath(); ctx.moveTo(-15, 2); ctx.quadraticCurveTo(0, -12, 15, 2); ctx.lineTo(12, 4); ctx.quadraticCurveTo(0, -4, -12, 4); ctx.closePath(); ctx.fill();
-    rr(-2, -2, 4, 26, 1.5); ctx.fill(); return;
-  }
+  const head = () => { ctx.beginPath(); ctx.moveTo(-15, -26); ctx.quadraticCurveTo(0, -40, 15, -26); ctx.lineTo(12, -24); ctx.quadraticCurveTo(0, -32, -12, -24); ctx.closePath(); };
+  if (ghost) { ctx.fillStyle = '#9ab8ff'; head(); ctx.fill(); rr(-2, -28, 4, 30, 1.5); ctx.fill(); return; }
   ctx.fillStyle = '#8b5a2b'; ctx.strokeStyle = '#120c06'; ctx.lineWidth = 1.6;
-  rr(-2, -2, 4, 26, 1.5); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#a8743c'; ctx.fillRect(-1, 0, 1, 22);   // wood light side
-  ctx.beginPath(); ctx.moveTo(-15, 2); ctx.quadraticCurveTo(0, -12, 15, 2); ctx.lineTo(12, 4); ctx.quadraticCurveTo(0, -4, -12, 4); ctx.closePath();
-  const g = ctx.createLinearGradient(0, -10, 0, 4); g.addColorStop(0, '#f4f8fb'); g.addColorStop(1, '#8e9aa6'); ctx.fillStyle = g; ctx.fill(); ctx.stroke();
+  rr(-2, -28, 4, 30, 1.5); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#a8743c'; ctx.fillRect(-1, -26, 1, 24);   // wood light side
+  ctx.fillStyle = '#5a3a1a'; ctx.fillRect(-2, -4, 4, 3);      // grip wrap near the hand
+  head();
+  const g = ctx.createLinearGradient(0, -38, 0, -24); g.addColorStop(0, '#f4f8fb'); g.addColorStop(1, '#8e9aa6'); ctx.fillStyle = g; ctx.fill(); ctx.stroke();
   if (GFX.trail) {   // a glint sliding along the steel
     const t = (G.time * 0.7) % 2.2 - 0.6;
-    if (t > 0 && t < 1) { const gx2 = -13 + t * 26, gy2 = -4 - Math.sin(t * Math.PI) * 4.5; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.sin(t * Math.PI) * 0.9; star4(gx2, gy2, 3.2, '#ffffff'); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; }
+    if (t > 0 && t < 1) { const gx2 = -13 + t * 26, gy2 = -30 - Math.sin(t * Math.PI) * 4.5; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.sin(t * Math.PI) * 0.9; star4(gx2, gy2, 3.2, '#ffffff'); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; }
   }
 }
 // little sparks where the pickaxe hits
@@ -4262,27 +4268,22 @@ function renderDroneShop(w, h) {
   unclip();
 }
 // NEW BIOME: nearly full screen, the biome's colour, its minerals; closes by itself or with a click
+// NEXT BIOME UNLOCKED: a band across the middle that slides in and fades out by itself (doesn't block anything)
 function renderBiomeFx() {
   const F = G.biomeFx; if (F && !GFX.splash) { G.biomeFx = null; return; }
-  if (!F || G.crateFx || G.mergeFx) return;
+  if (!F || G.crateFx || G.mergeFx || G.menu) return;
   setScreen();
-  const b = BIOMES[F.i], t = F.t, a = Math.min(1, t * 3, (7 - t) * 2), pop = easeBack(Math.min(1, t / 0.45));
-  ctx.globalAlpha = a; ctx.fillStyle = 'rgba(3,4,8,0.8)'; ctx.fillRect(0, 0, W, H);
-  region('biomefx', 0, 0, W, H, () => { if (F.t > 0.8) { G.biomeFx = null; AUDIO.sfx('click'); } });
-  const pw = Math.min(W - 24, 900), ph = Math.min(H - 24, 470), px = W / 2 - pw / 2, py = H / 2 - ph / 2, u = Math.min(pw / 900, ph / 470);
-  ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(0.8 + 0.2 * pop, 0.8 + 0.2 * pop); ctx.translate(-W / 2, -H / 2);
-  ctx.save(); ctx.translate(W / 2, py + ph * 0.42); ctx.rotate(G.time * 0.3); ctx.globalCompositeOperation = 'lighter';
-  for (let r = 0; r < 14; r++) { ctx.rotate(Math.PI / 7); ctx.globalAlpha = a * 0.1; ctx.fillStyle = b.accent; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-40 * u, -420 * u); ctx.lineTo(40 * u, -420 * u); ctx.closePath(); ctx.fill(); }
-  ctx.restore(); ctx.globalAlpha = a;
-  const g = ctx.createLinearGradient(0, py, 0, py + ph); g.addColorStop(0, rgba(b.accent, 0.35)); g.addColorStop(1, 'rgba(10,12,18,0.92)');
-  rr(px, py, pw, ph, 24 * u); ctx.fillStyle = '#10131c'; ctx.fill(); ctx.fillStyle = g; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = b.accent; ctx.stroke();
-  txt('NEW BIOME UNLOCKED!', W / 2, py + 54 * u, 26 * u, '#ffffff', { stroke: 4 });
-  txt(b.name, W / 2, py + 140 * u, fitSize(b.name, 84 * u, pw - 60), b.accent, { stroke: 7 });
-  txt('Biome ' + (F.i + 1) + ' of ' + BIOMES.length + '   -   Creditz x' + b.bonus + '   -   rock hardness x' + b.factor, W / 2, py + 210 * u, fitSize('Biome 00 of 00   -   Creditz x000   -   rock hardness x0000', 18 * u, pw - 60, FB), '#e8ecf4', { font: FB, weight: 900 });
-  const ms = b.minerals, gw = Math.min(130 * u, (pw - 60) / ms.length);
-  ms.forEach((m, k) => { const gx2 = W / 2 + (k - (ms.length - 1) / 2) * gw, gy = py + 320 * u; drawGem(gemArt(b.name, k), gx2, gy, 44 * u, { glow: RCOL[m[2]], rank: rank(m[2]), rot: Math.sin(G.time * 2 + k) * 0.15 }); txt(gemArt(b.name, k).name, gx2, gy + 50 * u, fitSize(gemArt(b.name, k).name, 14 * u, gw - 8, FB), '#ffffff', { font: FB, weight: 900 }); txt(m[2], gx2, gy + 68 * u, fitSize(m[2], 12 * u, gw - 8, FB), RCOL[m[2]], { font: FB, weight: 900 }); });
-  if (t > 0.8) txt(G.touch || TOUCH ? 'Tap to start mining' : 'Click to start mining', W / 2, py + ph - 36 * u, 16 * u, 'rgba(255,255,255,' + (0.55 + 0.4 * Math.sin(G.time * 4)) + ')', { font: FB, weight: 900 });
-  ctx.restore(); ctx.globalAlpha = 1;
+  const b = BIOMES[F.i], t = F.t, a = Math.min(1, t * 4, (3.4 - t) * 2.5), slide = ease(Math.min(1, t * 3));
+  const bh = Math.min(120, H * 0.18), y = H * 0.42 - bh / 2;
+  ctx.save(); ctx.globalAlpha = a * 0.85;
+  const g = ctx.createLinearGradient(0, 0, W, 0); g.addColorStop(0, 'rgba(8,10,16,0)'); g.addColorStop(0.2, 'rgba(8,10,16,0.75)'); g.addColorStop(0.8, 'rgba(8,10,16,0.75)'); g.addColorStop(1, 'rgba(8,10,16,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, y, W, bh);
+  ctx.fillStyle = rgba(b.accent, 0.8); ctx.fillRect(W * 0.2, y, W * 0.6, 2); ctx.fillRect(W * 0.2, y + bh - 2, W * 0.6, 2);
+  ctx.globalAlpha = a; const dx = (1 - slide) * 60;
+  txt('NEXT BIOME UNLOCKED', W / 2 - dx, y + bh * 0.3, Math.min(17, bh * 0.15), '#ffffff', { font: FB, weight: 900 });
+  txt(b.name, W / 2 + dx, y + bh * 0.62, fitSize(b.name, Math.min(46, bh * 0.4), W - 60), b.accent, { stroke: 5 });
+  txt('Open Biomes to go there', W / 2, y + bh * 0.88, Math.min(12, bh * 0.1), '#c9cfdc', { font: FB, weight: 800, shadow: false });
+  ctx.restore();
 }
 // big pop-ups: opening a crate, and merging two drones
 function renderDroneFx() {
