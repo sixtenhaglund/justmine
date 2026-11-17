@@ -1784,7 +1784,7 @@ function drawLighting(shx, shy) {
   for (const d of G.drops) L(d.x, d.y, 34, 0.7, RCOL[b.minerals[d.i][2]]);
   if (G.heart) L(0, 32, 160 + Math.sin(G.time * 3) * 16, 0.9, '#ff6a3a');
   for (const d of deployed()) { const s = DRT.get(d.id); if (!s) continue; const ac = dronePal(d).accent; L(s.x, s.y, 34, 0.45, null);
-    if (s.ends) for (const e of s.ends) for (let f = 0; f <= 1; f += 0.25) L(e.ox + Math.cos(s.ang) * e.len * f, e.oy + Math.sin(s.ang) * e.len * f, 50 + d.rank * 6, 0.8, ac);
+    if (s.ends) for (const e of s.ends) for (let f = 0; f <= 1; f += 0.5) L(e.ox + Math.cos(s.ang) * e.len * f, e.oy + Math.sin(s.ang) * e.len * f, 50 + d.rank * 6, 0.8, ac);
     if (d.type === 'alien' && s.state === 'beam' && s.target) L(s.target.x, s.target.y + 20, 70, 0.8, '#7dff3a'); }
   for (const b of G.dbombs) L(b.x, b.y, 26, 0.6, '#ff5a3a');
   if (gx('bg') > 0) for (const ln of LANTERNS) L(ln[0], ln[1] - 6, 135 * lanternFlick(ln[2]), 0.95, lanternCol());
@@ -1814,7 +1814,7 @@ function drawBloom() {
   const w1 = Math.max(4, Math.ceil(cv.width / 6)), h1 = Math.max(4, Math.ceil(cv.height / 6));
   const a = bloomCv('a', w1, h1), ax = a.getContext('2d'), b = bloomCv('b', Math.max(2, Math.ceil(w1 / 4)), Math.max(2, Math.ceil(h1 / 4)));
   BLOOM.n = (BLOOM.n || 0) + 1;
-  if (BLOOM.n % 2 === 0 || BLOOM.w !== w1 || BLOOM.h !== h1) {   // you can't see a glow that is 1 frame old, but it halves the cost
+  if (BLOOM.n % 3 === 0 || BLOOM.w !== w1 || BLOOM.h !== h1) {   // you can't see a glow that is 1 frame old, but it halves the cost
     BLOOM.w = w1; BLOOM.h = h1;
     ax.globalAlpha = 1; ax.imageSmoothingEnabled = true; ax.imageSmoothingQuality = 'high';
     ax.globalCompositeOperation = 'copy'; ax.drawImage(cv, 0, 0, w1, h1);
@@ -2580,7 +2580,7 @@ function region(id, x, y, w, h, fn) {
   const f = UI.frame;
   let rx = f.x + x * f.s, ry = f.y + y * f.s, rw = w * f.s, rh = h * f.s;
   if (UI.clip) { const c = UI.clip, x2 = Math.min(rx + rw, c.x + c.w), y2 = Math.min(ry + rh, c.y + c.h); rx = Math.max(rx, c.x); ry = Math.max(ry, c.y); rw = x2 - rx; rh = y2 - ry; if (rw <= 0 || rh <= 0) return; }
-  UI.regions.push({ id, x: rx, y: ry, w: rw, h: rh, fn });
+  const R = { id, x: rx, y: ry, w: rw, h: rh, fn }; UI.regions.push(R); return R;
 }
 const btnGrads = new Map();
 function btn(id, x, y, w, h, label, o) {
@@ -2774,7 +2774,7 @@ function render() {
   setScreen();
   if (G.mouse.over && !G.mouse.onUI && inWorld(G.mouse.x, G.mouse.y)) drawCursor(G.mouse.x, G.mouse.y);
   renderHUD();
-  renderMenus();
+  renderMenus(); renderDragGhost();
   renderOverlays();
   renderDroneFx();
   renderBiomeFx();
@@ -3642,7 +3642,7 @@ function openCrate(kind) {
     const w = crateOdds(C), tot = Object.values(w).reduce((a, b) => a + b, 0), type = pickW(w);
     item = { drone: addDrone(type, 1), pct: w[type] / tot * 100 };
   }
-  G.crateFx = { kind, item, t: 0 }; G.menu = null; AUDIO.sfx('crate'); addXP(15); save();
+  G.crateFx = { kind, item, t: 0 }; AUDIO.sfx('crate'); addXP(15); save();
 }
 // Crate luck: every type except the plain Drone gets more weight
 function crateOdds(C) { const w = {}, L = upv('cluck', 0); for (const k in C.odds) w[k] = C.odds[k] * (k === 'normal' ? 1 : 1 + L * 3); return w; }
@@ -3667,7 +3667,7 @@ function doMerge(a, b) {
   G.drones.push(n);
   if (k >= 0 && k < G.slotsOpen) G.slots[k] = n.id;
   G.droneSel = n.id; G.mergeSel = null;
-  G.mergeFx = { a, b, d: n, t: 0 }; G.menu = null; AUDIO.sfx('merge'); addXP(40); save();
+  G.mergeFx = { a, b, d: n, t: 0 }; AUDIO.sfx('merge'); addXP(40); save();
 }
 
 // ---------------- codes (typed in Settings) ----------------
@@ -4195,7 +4195,7 @@ function pixelSprite(d, P, t, act) {
   if (PIXC.size > 400) PIXC.clear();
   const r2 = 0.4, w = Math.ceil(68 * r2), h = Math.ceil(62 * r2);
   c = document.createElement('canvas'); c.width = w; c.height = h;
-  const x = c.getContext('2d'); x.setTransform(r2, 0, 0, r2, 34 * r2, 36 * r2);
+  const x = c.getContext('2d', { willReadFrequently: true }); x.setTransform(r2, 0, 0, r2, 34 * r2, 36 * r2);
   const keep = ctx; ctx = x; droneBody(d, P, 1); droneMoving(d, P, fr / 8, act > 0.5 ? 1 : 0); ctx = keep;
   try {
     const im = x.getImageData(0, 0, w, h), px = im.data, solid = new Uint8Array(w * h);
@@ -4206,7 +4206,7 @@ function pixelSprite(d, P, t, act) {
   PIXC.set(key, c);
   return c;
 }
-const DSPR = {};
+const DSPR = {}, GLC = new Map();
 function dspr(k, w, h) { let c = DSPR[k]; if (!c) c = DSPR[k] = document.createElement('canvas'); if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } return c; }
 function drawDrone(d, x, y, o) {
   o = o || {};
@@ -4216,15 +4216,21 @@ function drawDrone(d, x, y, o) {
   const m = ctx.getTransform && ctx.getTransform(), res = m && m.a !== undefined ? Math.hypot(m.a, m.b) : K * DPR * sc;   // pixels per unit right now
   if (P.fx === 'pixel') { ctx.imageSmoothingEnabled = false; ctx.drawImage(pixelSprite(d, P, t, act), -34, -36, 68, 62); ctx.imageSmoothingEnabled = true; }
   else if (P.fx === 'glitch') {
-    const pix = false, r2 = Math.min(4, Math.max(1, res)), Wd = Math.ceil(68 * r2), Hd = Math.ceil(62 * r2);
-    const c = dspr(pix ? 'pix' : 'gl', Wd, Hd), cx2 = c.getContext('2d');
-    cx2.setTransform(1, 0, 0, 1, 0, 0); cx2.clearRect(0, 0, Wd, Hd); cx2.setTransform(r2, 0, 0, r2, 34 * r2, 36 * r2);
-    const keep = ctx; ctx = cx2; droneBody(d, P, r2); droneMoving(d, P, t, act); ctx = keep;
+    const pix = false, r2 = Math.min(3, Math.max(1, Math.round(res * 2) / 2)), Wd = Math.ceil(68 * r2), Hd = Math.ceil(62 * r2);
+    const gk = d.id + '|' + r2, fr = Math.floor(t * 20);
+    let GC = GLC.get(gk); if (!GC) { if (GLC.size > 40) GLC.clear(); GC = { fr: -1, c: document.createElement('canvas'), tc: {} }; GLC.set(gk, GC); }
+    const c = GC.c;
+    if (GC.fr !== fr) {   // a new glitch frame
+      GC.fr = fr; if (c.width !== Wd || c.height !== Hd) { c.width = Wd; c.height = Hd; }
+      const cx2 = c.getContext('2d'); cx2.setTransform(1, 0, 0, 1, 0, 0); cx2.clearRect(0, 0, Wd, Hd); cx2.setTransform(r2, 0, 0, r2, 34 * r2, 36 * r2);
+      const keep = ctx; ctx = cx2; droneBody(d, P, r2); droneMoving(d, P, t, act); ctx = keep;
+      for (const col of ['#ff00ff', '#00ff66']) { const tc = GC.tc[col] || (GC.tc[col] = document.createElement('canvas')); if (tc.width !== Wd || tc.height !== Hd) { tc.width = Wd; tc.height = Hd; } const tx = tc.getContext('2d'); tx.globalCompositeOperation = 'copy'; tx.drawImage(c, 0, 0); tx.globalCompositeOperation = 'source-in'; tx.fillStyle = col; tx.fillRect(0, 0, Wd, Hd); }
+    }
     if (pix) { ctx.imageSmoothingEnabled = false; ctx.drawImage(c, -34, -36, 68, 62); ctx.imageSmoothingEnabled = true; }
     else {   // GL1TCH: colour channels split apart, slices jump sideways, the whole thing flickers
       const burst = Math.sin(t * 7.3 + d.id) > 0.55 || Math.random() < 0.06, sp = burst ? 2.5 : 0.9;
       ctx.globalCompositeOperation = 'lighter';
-      for (const [dx, col] of [[-sp, '#ff00ff'], [sp, '#00ff66']]) { const tc = dspr('glt' + col, Wd, Hd), tx = tc.getContext('2d'); tx.globalCompositeOperation = 'copy'; tx.drawImage(c, 0, 0); tx.globalCompositeOperation = 'source-in'; tx.fillStyle = col; tx.fillRect(0, 0, Wd, Hd); ctx.globalAlpha = 0.55; ctx.drawImage(tc, -34 + dx, -36, 68, 62); }
+      for (const [dx, col] of [[-sp, '#ff00ff'], [sp, '#00ff66']]) { ctx.globalAlpha = 0.55; ctx.drawImage(GC.tc[col], -34 + dx, -36, 68, 62); }
       ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
       if (burst) { for (let k = 0; k < 4; k++) { const sy = k * Hd / 4, off = (Math.random() - 0.5) * 8; ctx.drawImage(c, 0, sy, Wd, Hd / 4, -34 + off, -36 + k * 15.5, 68, 15.5); } }
       else ctx.drawImage(c, -34, -36, 68, 62);
@@ -4284,11 +4290,38 @@ function drawDroneWorld() {
 // ====================================================================
 //  DRONE MENU: slots + your drones + merging, and the Drone Shop
 // ====================================================================
+// DRAG + DROP: hold a drone and move it onto a slot (swaps with what's there) or into "your drones" (takes it out)
+let DDRAG = null; const DDROP = { inv: null, s: 1 };
+function dropDrone(id, x, y) {
+  const d = droneById(id); if (!d) return;
+  const from = slotOf(d), fromSlot = from >= 0 && from < G.slotsOpen, r = hitRegion(x, y), m = r && /^slot(\d)$/.exec(r.id);
+  G.droneSel = d.id;
+  if (m) {
+    const k = +m[1]; if (k >= G.slotsOpen || k === from) return;
+    const o = G.slots[k];
+    if (fromSlot) { G.slots[from] = o || null; G.slots[k] = d.id; }
+    else { G.slots[k] = d.id; if (o) DRT.delete(o); }
+    AUDIO.sfx('buy'); save(); return;
+  }
+  const I = DDROP.inv;
+  if (fromSlot && I && x >= I.x && x <= I.x + I.w && y >= I.y && y <= I.y + I.h) { G.slots[from] = null; DRT.delete(d.id); AUDIO.sfx('click'); save(); }
+}
+function renderDragGhost() {
+  if (!DDRAG || !DDRAG.on || G.menu !== 'drones') return;
+  const d = droneById(DDRAG.id); if (!d) { DDRAG = null; return; }
+  setScreen(); const k = DDROP.s || 1;
+  ctx.save(); ctx.globalAlpha = 0.25; ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(G.mouse.x + 6, G.mouse.y + 30 * k, 26 * k, 8 * k, 0, 0, 6.283); ctx.fill(); ctx.restore();
+  drawDrone(d, G.mouse.x, G.mouse.y - 4 * k, { scale: 2.2 * k, t: G.time });
+  rankBadge(d, G.mouse.x + 34 * k, G.mouse.y - 34 * k, k);
+}
 function cardDrone(d, x, y, w, h, id, opts) {
   opts = opts || {};
   const sel = G.droneSel === d.id, merging = G.mergeSel !== null && G.mergeSel !== undefined, A = merging && droneById(G.mergeSel);
   const canM = A && A !== d && !!mergeResult(A, d);
-  region(id, x, y, w, h, () => clickDrone(d));
+  const rg = region(id, x, y, w, h, () => clickDrone(d));
+  if (rg && G.menu === 'drones' && !merging && !opts.noDrag) rg.drag = d.id;
+  const dragged = DDRAG && DDRAG.on && DDRAG.id === d.id;
+  ctx.save(); if (dragged) ctx.globalAlpha *= 0.3;
   ctx.fillStyle = canM ? 'rgba(125,255,122,0.18)' : sel ? 'rgba(120,170,255,0.22)' : UI.hot === id ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)';
   rr(x, y, w, h, 10); ctx.fill();
   ctx.lineWidth = sel || canM ? 2 : 1; ctx.strokeStyle = canM ? '#7dff7a' : sel ? '#8fb0ff' : rgba(RCOL[DRONE_TYPES[d.type].rar], 0.6); ctx.stroke();
@@ -4299,6 +4332,7 @@ function cardDrone(d, x, y, w, h, id, opts) {
     const f = dLvl(d) >= DRONE_MAX_LVL ? 1 : clamp((d.xp || 0) / dXpNeed(dLvl(d)), 0, 1); ctx.fillStyle = 'rgba(0,0,0,0.5)'; rr(x + 6, y + h - 30, w - 12, 4, 2); ctx.fill(); ctx.fillStyle = '#ffe14a'; rr(x + 6, y + h - 30, (w - 12) * f, 4, 2); ctx.fill(); }
   txt(DRONE_TYPES[d.type].name, x + w / 2, y + h - 18, fitSize(DRONE_TYPES[d.type].name, 11, w - 8, FB), '#ffffff', { font: FB, weight: 900, shadow: false });
   txt(DRONE_TYPES[d.type].rar, x + w / 2, y + h - 7, fitSize(DRONE_TYPES[d.type].rar, 9, w - 6, FB), RCOL[DRONE_TYPES[d.type].rar], { font: FB, weight: 900, shadow: false });
+  ctx.restore();
   ctx.restore();
 }
 // a small plate with the rank in Roman numerals (I II III IV V), top-right corner at (rx, ry)
@@ -4322,7 +4356,7 @@ function renderDrones() {
   panel(0, 0, w, h, 'DRONES', '#2a8aa8');
   closeBtn(w - 46, 12);
   if (G.droneTab === undefined) G.droneTab = 0;
-  ['My Drones', 'Drone Shop'].forEach((n, i) => btn('dtab' + i, 30 + i * 200, 28, 190, 34, n, { col: G.droneTab === i ? '#2a8aa8' : '#343c50', size: 16, r: 9, icon: i ? 'shop' : 'drone', fn: () => { G.droneTab = i; G.mergeSel = null; AUDIO.sfx('click'); } }));
+  ['My Drones', 'Drone Shop'].forEach((n, i) => btn('dtab' + i, 30 + i * 200, 28, 190, 34, n, { col: G.droneTab === i ? '#2a8aa8' : '#343c50', size: 16, r: 9, icon: i ? 'shop' : 'drone', fn: () => { G.droneTab = i; G.mergeSel = null; G.skinList = false; AUDIO.sfx('click'); } }));
   ctx.globalAlpha *= tabFade('drones', G.droneTab);
   if (G.droneTab === 1) { renderDroneShop(w, h); return; }
   // --- the 10 slots ---
@@ -4337,6 +4371,7 @@ function renderDrones() {
       continue;
     }
     const d = G.slots[k] && droneById(G.slots[k]);
+    if (DDRAG && DDRAG.on) { const fr = UI.frame, mx = (G.mouse.x - fr.x) / fr.s, my = (G.mouse.y - fr.y) / fr.s, over = mx >= x && mx <= x + sw && my >= y && my <= y + sh; ctx.fillStyle = over ? 'rgba(125,255,122,0.25)' : 'rgba(125,255,122,0.07)'; rr(x - 3, y - 3, sw + 6, sh + 6, 12); ctx.fill(); if (over) { ctx.lineWidth = 2.5; ctx.strokeStyle = '#7dff7a'; ctx.stroke(); } }
     if (d) { cardDrone(d, x, y, sw, sh, 'slot' + k); continue; }
     const sel = G.droneSel && droneById(G.droneSel);
     region('slot' + k, x, y, sw, sh, () => { if (sel && slotOf(sel) < 0) { G.slots[k] = sel.id; AUDIO.sfx('buy'); save(); } else AUDIO.sfx('click'); });
@@ -4350,6 +4385,9 @@ function renderDrones() {
   txt('YOUR DRONES  (' + inv.length + ')', 30, 204, 13, '#9ad8ff', { align: 'left', font: FB, weight: 900 });
   if (inv.length > 16) txt('scroll for more', w - 30, 204, 11, '#8a90a0', { align: 'right', font: FB, weight: 800 });
   const isa = scrollArea('dinv', 20, 214, w - 40, 192, 'y', Math.ceil(inv.length / 8) * 94);
+  { const fr = UI.frame; DDROP.inv = { x: fr.x + 20 * fr.s, y: fr.y + 214 * fr.s, w: (w - 40) * fr.s, h: 192 * fr.s }; DDROP.s = fr.s; }
+  if (DDRAG && DDRAG.on) { const dd = droneById(DDRAG.id), fromSlot = dd && slotOf(dd) >= 0 && slotOf(dd) < G.slotsOpen, I = DDROP.inv, over = G.mouse.x >= I.x && G.mouse.x <= I.x + I.w && G.mouse.y >= I.y && G.mouse.y <= I.y + I.h;
+    if (fromSlot) { ctx.setLineDash([7, 5]); ctx.lineWidth = 2; ctx.strokeStyle = over ? '#ffd84a' : 'rgba(255,216,74,0.45)'; rr(22, 216, w - 44, 188, 12); ctx.stroke(); ctx.setLineDash([]); if (over) { ctx.fillStyle = 'rgba(255,216,74,0.08)'; ctx.fill(); } } }
   clipBox(20, 214, w - 40, 192);
   inv.forEach((d, i) => { const yy = 218 + Math.floor(i / 8) * 94 - isa.pos; if (yy > 120 && yy < 410) cardDrone(d, 26 + (i % 8) * 102, yy, 96, 88, 'inv' + d.id); });
   unclip();
@@ -4423,7 +4461,34 @@ function drawCrate(x, y, s, col, t, shake) {
   ctx.fillStyle = '#ffd84a'; rr(-3, -3, 6, 6, 1); ctx.fill(); ctx.stroke();
   ctx.restore();
 }
+function renderSkinList(w, h) {
+  const C = CRATES.skin, tot = Object.values(C.skins).reduce((a, b) => a + b, 0), RORD = ['Celestial', 'Mythical', 'Legendary', 'Epic', 'Rare', 'Uncommon', 'Common'];
+  const ids = Object.keys(C.skins).sort((a, b) => C.skins[a] - C.skins[b] || RORD.indexOf(SKINS[a].rar) - RORD.indexOf(SKINS[b].rar));
+  const have = ids.filter(id => G.skins[id] > 0).length;
+  btn('skinlist_back', 30, 74, 110, 32, 'Back', { col: '#4a5070', size: 15, r: 9, fn: () => { G.skinList = false; AUDIO.sfx('click'); } });
+  txt('SKIN CRATE: every skin inside', w / 2, 90, 20, C.col, { stroke: 3 });
+  txt('You have ' + have + ' / ' + ids.length, w - 34, 90, 13, '#c9cfdc', { align: 'right', font: FB, weight: 900 });
+  const cols = 6, tw = 128, th = 150, gap = 8, top = 116, boxH = h - top - 70, rows = Math.ceil(ids.length / cols);
+  const sa = scrollArea('skinlist', 20, top, w - 40, boxH, 'y', rows * (th + gap) + 6);
+  clipBox(20, top, w - 40, boxH);
+  ids.forEach((id, i) => {
+    const x = 26 + (i % cols) * (tw + gap), y = top + 4 + Math.floor(i / cols) * (th + gap) - sa.pos;
+    if (y > top + boxH || y + th < top) return;
+    const S = SKINS[id], rc = RCOL[S.rar] || '#ffffff', own = G.skins[id] || 0;
+    ctx.fillStyle = rgba(rc, own ? 0.14 : 0.06); rr(x, y, tw, th, 12); ctx.fill(); ctx.lineWidth = own ? 2 : 1; ctx.strokeStyle = rgba(rc, own ? 0.9 : 0.4); ctx.stroke();
+    ctx.fillStyle = '#eef1f6'; rr(x + 8, y + 8, tw - 16, 76, 9); ctx.fill();
+    ctx.save(); if (!own) ctx.globalAlpha *= 0.55; drawDrone({ id: 70 + i, type: 'normal', rank: 1, skin: id, hat: null }, x + tw / 2, y + 48, { scale: 1.6, t: G.time + i }); ctx.restore();
+    if (own) { const lab = 'x' + own, bw = 12 + lab.length * 6; rr(x + tw - bw - 10, y + 11, bw, 16, 8); ctx.fillStyle = '#2a3446'; ctx.fill(); txt(lab, x + tw - bw / 2 - 10, y + 19.5, 11, '#ffffff', { font: FB, weight: 900, shadow: false }); }
+    txt(S.name, x + tw / 2, y + 100, fitSize(S.name, 15, tw - 12), '#ffffff', { stroke: 3 });
+    txt(S.rar, x + tw / 2, y + 119, 11, rc, { font: FB, weight: 900, shadow: false });
+    txt(fmtPct(C.skins[id] / tot) + ' chance', x + tw / 2, y + 136, 11, '#c9cfdc', { font: FB, weight: 800, shadow: false });
+  });
+  unclip();
+  const hv = G.crates.skin || 0;
+  btn('skinlist_buy', w / 2 - 130, h - 58, 260, 42, hv ? 'Open free (' + hv + ')' : 'Open one: ' + fmt(C.price), { col: hv ? '#7a3aa8' : G.creditz >= C.price ? '#3aa04a' : '#6a3a3a', size: 17, fn: () => buyCrate('skin') });
+}
 function renderDroneShop(w, h) {
+  if (G.skinList) { renderSkinList(w, h); return; }
   const rows = Math.ceil(CRATE_ORDER.length / 3), sa = scrollArea('dshop', 20, 72, w - 40, h - 90, 'y', rows * 272 + 10);
   if (rows * 272 > h - 90) txt('scroll for more crates', w - 30, 64, 11, '#8a90a0', { align: 'right', font: FB, weight: 800 });
   clipBox(20, 72, w - 40, h - 90);
@@ -4431,7 +4496,9 @@ function renderDroneShop(w, h) {
     const C = CRATES[k], x = 26 + (i % 3) * 272, y = 78 + Math.floor(i / 3) * 272 - sa.pos, cw = 262, ch = 262, have = G.crates[k] || 0;
     if (y > h || y + ch < 60) return;
     ctx.fillStyle = rgba(C.col, 0.08); rr(x, y, cw, ch, 14); ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = rgba(C.col, 0.5); ctx.stroke();
+    if (k === 'skin') region('skinlist_open', x, y, cw, ch - 50, () => { G.skinList = true; if (SCR.skinlist) SCR.skinlist.target = SCR.skinlist.pos = 0; AUDIO.sfx('open'); });
     drawCrate(x + cw / 2, y + 62, 2, C.col, G.time + i);
+    if (k === 'skin') txt('tap to see all skins', x + cw / 2, y + 16, 11, '#ffb27a', { font: FB, weight: 900, shadow: false });
     txt(C.name, x + cw / 2, y + 116, fitSize(C.name, 19, cw - 20), C.col, { stroke: 3 });
     let lines;
     if (k === 'skin') { const tot = Object.values(C.skins).reduce((a, b) => a + b, 0), by = {}; for (const [sk, v] of Object.entries(C.skins)) by[SKINS[sk].rar] = (by[SKINS[sk].rar] || 0) + v; lines = Object.entries(by).map(([r, v]) => r + ' skins ' + fmtPct(v / tot)); lines.unshift(Object.keys(C.skins).length + ' skins to collect'); }
@@ -4520,7 +4587,7 @@ function renderPassButton() {
     ctx.fillStyle = 'rgba(0,0,0,0.35)'; rr(x, y + 4, w, h, 14); ctx.fill();
     const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, hot ? '#5ad02a' : '#3a9a1a'); g.addColorStop(1, '#14400a'); ctx.fillStyle = g; rr(x, y, w, h, 14); ctx.fill();
     ctx.lineWidth = 2; ctx.strokeStyle = '#9aff4a'; ctx.stroke();
-    drawDrone({ id: 9, type: 'alien', rank: 5, skin: null, hat: null }, x + w / 2, y + 34 * u + Math.sin(G.time * 2) * 3, { scale: w / 46 });
+    { const pw2 = Math.ceil(w), ph2 = Math.ceil(w * 0.75), pic = hudPic('passufo', pw2, ph2, () => drawDrone({ id: 9, type: 'alien', rank: 5, skin: null, hat: null }, 0, 0, { scale: w / 46, t: 1 })); ctx.drawImage(pic, x + w / 2 - pw2 / 2, y + 34 * u + Math.sin(G.time * 2) * 3 - ph2 / 2, pw2, ph2); }
     txt('PASS', x + w / 2, y + 74 * u, Math.min(28, w / 3.6), '#ffffff', { stroke: 3.5 });
     txt('Lv ' + P.lvl, x + w / 2, y + 98 * u, Math.min(22, 15 * u), '#c8ff9a', { stroke: 3 });
     ctx.fillStyle = 'rgba(0,0,0,0.4)'; rr(x + 8, y + 112 * u, w - 16, 9, 4.5); ctx.fill(); ctx.fillStyle = '#9aff4a'; rr(x + 8, y + 112 * u, (w - 16) * (P.lvl >= PASS_MAX ? 1 : clamp(P.xp / xpNeed(P.lvl + 1), 0, 1)), 9, 4.5); ctx.fill();
@@ -4558,7 +4625,7 @@ function renderDroneColumn() {
     region(id, sx, y, size, size, () => open(d && d.id));
     ctx.fillStyle = UI.hot === id ? 'rgba(255,255,255,0.18)' : 'rgba(10,14,22,0.7)'; rr(sx, y, size, size, 7); ctx.fill();
     ctx.lineWidth = 1.2; ctx.strokeStyle = d ? rgba(RCOL[DRONE_TYPES[d.type].rar], 0.8) : 'rgba(255,255,255,0.18)'; ctx.stroke();
-    if (d) { drawDrone(d, sx + size / 2, y + size * 0.52, { scale: size / 44 }); rankBadge(d, sx + size - 1, y + 1, Math.max(0.55, size / 70)); }
+    if (d) { const pic = hudPic('slot' + d.type + (d.skin || '') + (d.hat || '') + d.rank, size, size, () => drawDrone(d, 0, size * 0.02, { scale: size / 44, t: 1 })); ctx.drawImage(pic, sx, y, size, size); rankBadge(d, sx + size - 1, y + 1, Math.max(0.55, size / 70)); }
     else txt('+', sx + size / 2, y + size / 2 + 1, size * 0.45, 'rgba(255,255,255,0.3)', { shadow: false });
   }
   const hot = UI.hot === 'dronebig';
@@ -4604,6 +4671,12 @@ const WHEEL = [   // [name, weight, colour]
 const WSEG = 6.2832 / WHEEL.length;
 const WS = { ang: 0, from: 0, to: 0, t: 0, dur: 4.2, spinning: false, prize: -1, show: 0, msg: '', lastTick: -1 };
 const spinPrice = () => Math.min(1e12, 1e5 * Math.pow(4, G.biome));   // 100K in the first biome, at most 1T
+const HUDC = new Map();
+function hudPic(key, w, h, draw) {   // draws draw() once into a w x h picture (centre = 0,0) and reuses it
+  const k = key + '|' + w + 'x' + h + '|' + DPR; let c = HUDC.get(k);
+  if (!c) { if (HUDC.size > 120) HUDC.clear(); c = document.createElement('canvas'); c.width = Math.ceil(w * DPR); c.height = Math.ceil(h * DPR); const x = c.getContext('2d'); x.setTransform(DPR, 0, 0, DPR, c.width / 2, c.height / 2); const keep = ctx; ctx = x; draw(); ctx = keep; HUDC.set(k, c); }
+  return c;
+}
 function drawWheelIcon(x, y, r, a) {   // a little wheel (buttons, pass card)
   ctx.save(); ctx.translate(x, y); ctx.rotate(a);
   WHEEL.forEach((w, i) => { ctx.fillStyle = w[2]; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r, i * WSEG, (i + 1) * WSEG); ctx.closePath(); ctx.fill(); });
@@ -4638,70 +4711,138 @@ function giveWheelPrize(i) {
     case 'Extra spin': G.spins = (G.spins || 0) + 1; msg = 'One more spin!'; break;
     case 'JACKPOT': { const a = rv * 1000; giveCreditz(a, true); G.crates.epic = (G.crates.epic || 0) + 1; msg = 'JACKPOT! +' + fmt(a) + ' Creditz + an Epic Crate'; G.flash = 0.6; G.flashCol = '#ffd84a'; G.shake = Math.max(G.shake, 8); break; }
   }
-  WS.msg = msg; WS.show = 1; G.hudPulse = 1;
+  WS.msg = msg; WS.show = 1; G.hudPulse = 1; WS.win = 1;
+  const big = WHEEL[i][0] === 'JACKPOT', cols = ['#ff4a6a', '#ffd84a', '#4ad0ff', '#7dff7a', '#ff8af2', '#ffffff'];
+  WS.conf = []; for (let k = 0; k < (big ? 160 : 70); k++) { const a = Math.random() * 6.283, v = 4 + Math.random() * (big ? 11 : 7); WS.conf.push({ x: 0, y: 0, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 3, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4, c: cols[k % cols.length], w: 4 + Math.random() * 5, life: 1.6 + Math.random() * 1.2 }); }
   AUDIO.sfx(WHEEL[i][0] === 'JACKPOT' ? 'victory' : 'quest'); save();
 }
+function tickWheelFx(dt) {
+  WS.flap = (WS.flap || 0) * Math.pow(0.0005, dt); if (WS.buy > 0) WS.buy = Math.max(0, WS.buy - dt / 1.3); WS.win = Math.max(0, (WS.win || 0) - dt / 2.5);
+  if (WS.conf) { for (const p of WS.conf) { p.x += p.vx * dt * 60; p.y += p.vy * dt * 60; p.vy += 0.25 * dt * 60; p.vx *= Math.pow(0.98, dt * 60); p.r += p.vr * dt * 60; p.life -= dt; } WS.conf = WS.conf.filter(p => p.life > 0); }
+}
 function tickWheel(dt) {
-  if (!WS.spinning) { if (WS.show > 0) WS.show = Math.max(0, WS.show - dt / 6); return; }
+  tickWheelFx(dt);
+  if (!WS.spinning) { if (WS.show > 0) WS.show = Math.max(0, WS.show - dt / 6); return; }   // (tickWheelFx above keeps confetti moving)
   WS.t += dt; const f = Math.min(1, WS.t / WS.dur), e = 1 - Math.pow(1 - f, 4);   // fast start, slow stop
   WS.ang = WS.from + (WS.to - WS.from) * e;
   const seg = Math.floor(((-WS.ang - Math.PI / 2) % 6.2832 + 6.2832) % 6.2832 / WSEG);   // tick sound when a new slice passes the pointer
-  if (seg !== WS.lastTick) { WS.lastTick = seg; AUDIO.sfx('tick'); }
+  if (seg !== WS.lastTick) { WS.lastTick = seg; AUDIO.sfx('tick'); WS.flap = 0.55; }
   if (f >= 1) { WS.spinning = false; WS.ang = WS.to % 6.2832; giveWheelPrize(WS.prize); }
 }
+// the wheel face (slices, gloss, icons, words) is drawn once into a picture; spinning just turns that picture
+const WFACE = { key: '', c: null };
+function wheelFace(R, res) {
+  const key = R + '|' + Math.round(res * 20); if (WFACE.key === key) return WFACE.c;
+  const S = Math.ceil(R * 2 * res), c = WFACE.c || document.createElement('canvas'); c.width = c.height = S;
+  const x = c.getContext('2d'); x.setTransform(res, 0, 0, res, S / 2, S / 2); x.clearRect(-R, -R, R * 2, R * 2);
+  const keep = ctx; ctx = x;
+  WHEEL.forEach((wh, i) => {
+    const a0 = i * WSEG, a1 = a0 + WSEG, g = ctx.createRadialGradient(0, 0, R * 0.15, 0, 0, R);
+    g.addColorStop(0, lighten(wh[2], 0.45)); g.addColorStop(0.6, wh[2]); g.addColorStop(1, darken(wh[2], 0.35));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, R, a0, a1); ctx.closePath(); ctx.fill();
+    // a glossy stripe along the slice
+    ctx.save(); ctx.clip(); ctx.rotate(a0 + WSEG / 2); const sg = ctx.createLinearGradient(0, -R * 0.25, 0, R * 0.25); sg.addColorStop(0, 'rgba(255,255,255,0)'); sg.addColorStop(0.35, 'rgba(255,255,255,0.22)'); sg.addColorStop(0.5, 'rgba(255,255,255,0)'); ctx.fillStyle = sg; ctx.fillRect(0, -R * 0.25, R, R * 0.5); ctx.restore();
+    ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(40,24,4,0.9)'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a0) * R, Math.sin(a0) * R); ctx.stroke();
+    ctx.save(); ctx.rotate(a0 + WSEG / 2);
+    ctx.save(); ctx.translate(R * 0.74, 0); ctx.rotate(Math.PI / 2);
+    switch (wh[0]) {
+      case 'Creditz': drawIcon('gem', 0, 0, 26, '#ffffff'); break;
+      case 'Big Creditz': drawIcon('gem', -9, 3, 22, '#ffffff'); drawIcon('gem', 9, 3, 22, '#ffffff'); drawIcon('gem', 0, -8, 24, '#ffffff'); break;
+      case 'Pass XP': txt('XP', 0, 0, 22, '#ffffff', { stroke: 4 }); break;
+      case 'Skin': drawDrone({ id: 7, type: 'normal', rank: 1, skin: 'neon', hat: null }, 0, 0, { scale: 1.15, t: 1 }); break;
+      case 'Hat': drawDrone({ id: 8, type: 'normal', rank: 1, skin: null, hat: 'crown' }, 0, 3, { scale: 1.15, t: 1 }); break;
+      case 'x2 Boost': drawIcon('clock', 0, 0, 26, '#ffffff'); txt('x2', 12, 10, 11, '#ffe27a', { stroke: 3 }); break;
+      case 'Drone crate': drawCrate(0, 0, 0.8, '#2eb0ff', 1); break;
+      case 'Skin crate': drawCrate(0, 0, 0.8, '#ff8a3a', 1); break;
+      case 'Extra spin': drawWheelIcon(0, 0, 14, 0.3); break;
+      case 'JACKPOT': star4(0, 0, 16, '#fff6c0'); star4(-10, 8, 6, '#ffffff'); star4(11, 7, 5, '#ffffff'); break;
+    }
+    ctx.restore();
+    ctx.translate(R * 0.43, 0);
+    txt(wh[0].toUpperCase(), 0, 0, fitSize(wh[0].toUpperCase(), 14, R * 0.42), '#ffffff', { stroke: 3.5 });
+    ctx.restore();
+  });
+  // inner shadow ring so the face looks set into the rim
+  const ig = ctx.createRadialGradient(0, 0, R * 0.82, 0, 0, R); ig.addColorStop(0, 'rgba(0,0,0,0)'); ig.addColorStop(1, 'rgba(0,0,0,0.45)'); ctx.fillStyle = ig; ctx.beginPath(); ctx.arc(0, 0, R, 0, 6.283); ctx.fill();
+  ctx = keep; WFACE.c = c; WFACE.key = key; return c;
+}
 function renderWheel() {
-  const w = 640, h = 620;
+  const w = 660, h = 640;
   const f = modalFrame('wheel', w, h); if (!f) return;
   panel(0, 0, w, h, 'LUCKY WHEEL', '#e8b21c');
   closeBtn(w - 46, 12);
-  const cx = w / 2, cy = 300, R = 210;
-  // rim with blinking bulbs
-  ctx.fillStyle = '#2a1a08'; ctx.beginPath(); ctx.arc(cx, cy, R + 18, 0, 6.283); ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = '#ffd84a'; ctx.stroke();
-  for (let k = 0; k < 20; k++) { const a = k / 20 * 6.283, on = (k + Math.floor(G.time * (WS.spinning ? 12 : 3))) % 2; ctx.fillStyle = on ? '#fff6c0' : '#8a6a1a'; ctx.beginPath(); ctx.arc(cx + Math.cos(a) * (R + 9), cy + Math.sin(a) * (R + 9), 4, 0, 6.283); ctx.fill(); }
-  // the slices
-  ctx.save(); ctx.translate(cx, cy); ctx.rotate(WS.ang);
-  WHEEL.forEach((wh, i) => {
-    const a0 = i * WSEG, a1 = a0 + WSEG, g = ctx.createRadialGradient(0, 0, 20, 0, 0, R);
-    g.addColorStop(0, lighten(wh[2], 0.3)); g.addColorStop(1, darken(wh[2], 0.25));
-    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, R, a0, a1); ctx.closePath(); ctx.fill();
-    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(11,12,18,0.8)'; ctx.stroke();
-    ctx.save(); ctx.rotate(a0 + WSEG / 2);
-    const ix = R * 0.72;
-    ctx.save(); ctx.translate(ix, 0); ctx.rotate(Math.PI / 2);
-    switch (wh[0]) {
-      case 'Creditz': case 'Big Creditz': drawIcon('gem', 0, 0, wh[0] === 'Big Creditz' ? 30 : 22, '#ffffff'); break;
-      case 'Pass XP': txt('XP', 0, 0, 18, '#ffffff', { stroke: 3 }); break;
-      case 'Skin': drawDrone({ id: 7, type: 'normal', rank: 1, skin: 'neon', hat: null }, 0, 0, { scale: 0.9 }); break;
-      case 'Hat': drawDrone({ id: 8, type: 'normal', rank: 1, skin: null, hat: 'crown' }, 0, 2, { scale: 0.9 }); break;
-      case 'x2 Boost': drawIcon('clock', 0, 0, 22, '#ffffff'); break;
-      case 'Drone crate': drawCrate(0, 0, 0.62, '#2eb0ff', G.time); break;
-      case 'Skin crate': drawCrate(0, 0, 0.62, '#ff8a3a', G.time); break;
-      case 'Extra spin': drawWheelIcon(0, 0, 11, -G.time); break;
-      case 'JACKPOT': ctx.globalCompositeOperation = 'lighter'; star4(0, 0, 13, '#fff6c0'); ctx.globalCompositeOperation = 'source-over'; break;
-    }
-    ctx.restore();
-    ctx.translate(R * 0.42, 0);
-    txt(wh[0], 0, 0, fitSize(wh[0], 13, 92), '#ffffff', { stroke: 3 });
-    ctx.restore();
-  });
+  const cx = w / 2, cy = 308, R = 212, spinning = WS.spinning, speed = spinning ? Math.max(0, 1 - WS.t / WS.dur) : 0;
+  // turning light rays + glow behind everything
+  ctx.save(); ctx.beginPath(); rr(6, 30, w - 12, h - 36, 16); ctx.clip();
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(G.time * (0.15 + speed * 1.5)); ctx.globalCompositeOperation = 'lighter';
+  for (let k = 0; k < 16; k++) { ctx.rotate(Math.PI / 8); ctx.globalAlpha = 0.07 + (WS.win || 0) * 0.12; ctx.fillStyle = k % 2 ? '#ffd84a' : '#ff9a3a'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-34, -460); ctx.lineTo(34, -460); ctx.closePath(); ctx.fill(); }
+  ctx.globalAlpha = 0.45; ctx.drawImage(soft('#ffb02a'), -R * 1.5, -R * 1.5, R * 3, R * 3);
+  ctx.restore(); ctx.restore(); ctx.globalAlpha = 1;
+  // gold rim with a bevel
+  const rim = ctx.createLinearGradient(0, cy - R - 26, 0, cy + R + 26); rim.addColorStop(0, '#fff2a0'); rim.addColorStop(0.3, '#e8a812'); rim.addColorStop(0.7, '#9a6204'); rim.addColorStop(1, '#ffd84a');
+  ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.beginPath(); ctx.arc(cx + 4, cy + 8, R + 26, 0, 6.283); ctx.fill();
+  ctx.fillStyle = rim; ctx.beginPath(); ctx.arc(cx, cy, R + 26, 0, 6.283); ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#4a2a02'; ctx.stroke();
+  ctx.fillStyle = '#3a2004'; ctx.beginPath(); ctx.arc(cx, cy, R + 6, 0, 6.283); ctx.fill();
+  // chasing light bulbs
+  for (let k = 0; k < 24; k++) { const a = k / 24 * 6.283, on = (k + Math.floor(G.time * (spinning ? 16 : 4))) % 3 === 0 || (WS.win > 0 && Math.sin(G.time * 20) > 0), bx = cx + Math.cos(a) * (R + 16), by = cy + Math.sin(a) * (R + 16);
+    if (on) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.8; ctx.drawImage(soft('#fff2a0'), bx - 12, by - 12, 24, 24); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+    ctx.fillStyle = on ? '#ffffff' : '#7a5a14'; ctx.beginPath(); ctx.arc(bx, by, 4.5, 0, 6.283); ctx.fill(); }
+  // the face, with motion blur while it's fast
+  const res = UI.frame.s * DPR, face = wheelFace(R, res);
+  const drawFace = (ang, alpha) => { ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang); ctx.globalAlpha *= alpha; ctx.drawImage(face, -R, -R, R * 2, R * 2); ctx.restore(); };
+  if (speed > 0.35) { const sp = (WS.to - WS.from) * 4 * Math.pow(1 - WS.t / WS.dur, 3) / WS.dur * 0.016; for (let k = 3; k >= 1; k--) drawFace(WS.ang - sp * k * 1.4, 0.22); }
+  drawFace(WS.ang, 1);
+  // the winning slice lights up
+  if (WS.win > 0 && WS.prize >= 0) { ctx.save(); ctx.translate(cx, cy); ctx.rotate(WS.ang); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = WS.win * (0.35 + 0.25 * Math.sin(G.time * 12)); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, R, WS.prize * WSEG, (WS.prize + 1) * WSEG); ctx.closePath(); ctx.fill(); ctx.restore(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+  // gold pins between the slices (they make the flapper click)
+  for (let i = 0; i < WHEEL.length; i++) { const a = WS.ang + i * WSEG, px = cx + Math.cos(a) * (R - 6), py = cy + Math.sin(a) * (R - 6); ctx.fillStyle = '#ffe27a'; ctx.beginPath(); ctx.arc(px, py, 5, 0, 6.283); ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = '#5a3a04'; ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.arc(px - 1.5, py - 1.5, 1.6, 0, 6.283); ctx.fill(); }
+  // the flapper at the top: bounces when a pin passes
+  ctx.save(); ctx.translate(cx, cy - R - 30); ctx.rotate(-(WS.flap || 0) * (spinning ? 1 : 0.6));
+  ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.beginPath(); ctx.moveTo(-17, 2); ctx.lineTo(19, 2); ctx.lineTo(2, 46); ctx.closePath(); ctx.fill();
+  const pg = ctx.createLinearGradient(-16, 0, 16, 0); pg.addColorStop(0, '#ff7a7a'); pg.addColorStop(0.5, '#e8202a'); pg.addColorStop(1, '#8a0a10');
+  ctx.fillStyle = pg; ctx.beginPath(); ctx.moveTo(-16, 0); ctx.lineTo(16, 0); ctx.lineTo(0, 42); ctx.closePath(); ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#3a0408'; ctx.stroke();
+  ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.arc(0, 4, 8, 0, 6.283); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#5a3a04'; ctx.stroke(); ctx.fillStyle = '#fff6c0'; ctx.beginPath(); ctx.arc(-2, 2, 2.5, 0, 6.283); ctx.fill();
   ctx.restore();
-  // pointer at the top
-  ctx.fillStyle = '#ff3a3a'; ctx.beginPath(); ctx.moveTo(cx - 16, cy - R - 26); ctx.lineTo(cx + 16, cy - R - 26); ctx.lineTo(cx, cy - R + 8); ctx.closePath(); ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = '#0b0c12'; ctx.stroke();
   // the hub = the SPIN button
-  const can = (G.spins || 0) > 0 && !WS.spinning, hub = 52;
+  const can = (G.spins || 0) > 0 && !spinning, hub = 56, pz = (can ? 1 + 0.04 * Math.sin(G.time * 5) : 1) + (WS.buy || 0) * 0.25 * Math.sin((1 - (WS.buy || 0)) * Math.PI);
   region('wheelhub', cx - hub, cy - hub, hub * 2, hub * 2, () => spinWheel());
-  const hg = ctx.createRadialGradient(cx - 12, cy - 14, 4, cx, cy, hub); hg.addColorStop(0, can ? '#8aff8a' : '#8a90a0'); hg.addColorStop(1, can ? '#2a8a2a' : '#3a3f4c');
-  ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(cx, cy, hub * (can && UI.hot === 'wheelhub' ? 1.05 : 1), 0, 6.283); ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = '#0b0c12'; ctx.stroke();
-  txt(WS.spinning ? '...' : 'SPIN', cx, cy - 6, 24, '#ffffff', { stroke: 4 });
-  txt((G.spins || 0) + ' left', cx, cy + 18, 13, '#ffffff', { font: FB, weight: 900, stroke: 3 });
+  if (can) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5 + 0.2 * Math.sin(G.time * 5); ctx.drawImage(soft('#7dff7a'), cx - hub * 1.8, cy - hub * 1.8, hub * 3.6, hub * 3.6); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(pz * (can && UI.hot === 'wheelhub' ? 1.06 : 1), pz * (can && UI.hot === 'wheelhub' ? 1.06 : 1));
+  const hr = ctx.createLinearGradient(0, -hub - 6, 0, hub + 6); hr.addColorStop(0, '#fff2a0'); hr.addColorStop(0.5, '#c88a0a'); hr.addColorStop(1, '#ffd84a');
+  ctx.fillStyle = hr; ctx.beginPath(); ctx.arc(0, 0, hub + 6, 0, 6.283); ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#4a2a02'; ctx.stroke();
+  const hg = ctx.createRadialGradient(-14, -18, 4, 0, 0, hub); hg.addColorStop(0, can ? '#b4ffb4' : '#9aa0aa'); hg.addColorStop(0.6, can ? '#3aa83a' : '#4a505c'); hg.addColorStop(1, can ? '#1a5a1a' : '#2a2e38');
+  ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(0, 0, hub, 0, 6.283); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#0b0c12'; ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.ellipse(-8, -24, 30, 12, -0.2, 0, 6.283); ctx.fill();
+  txt(spinning ? '...' : 'SPIN', 0, -6, 26, '#ffffff', { stroke: 4.5 });
+  txt((G.spins || 0) + ' left', 0, 20, 13, '#ffffff', { font: FB, weight: 900, stroke: 3 });
+  ctx.restore();
+  // confetti
+  if (WS.conf && WS.conf.length) for (const p of WS.conf) { ctx.save(); ctx.translate(cx + p.x, cy + p.y); ctx.rotate(p.r); ctx.globalAlpha = Math.min(1, p.life * 2); ctx.fillStyle = p.c; ctx.fillRect(-p.w / 2, -p.w * 0.3, p.w, p.w * 0.6); ctx.restore(); }
+  ctx.globalAlpha = 1;
   // prize message
-  if (WS.show > 0 && WS.msg) { const a = Math.min(1, WS.show * 4); ctx.globalAlpha *= a; ctx.fillStyle = 'rgba(8,10,16,0.92)'; rr(40, cy - 34, w - 80, 68, 16); ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = WHEEL[WS.prize][2]; ctx.stroke(); txt('YOU WON', w / 2, cy - 14, 13, WHEEL[WS.prize][2], { font: FB, weight: 900 }); txt(WS.msg, w / 2, cy + 12, fitSize(WS.msg, 22, w - 110), '#ffffff', { stroke: 4 }); ctx.globalAlpha = 1; }
+  if (WS.show > 0 && WS.msg) {
+    const a = Math.min(1, WS.show * 4), pop = easeBack(Math.min(1, (1 - WS.show) * 6 + 0.01)), col = WHEEL[WS.prize][2];
+    ctx.save(); ctx.globalAlpha *= a; ctx.translate(w / 2, cy); ctx.scale(pop, pop);
+    ctx.fillStyle = 'rgba(8,10,16,0.94)'; rr(-(w - 80) / 2, -40, w - 80, 80, 18); ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = col; ctx.stroke();
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= 0.4; ctx.drawImage(soft(col), -(w - 80) / 2 - 20, -60, w - 40, 120); ctx.globalAlpha = a; ctx.globalCompositeOperation = 'source-over';
+    txt(WHEEL[WS.prize][0] === 'JACKPOT' ? 'JACKPOT!!!' : 'YOU WON', 0, -16, 15, col, { stroke: 3 });
+    txt(WS.msg, 0, 12, fitSize(WS.msg, 24, w - 120), '#ffffff', { stroke: 4 });
+    ctx.restore(); ctx.globalAlpha = 1;
+  }
   // buy a spin
   const price = spinPrice();
-  txt('Spins: ' + (G.spins || 0) + '   -   get more from the Alien Pass, or buy one:', w / 2, h - 82, 13, '#c9cfdc', { font: FB, weight: 800 });
-  btn('buyspin', w / 2 - 130, h - 64, 260, 44, 'Buy 1 spin: ' + fmt(price), { col: G.creditz >= price ? '#c48a12' : '#5a3a3a', size: 17, r: 12, fn: () => {
+  txt('Spins: ' + (G.spins || 0) + '   -   get more from the Alien Pass, or buy one:', w / 2, h - 86, 13, '#c9cfdc', { font: FB, weight: 800 });
+  btn('buyspin', w / 2 - 140, h - 68, 280, 46, 'Buy 1 spin: ' + fmt(price), { col: G.creditz >= price ? '#c48a12' : '#5a3a3a', size: 17, r: 12, icon: 'gem', fn: () => {
     if (G.creditz < price) { toast('A spin costs ' + fmt(price) + ' Creditz here', '#ff8a8a'); AUDIO.sfx('deny'); return; }
-    G.creditz -= price; G.shown = G.creditz; G.spins = (G.spins || 0) + 1; AUDIO.sfx('buy'); save(); } });
+    G.creditz -= price; G.shown = G.creditz; G.spins = (G.spins || 0) + 1; AUDIO.sfx('buy'); AUDIO.sfx('quest'); save();
+    WS.buy = 1; WS.conf = (WS.conf || []).concat(Array.from({ length: 40 }, (_, k) => { const a = -Math.PI / 2 + (Math.random() - 0.5) * 1.6, v = 5 + Math.random() * 7; return { x: (Math.random() - 0.5) * 200, y: 278, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4, c: k % 3 ? '#ffd84a' : '#fff6c0', w: 5 + Math.random() * 4, life: 1.2 + Math.random() * 0.8 }; })); } });
+  if (WS.buy > 0) {   // +1 SPIN flies up to the hub, a gold ring pops out of it
+    const b = WS.buy, f = 1 - b;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = b * 0.9; ctx.lineWidth = 10 * b + 2; ctx.strokeStyle = '#ffd84a'; ctx.beginPath(); ctx.arc(cx, cy, 60 + f * 190, 0, 6.283); ctx.stroke();
+    ctx.globalAlpha = b * 0.6; ctx.drawImage(soft('#ffd84a'), cx - 120, cy - 120, 240, 240); ctx.restore();
+    const ty = (h - 46) + (cy - (h - 46)) * ease(Math.min(1, f * 1.6)), sc = 1 + 0.5 * Math.sin(Math.min(1, f * 2) * Math.PI);
+    ctx.save(); ctx.globalAlpha = Math.min(1, b * 3); ctx.translate(w / 2, ty - 50); ctx.scale(sc, sc); txt('+1 SPIN!', 0, 0, 34, '#ffe27a', { stroke: 6 }); ctx.restore();
+  }
 }
 // the round button under the PASS button
 function renderWheelButton() {
@@ -4713,7 +4854,7 @@ function renderWheelButton() {
   region('wheelbtn', x, y, w, h, open);
   ctx.fillStyle = 'rgba(0,0,0,0.35)'; rr(x, y + 4, w, h, 14); ctx.fill();
   const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, hot ? '#f0c040' : '#c48a12'); g.addColorStop(1, '#4a2a04'); ctx.fillStyle = g; rr(x, y, w, h, 14); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#ffe27a'; ctx.stroke();
-  if (room >= 70) { drawWheelIcon(x + w / 2, y + h * 0.42, Math.min(w, h) * 0.3, G.time * (n ? 1.2 : 0.3)); txt('SPIN', x + w / 2, y + h * 0.86, Math.min(20, w / 5), '#ffffff', { stroke: 3 }); }
+  if (room >= 70) { const wr = Math.min(w, h) * 0.3, wd = Math.ceil(wr * 2 + 4), pic = hudPic('wicon', wd, wd, () => drawWheelIcon(0, 0, wr, 0)); ctx.save(); ctx.translate(x + w / 2, y + h * 0.42); ctx.rotate(G.time * (n ? 1.2 : 0.3)); ctx.drawImage(pic, -wd / 2, -wd / 2, wd, wd); ctx.restore(); txt('SPIN', x + w / 2, y + h * 0.86, Math.min(20, w / 5), '#ffffff', { stroke: 3 }); }
   else { drawWheelIcon(x + 22, y + h / 2, 15, G.time * (n ? 1.2 : 0.3)); txt('LUCKY WHEEL', x + 98, y + h / 2 + 0.5, 14, '#ffffff', { stroke: 2.5 }); }
   if (n) { const pz = 1 + 0.08 * Math.sin(G.time * 6); ctx.fillStyle = '#e8402a'; ctx.beginPath(); ctx.arc(x + w - 6, y + 6, 12 * pz, 0, 6.283); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff'; ctx.stroke(); txt(String(n), x + w - 6, y + 6.5, 12, '#ffffff', { shadow: false }); }
 }
@@ -5034,6 +5175,10 @@ const PTR = { id: null, sx: 0, sy: 0, moved: false, region: null, px: 0, py: 0, 
 cv.addEventListener('pointermove', e => {
   if (e.pointerType === 'touch' && PTR.id !== e.pointerId) return;   // a second finger doesn't move the pickaxe
   setMouse(e);
+  if (DDRAG && DDRAG.pid === e.pointerId && !DDRAG.no) {
+    if (!DDRAG.on) { const dx = e.clientX - DDRAG.sx, dy = e.clientY - DDRAG.sy; if (Math.hypot(dx, dy) > 8) { if (DDRAG.touch && DDRAG.list && Math.abs(dy) > Math.abs(dx)) DDRAG.no = true; else { DDRAG.on = true; AUDIO.sfx('click'); } } }
+    if (DDRAG.on) { PTR.moved = true; return; }
+  }
   if (PTR.id === e.pointerId) {
     const dx = e.clientX - PTR.sx, dy = e.clientY - PTR.sy;
     if (!PTR.moved && Math.hypot(dx, dy) > 10) PTR.moved = true;
@@ -5054,6 +5199,7 @@ cv.addEventListener('pointerdown', e => {
   try { cv.setPointerCapture(e.pointerId); } catch (err) {}
   const r = hitRegion(G.mouse.x, G.mouse.y);
   const sa = scrollAt(G.mouse.x, G.mouse.y);
+  DDRAG = r && r.drag ? { id: r.drag, pid: e.pointerId, sx: e.clientX, sy: e.clientY, on: false, no: false, touch, list: r.id.startsWith('inv') } : null;
   const grab = { id: e.pointerId, sx: e.clientX, sy: e.clientY, lx: e.clientX, ly: e.clientY, moved: false, px: PAN.x, py: PAN.y, scroll: sa ? sa.id : null, st: sa ? SCR[sa.id].target : 0, vel: 0 };
   if (sa && SCR[sa.id]) SCR[sa.id].vel = 0;   // a touch stops a list that is still gliding
   if (touch) {
@@ -5069,6 +5215,7 @@ cv.addEventListener('pointerdown', e => {
 });
 function endPointer(e, fire) {
   G.mouse.down = false;
+  if (DDRAG && DDRAG.pid === e.pointerId) { const D = DDRAG; DDRAG = null; if (D.on) { if (fire) dropDrone(D.id, e.clientX, e.clientY); if (PTR.id === e.pointerId) { PTR.id = null; PTR.region = null; PTR.scroll = null; } if (D.touch) { G.mouse.over = false; G.mouse.x = G.mouse.y = -999; } return; } }
   if (PTR.id !== e.pointerId) return;
   const sa = PTR.scroll && SCR[PTR.scroll];
   if (sa && sa.drag) { sa.drag = false; sa.vel = clamp(PTR.vel, -45, 45); }   // let go: it keeps gliding, then slows down
@@ -5087,7 +5234,7 @@ window.addEventListener('keydown', e => {
   if (e.target && e.target.tagName === 'INPUT') return;
   AUDIO.init();
   if (e.code === 'Space') { G.keys.Space = true; e.preventDefault(); }
-  if (e.code === 'Escape') { G.menu = null; G.bombArm = false; G.mergeSel = null; if (G.crateFx && G.crateFx.t > 1.5) G.crateFx = null; if (G.mergeFx && G.mergeFx.t > 1.5) G.mergeFx = null; if (G.victory) G.victory = 0; }
+  if (e.code === 'Escape') { if (G.crateFx || G.mergeFx) { if (G.crateFx && G.crateFx.t > 1.5) G.crateFx = null; if (G.mergeFx && G.mergeFx.t > 1.5) G.mergeFx = null; return; } if (G.skinList) { G.skinList = false; return; } G.menu = null; G.bombArm = false; G.mergeSel = null; if (G.victory) G.victory = 0; }
   if (e.code === 'KeyM') { G.settings.vol = G.settings.vol === 3 ? 0 : 3; AUDIO.applyVolume(); save(); }
   if (G.scene === 'play' && !e.repeat) {
     const m = { KeyB: 'biomes', KeyS: 'shop', KeyR: 'rebirth', KeyK: 'book', KeyD: 'drones', KeyP: 'pass' }[e.code];
