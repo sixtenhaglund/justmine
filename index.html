@@ -3690,8 +3690,8 @@ function droneXp(d, s) {
 // pal: body / dark / light colours, accent = glowing parts, fx = the special effect of the skin
 const SKINS = {
   camo: { name: 'Camo', rar: 'Common', body: '#5a6a3a', dark: '#2a3418', light: '#8a9a5a', accent: '#d8e86a', fx: 'camo' },
-  bubblegum: { name: 'Bubblegum', rar: 'Common', body: '#ff8ad0', dark: '#a03a80', light: '#ffd0ee', accent: '#ffffff', fx: null },
-  midnight: { name: 'Midnight', rar: 'Common', body: '#1c2440', dark: '#080c1a', light: '#3a4670', accent: '#6a9aff', fx: null },
+  bubblegum: { name: 'Bubblegum', rar: 'Common', body: '#ff8ad0', dark: '#a03a80', light: '#ffd0ee', accent: '#ffffff', fx: 'gum' },
+  midnight: { name: 'Midnight', rar: 'Common', body: '#1c2440', dark: '#080c1a', light: '#3a4670', accent: '#6a9aff', fx: 'twinkle' },
   arctic: { name: 'Arctic', rar: 'Common', body: '#dfeefa', dark: '#7a9ab8', light: '#ffffff', accent: '#4ac0ff', fx: 'frost' },
   racer: { name: 'Racer', rar: 'Uncommon', body: '#d8202a', dark: '#6a0a10', light: '#ff7a7a', accent: '#ffd84a', fx: 'stripes' },
   toxic: { name: 'Toxic', rar: 'Uncommon', body: '#2a3a1a', dark: '#0e160a', light: '#4a6a2a', accent: '#8dff3a', fx: 'drip' },
@@ -3946,7 +3946,39 @@ function pickRock(d, s, o) {
   return list[Math.floor(Math.random() * list.length)];
 }
 function droneSfx(d, name) { if (d.skin === 'pixel') AUDIO.sfx('retro', name); else if (d.skin === 'glitch' && Math.random() < 0.5) AUDIO.sfx('glitch'); else AUDIO.sfx(name); }
+const TRAIL_MULT = () => [0.3, 0.6, 1, 1][gx('parts')];
+const pk = a => a[Math.floor(Math.random() * a.length)];
+const TRAILS = {   // skin -> what comes out behind it while it works (rates are per tick)
+  candy: [0.25, (x, y) => ({ kind: 'star', x, y, vx: 0, vy: 0, life: 22, max: 22, col: pk(['#ff2a4a', '#ffffff']), s: 1 })],
+  lava: [0.35, (x, y) => ({ kind: 'ember', x, y, vx: (Math.random() - 0.5) * 0.5, vy: 0.3 + Math.random() * 0.5, life: 30, max: 30, s: 0.9, col: '#ff7a1a', ph: Math.random() * 6 })],
+  ocean: [0.3, (x, y) => ({ kind: 'ember', x, y, vx: (Math.random() - 0.5) * 0.3, vy: 0.6 + Math.random() * 0.4, life: 30, max: 30, s: 0.8, col: '#bff6ff', ph: Math.random() * 6 })],
+  toxic: [0.25, (x, y) => ({ kind: 'ember', x, y: y - 6, vx: 0, vy: -0.9, life: 26, max: 26, s: 0.9, col: '#8dff3a', ph: 0 })],
+  shadow: [0.45, (x, y) => ({ kind: 'smoke', x, y, vx: (Math.random() - 0.5) * 0.4, vy: 0, life: 34, max: 34, s: 3, grow: 0.25, col: pk(['#2a1a3a', '#6a2a9a']) })],
+  plasma: [0.35, (x, y) => { const a = Math.random() * 6.283; return { kind: 'spark', x, y, vx: Math.cos(a) * 2.5, vy: Math.sin(a) * 2.5, life: 10, max: 10, col: pk(['#9ae0ff', '#ffffff']), s: 1.2 }; }],
+  neon: [0.6, (x, y) => ({ kind: 'ember', x, y, vx: 0, vy: 0, life: 22, max: 22, s: 0.8, col: pk(['#00f0ff', '#ff3ad0']), ph: 0 })],
+  pixel: [0.4, (x, y) => ({ kind: 'pix', x: x + (Math.random() - 0.5) * 8, y, vx: 0, vy: -0.4, life: 24, max: 24, s: 2.5, col: pk(['#ffd84a', '#4a8aff', '#a0d4ff']) })],
+  diamond: [0.4, (x, y) => ({ kind: 'star', x: x + (Math.random() - 0.5) * 14, y: y + (Math.random() - 0.5) * 8, vx: 0, vy: 0.2, life: 26, max: 26, col: pk(['#ffffff', '#bff0ff']), s: 1.3 })],
+  hightech: [0.5, (x, y) => Math.random() < 0.5 ? { kind: 'smoke', x, y: y - 4, vx: 0, vy: -0.4, life: 24, max: 24, s: 2, grow: 0.3, col: '#6a6a7a' } : { kind: 'ember', x, y: y - 4, vx: 0, vy: -1, life: 14, max: 14, s: 0.8, col: '#ff2a3a', ph: 0 }],
+  inferno: [0.7, (x, y) => Math.random() < 0.7 ? { kind: 'ember', x: x + (Math.random() - 0.5) * 12, y, vx: (Math.random() - 0.5) * 0.6, vy: 0.5 + Math.random() * 0.8, life: 32, max: 32, s: 1.1, col: pk(['#ffb02a', '#ff5a1a', '#ffe08a']), ph: Math.random() * 6 } : { kind: 'smoke', x, y: y + 6, vx: 0, vy: 0.3, life: 40, max: 40, s: 3, grow: 0.35, col: '#3a1a10' }],
+  golden: [0.45, (x, y) => ({ kind: 'star', x: x + (Math.random() - 0.5) * 14, y: y + (Math.random() - 0.5) * 8, vx: 0, vy: 0, life: 28, max: 28, col: pk(['#ffd84a', '#fff2a0', '#ffffff']), s: 1.4 })],
+  glitch: [0.5, (x, y) => ({ kind: 'glitch', x: x + (Math.random() - 0.5) * 16, y: y + (Math.random() - 0.5) * 10, vx: 0, vy: 0, life: 14, max: 14, s: 3 + Math.random() * 6, h: 1.5, col: pk(['#00ff66', '#ff00ff']) })],
+  alien: [0.2, (x, y) => ({ kind: 'ember', x, y, vx: 0, vy: 0.2, life: 22, max: 22, s: 0.8, col: '#e0ff3a', ph: 0 })],
+  chrome: [0.3, (x, y) => ({ kind: 'star', x, y, vx: 0, vy: 0, life: 18, max: 18, col: '#ffffff', s: 1 })],
+  nebula: [0.6, (x, y) => ({ kind: 'star', x: x + (Math.random() - 0.5) * 16, y: y + (Math.random() - 0.5) * 10, vx: (Math.random() - 0.5) * 0.3, vy: 0, life: 34, max: 34, col: pk(['#d07aff', '#6ac8ff', '#ffffff', '#ff7ad8']), s: 1.3 })],
+  abductor: [0.5, (x, y) => ({ kind: 'spark', x: x + (Math.random() - 0.5) * 10, y: y - 6, vx: 0, vy: -2.5, life: 12, max: 12, col: '#7dff3a', s: 1.2 })],
+};
+function droneTrails() {
+  if (!gx('parts')) return;
+  const m = TRAIL_MULT(), k = vsc();
+  for (const d of deployed()) {
+    const T = d.skin && TRAILS[d.skin]; if (!T) continue;
+    const s = DRT.get(d.id); if (!s) continue;
+    const moving = s.px !== undefined && Math.hypot(s.x - s.px, s.y - s.py) > 0.4;
+    if (Math.random() < T[0] * m * (moving ? 1 : 0.35)) { const p = T[1](s.x, s.y); p.s *= k; G.parts.push(p); }
+  }
+}
 function tickDrones() {
+  droneTrails();
   const list = deployed(), ids = new Set(list.map(d => d.id));
   for (const id of DRT.keys()) if (!ids.has(id)) DRT.delete(id);
   for (const d of list) { const s = rt(d); tickDrone(d, s); droneXp(d, s); if (s.lvlFx > 0) s.lvlFx -= DT; }
@@ -4263,6 +4295,17 @@ function droneMoving(d, P, t, act) {
   if (P.fx === 'zap' && Math.sin(t * 9 + d.id) > 0.2) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; zap(B[0] + B[2] * 0.2, B[1] + 2, 0.3 + Math.sin(t * 13) * 0.6, 10, P.accent, Math.floor(t * 12) + d.id); zap(B[0] + B[2] * 0.8, B[1] + B[3] - 2, 2.6 + Math.sin(t * 11) * 0.6, 9, P.accent, Math.floor(t * 12) + d.id + 7); ctx.restore(); }
   if (P.fx === 'diamond') { const tw = Math.max(0, Math.sin(t * 2.4 + d.id)); if (tw > 0.3) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = tw; star4(B[0] + B[2] * 0.3, B[1] + 2, 2.6, '#ffffff'); star4(B[0] + B[2] * 0.8, B[1] + B[3] * 0.5, 1.8, '#bff0ff'); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; } }
   if (P.fx === 'fire') { ctx.globalCompositeOperation = 'lighter'; for (let k = 0; k < 5; k++) { const fx2 = B[0] + B[2] * (k + 0.5) / 5, fl = 5 + Math.sin(t * 12 + k * 2) * 2 + Math.random() * 1.5, g2 = ctx.createLinearGradient(0, B[1], 0, B[1] - fl); g2.addColorStop(0, 'rgba(255,220,120,0.9)'); g2.addColorStop(0.5, 'rgba(255,90,20,0.7)'); g2.addColorStop(1, 'rgba(255,40,0,0)'); ctx.fillStyle = g2; ctx.beginPath(); ctx.moveTo(fx2 - 2.4, B[1] + 1); ctx.quadraticCurveTo(fx2 - 1, B[1] - fl * 0.5, fx2 + Math.sin(t * 9 + k) * 1.2, B[1] - fl); ctx.quadraticCurveTo(fx2 + 1, B[1] - fl * 0.5, fx2 + 2.4, B[1] + 1); ctx.closePath(); ctx.fill(); } ctx.globalAlpha = 0.3; ctx.drawImage(soft('#ff5a1a'), B[0] - 6, B[1] - 10, B[2] + 12, B[3] + 14); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+  if (P.fx === 'gum') {   // Bubblegum: blows a bubble... that pops
+    const f = (t * 0.32 + d.id * 0.37) % 1, bx = B[0] + B[2] + 1, by = B[1] + B[3] * 0.55;
+    if (f < 0.9) { const r = 1.5 + 7 * ease(f / 0.9); ctx.globalAlpha = 0.85; ctx.fillStyle = '#ff9ad8'; ctx.beginPath(); ctx.arc(bx + r * 0.8, by, r, 0, 6.283); ctx.fill(); ctx.lineWidth = 0.6; ctx.strokeStyle = '#c04a90'; ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.arc(bx + r * 0.5, by - r * 0.4, r * 0.25, 0, 6.283); ctx.fill(); }
+    else { const p = (f - 0.9) / 0.1; ctx.globalAlpha = 1 - p; ctx.fillStyle = '#ff9ad8'; for (let k = 0; k < 6; k++) { const a = k * 1.05; ctx.beginPath(); ctx.arc(bx + 7 + Math.cos(a) * (6 + p * 6), by + Math.sin(a) * (6 + p * 6), 1.2, 0, 6.283); ctx.fill(); } }
+    ctx.globalAlpha = 1;
+  }
+  if (P.fx === 'twinkle') {   // Midnight: little stars twinkle on the body
+    const R = seeded(typeSeed(d) + 21); ctx.globalCompositeOperation = 'lighter';
+    for (let k = 0; k < 6; k++) { const x = B[0] + 3 + R() * (B[2] - 6), y = B[1] + 3 + R() * (B[3] - 6), tw = Math.max(0, Math.sin(t * (1.5 + R() * 2) + k * 2)); ctx.globalAlpha = tw; star4(x, y, 0.8 + tw * 1.6, k % 2 ? '#ffffff' : P.accent); }
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  }
   if (P.fx === 'chrome' || P.fx === 'gold') { const sx = ((t * 30) % 70) - 35; if (Math.abs(sx) < B[2] / 2) { ctx.globalAlpha = 0.35; ctx.fillStyle = '#ffffff'; ctx.fillRect(sx - 1.5, B[1] + 1, 3, B[3] - 2); } }
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
 }
@@ -4396,6 +4439,10 @@ function drawDroneWorld() {
       if (s.gem !== undefined) { const f = clamp((s.beamT - 0.9) / 1.7, 0, 1), gx2 = r.x + (x - r.x) * ease(f), gy2 = wy(r.y) + (top - wy(r.y)) * ease(f); drawGem(gemArt(b.name, s.gem), gx2 + Math.sin(G.time * 6) * 2, gy2, 16 * (1 - f * 0.5), { glow: RCOL[b.minerals[s.gem][2]], rot: G.time * 3 }); if (f < 0.3) txt(b.minerals[s.gem] ? gemArt(b.name, s.gem).name : '', r.x, wy(r.y) + 30, 7, '#c8ff9a', { stroke: 2 }); }
     }
     if (gx('shadows')) { ctx.globalAlpha = 0.25; ctx.drawImage(soft('#000000'), x - 12, y + 22, 24, 6); ctx.globalAlpha = 1; }
+    { const SK = d.skin && SKINS[d.skin], rk = SK ? ['Legendary', 'Mythical', 'Celestial', 'Admin'].indexOf(SK.rar) : -1;
+      if (rk >= 0) { const k = vsc(), ac = SK.accent2 || SK.accent === '#ffffff' ? SK.light : SK.accent; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.22 + 0.1 * Math.sin(G.time * 3 + d.id); ctx.drawImage(soft(ac), x - 34 * k, y - 30 * k, 68 * k, 60 * k);
+        if (rk >= 1) for (let q = 0; q < 3; q++) { const a = G.time * 2.2 + q * 2.094 + d.id; ctx.globalAlpha = 0.85; star4(x + Math.cos(a) * 26 * k, y + Math.sin(a) * 9 * k + 4 * k, (1.6 + 0.6 * Math.sin(G.time * 6 + q)) * k * 1.4, q ? '#ffffff' : ac); }
+        ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; } }
     drawDrone(d, x, y, { tilt: s.tilt, act: Math.max(s.act, s.hitT > 0 ? 1 : 0), t: s.t + ta * DT, scale: vsc() });
     if (s.lvlFx > 0) {   // LEVEL UP: flash yellow
       const k = s.lvlFx / 1.4, pulse = Math.abs(Math.sin(s.lvlFx * 9));
