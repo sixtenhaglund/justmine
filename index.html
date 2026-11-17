@@ -214,6 +214,9 @@ const SHOP = {
   reborn: { title: 'Rebirth power', name: l => 'Rebirth power ' + (l + 1), icon: 'rebirth', col: '#ffb36a', isNew: true,
     costs: [1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15, 1e16, 1e17],
     desc: l => 'Your rebirth multiplier counts +' + pct(SHOPV.reborn[l]) + ' (needs 1 rebirth)' },
+  rocks: { title: 'More rocks', name: l => 'More rocks ' + (l + 1), icon: 'cluster', col: '#c9a27a', isNew: true,
+    costs: [1e10, 1e13, 1e16, 1e19, 1e22, 1e25],
+    desc: l => 'Wall becomes ' + GRID_SIZES[l + 1][0] + ' x ' + GRID_SIZES[l + 1][1] + ' = ' + GRID_SIZES[l + 1][0] * GRID_SIZES[l + 1][1] + ' smaller rocks' },
   dspeed: { title: 'Drone engines', name: l => 'Drone engines ' + (l + 1), icon: 'drone', col: '#6ad0ff', isNew: true,
     costs: [1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12],
     desc: l => 'Your drones act ' + Math.round((1 / SHOPV.dspeed[l] - 1) * 100) + '% faster' },
@@ -257,11 +260,11 @@ const SHOPV = {
   chestup: [1.25, 1.5, 1.75, 2, 2.5, 3],
 };
 // shop tabs: every upgrade line lives in one tab
-const SHOP_TABS = [['Mining', 'pick', ['creditz', 'speed', 'crit', 'value', 'regen']], ['Bombs', 'bomb', ['bomb', 'radius', 'cluster', 'fuse']], ['Robots', 'robot', ['auto', 'robo', 'factory', 'dspeed', 'dpower', 'cluck']],
+const SHOP_TABS = [['Mining', 'pick', ['creditz', 'speed', 'crit', 'value', 'regen', 'rocks']], ['Bombs', 'bomb', ['bomb', 'radius', 'cluster', 'fuse']], ['Robots', 'robot', ['auto', 'robo', 'factory', 'dspeed', 'dpower', 'cluck']],
   ['Luck', 'clover', ['luck', 'rare', 'double', 'golden', 'chestup']], ['Special', 'gem', ['meteor', 'quest', 'offline', 'reborn', 'storm', 'xpboost']]];
 const SHOP_ORDER = SHOP_TABS.flatMap(t => t[2]);
 const LVL_KEY = { creditz: 'cmLevel', speed: 'spLevel', bomb: 'bombLevel', auto: 'autoLevel', luck: 'luckLevel', regen: 'regenLevel', radius: 'radiusLevel', cluster: 'clusterLevel', robo: 'roboLevel',
-  crit: 'critLevel', value: 'valueLevel', fuse: 'fuseLevel', factory: 'factoryLevel', double: 'doubleLevel', rare: 'rareLevel', golden: 'goldenLevel', meteor: 'meteorLevel', quest: 'questLevel', offline: 'offlineLevel', reborn: 'rebornLevel', storm: 'stormLevel', dspeed: 'dspeedLevel', dpower: 'dpowerLevel', cluck: 'cluckLevel', xpboost: 'xpboostLevel', chestup: 'chestupLevel' };
+  crit: 'critLevel', value: 'valueLevel', fuse: 'fuseLevel', factory: 'factoryLevel', double: 'doubleLevel', rare: 'rareLevel', golden: 'goldenLevel', meteor: 'meteorLevel', quest: 'questLevel', offline: 'offlineLevel', reborn: 'rebornLevel', storm: 'stormLevel', rocks: 'rocksLevel', dspeed: 'dspeedLevel', dpower: 'dpowerLevel', cluck: 'cluckLevel', xpboost: 'xpboostLevel', chestup: 'chestupLevel' };
 const upv = (k, d) => G[LVL_KEY[k]] ? SHOPV[k][G[LVL_KEY[k]] - 1] : d;   // current value of an upgrade line
 const BASE_SPEED = 1.5;
 const BOMB_STRENGTH = [0, 0.6, 0.5, 0.4, 0.2, 0.1, 0.08, 0.065, 0.05, 0.04, 0.03];
@@ -297,7 +300,7 @@ const FIND_ACH = { Sphinxium: 'sphinx', Fireflium: 'firefly', Tempestium: 'tempe
 
 // ---------------- state ----------------
 const LEVEL_DEFAULTS = { cmLevel: 0, spLevel: 0, bombLevel: 0, autoLevel: 0, luckLevel: 0, regenLevel: 0, radiusLevel: 0, clusterLevel: 0, roboLevel: 0,
-  critLevel: 0, valueLevel: 0, fuseLevel: 0, factoryLevel: 0, doubleLevel: 0, rareLevel: 0, goldenLevel: 0, meteorLevel: 0, questLevel: 0, offlineLevel: 0, rebornLevel: 0, stormLevel: 0, dspeedLevel: 0, dpowerLevel: 0, cluckLevel: 0, xpboostLevel: 0, chestupLevel: 0 };
+  critLevel: 0, valueLevel: 0, fuseLevel: 0, factoryLevel: 0, doubleLevel: 0, rareLevel: 0, goldenLevel: 0, meteorLevel: 0, questLevel: 0, offlineLevel: 0, rebornLevel: 0, stormLevel: 0, rocksLevel: 0, dspeedLevel: 0, dpowerLevel: 0, cluckLevel: 0, xpboostLevel: 0, chestupLevel: 0 };
 const G = Object.assign({
   scene: 'loading', creditz: 0, shown: 0, high: 0,
   rebirths: 1, rebirthMult: 1,
@@ -470,24 +473,29 @@ function loadBiome(i, fromTeleport) {
   if (i === BIOMES.length - 1 && rebirthsDone() >= HEART_REBIRTHS && !G.won) G.heart = { hp: G.heartHP, cool: 0, shake: 0, flash: 0 };
   makeGrid();
 }
+const GRID_SIZES = [[9, 5], [13, 7], [17, 9], [21, 11], [27, 14], [37, 19], [45, 23]];
+const gridDims = () => GRID_SIZES[clamp(G.rocksLevel | 0, 0, GRID_SIZES.length - 1)];
+const gsc = () => G.gs || 1;   // rock size compared to the original 48-unit grid (1 = normal, 0.18 = tiny)
 function makeGrid() {
+  const [C, R] = gridDims(), cell = 384 / (C - 1), f = cell / 48; G.gs = f;
   const q = [];
-  for (let c = 0; c < 9; c++) {
-    for (let r = 0; r < 5; r++) {
-      if (G.heart && c >= 3 && c <= 5 && r >= 1 && r <= 3) continue;   // room for the Heart
-      if (G.mega && Math.abs(-192 + 48 * c - G.mega.x) < 30 && Math.abs(128 - 48 * r - G.mega.y) < 30) continue;   // room for the Mega Rock
-      q.push({ c, r });
+  for (let c = 0; c < C; c++) {
+    for (let r = 0; r < R; r++) {
+      const x = -192 + cell * c, y = 128 - cell * r;
+      if (G.heart && Math.abs(x) < 70 + 23 * f && Math.abs(y - 32) < 70 + 23 * f) continue;   // room for the Heart
+      if (G.mega && Math.abs(x - G.mega.x) < 46 + 23 * f && Math.abs(y - G.mega.y) < 46 + 23 * f) continue;   // room for the Mega Rock
+      q.push({ x, y });
     }
     q.push(null);
   }
-  G.gen = q;
+  G.gen = q; G.genRate = Math.max(1, Math.round(C * R / 45)); G.gridGen = (G.gridGen || 0) + 1;
 }
-function spawnRock(c, r) {
+function spawnRock(x0, y0) {
   const b = BIOMES[G.biome];
   let dir = 180;
   for (let k = 0; k < 4; k++) if (rnd(1, 2) === 2) dir += 90;
   const lock = spawnLock();
-  const rock = { x: -192 + 48 * c, y: 128 - 48 * r, dir, costume: 0, bright: 0, hue: 0, seed: Math.random() * 1000,
+  const rock = { x: x0, y: y0, dir, costume: 0, bright: 0, hue: 0, seed: Math.random() * 1000,
     spawnT: lock, spawnMax: lock, cool: 0, coolMax: 1, ringT: 0, state: 'rock', gem: -1, gemT: 0, value: 0, shake: 0, flash: 0, born: G.time, golden: false, hard: false, tier: 0, armor: 0, chest: null };
   if (b.bright) rock.bright = rnd(b.bright[0], b.bright[1]);
   if (b.magnet && rnd(1, 2) === 2) rock.hue = 125;
@@ -619,7 +627,7 @@ function breakRock(rock, special) {
     if (i < 0 && Math.random() < luck()) i = rollMineral(b);                      // Luck: second roll
     if (i < 0) {
       rock.state = 'dead'; G.stats.empty++;
-      G.floats.push({ x: rock.x, y: rock.y, text: 'empty...', col: '#9aa0aa', t: 0, size: 13 });
+      if (gsc() > 0.6) G.floats.push({ x: rock.x, y: rock.y, text: 'empty...', col: '#9aa0aa', t: 0, size: 13 });
       AUDIO.sfx('empty');
       checkAch();
       return;
@@ -769,7 +777,8 @@ function hoverMega() {
 function worldHover() {
   if (G.mouse.onUI || !G.mouse.over) return null;
   const w = toWorld(G.mouse.x, G.mouse.y);
-  for (const r of G.rocks) if (r.state === 'rock' && Math.abs(w.x - r.x) <= 24 && Math.abs(w.y - r.y) <= 24) return r;
+  const hr = 24 * gsc();
+  for (const r of G.rocks) if (r.state === 'rock' && Math.abs(w.x - r.x) <= hr && Math.abs(w.y - r.y) <= hr) return r;
   if (G.heart && Math.abs(w.x) <= 70 && Math.abs(w.y - 32) <= 70) return G.heart;
   if (hoverMega()) return null;
   return null;
@@ -785,7 +794,7 @@ function bombTier(L) {
 function bombRadius(bo) { return 0.42 * bombArt(bo).size * 1.15 * bo.size / 100 * (1 + 0.15 * G.radiusLevel); }
 function bombTouches(bo, rock) {
   const rad = bombRadius(bo);
-  const dx = Math.max(Math.abs(bo.x - rock.x) - 25.6, 0), dy = Math.max(Math.abs(bo.y - rock.y) - 25.6, 0);
+  const half = 25.6 * gsc(), dx = Math.max(Math.abs(bo.x - rock.x) - half, 0), dy = Math.max(Math.abs(bo.y - rock.y) - half, 0);
   return dx * dx + dy * dy <= rad * rad;
 }
 function dropBomb(wx, wy) {
@@ -823,9 +832,10 @@ const MEGA_HP = 40, MEGA_TIME = 45;
 function startMega() {
   if (G.heart) return false;
   const c = rnd(0, 7), r = rnd(0, 3), cx = -192 + 48 * c + 24, cy = 128 - 48 * r - 24;
-  for (const k of G.rocks) if (k.state === 'rock' && Math.abs(k.x - cx) < 30 && Math.abs(k.y - cy) < 30) k.state = 'dead';
-  if (G.gen) G.gen = G.gen.filter(q => !q || !(Math.abs(-192 + 48 * q.c - cx) < 30 && Math.abs(128 - 48 * q.r - cy) < 30));   // a grid that is still filling in skips these cells too
-  spawnRock(c, r); const m = G.rocks.pop();
+  const mr = 46 + 23 * gsc();
+  for (const k of G.rocks) if (k.state === 'rock' && Math.abs(k.x - cx) < mr && Math.abs(k.y - cy) < mr) k.state = 'dead';
+  if (G.gen) G.gen = G.gen.filter(q => !q || !(Math.abs(q.x - cx) < mr && Math.abs(q.y - cy) < mr));   // a grid that is still filling in skips these cells too
+  spawnRock(cx, cy); const m = G.rocks.pop();
   Object.assign(m, { x: cx, y: cy, golden: false, chest: null, tier: 0, armor: 0, hard: false, costume: 0, spawnT: 0, cool: 0, hp: MEGA_HP, t: MEGA_TIME, robo: 0 });
   recolor(m); G.mega = m;
   G.shake = Math.max(G.shake, 8); dust(cx, cy, m.col, 14);
@@ -947,7 +957,7 @@ function tick() {
     G.stats.time += DT;
     if (G.boostT > 0) G.boostT = Math.max(0, G.boostT - DT);
     for (const k in G.buffs) if (G.buffs[k] > 0) G.buffs[k] = Math.max(0, G.buffs[k] - DT);
-    if (G.gen && G.gen.length) { const s = G.gen.shift(); if (s) spawnRock(s.c, s.r); if (!G.gen.length) G.gen = null; }
+    if (G.gen && G.gen.length) { for (let k = 0; k < (G.genRate || 1) && G.gen && G.gen.length; k++) { const s = G.gen.shift(); if (s) spawnRock(s.x, s.y); else break; } if (G.gen && !G.gen.length) G.gen = null; }   // big walls fill a whole column per frame
     if (G.loading > 0) G.loading--;
     // quests: keep 3, replace finished ones after a short "done!" moment
     for (const q of G.quests) if (q.done > 0) { q.done -= DT; if (q.done <= 0) q.gone = true; }
@@ -1108,7 +1118,7 @@ function chunks(x, y, col, n, small) {
   for (let i = 0, N = pn(n); i < N; i++) {
     const a = Math.random() * 6.283, v = (small ? 1.5 : 2.5) + Math.random() * (small ? 2 : 4);
     G.parts.push({ kind: 'chunk', x: x + rnd(-12, 12), y: y + rnd(-12, 12), vx: Math.cos(a) * v, vy: Math.sin(a) * v + 3, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.5,
-      s: small ? rnd(2, 4) : rnd(4, 9), col: Math.random() < 0.5 ? col : darken(col, 0.25), life: 30 + rnd(0, 25), max: 55, pts: [Math.random(), Math.random(), Math.random()] });
+      s: (small ? rnd(2, 4) : rnd(4, 9)) * Math.max(0.4, gsc()), col: Math.random() < 0.5 ? col : darken(col, 0.25), life: 30 + rnd(0, 25), max: 55, pts: [Math.random(), Math.random(), Math.random()] });
   }
 }
 function dust(x, y, col, n) {
@@ -1189,6 +1199,7 @@ function buy(kind) {
   const cost = costOf(kind, lvl);
   if (G.creditz < cost) { toast('You need ' + fmt(cost) + ' Creditz'); AUDIO.sfx('deny'); return; }
   G.creditz -= cost; G[key] = lvl + 1;
+  if (kind === 'rocks') { G.rocks = G.rocks.filter(r => r.state === 'gem'); G.regenWait = -1; makeGrid(); const [c, r] = gridDims(); toast('The wall is now ' + c + ' x ' + r + ' rocks!', '#c9a27a'); }
   AUDIO.sfx('buy');
   G.hudPulse = 1;
   checkAch(); save();
@@ -1730,9 +1741,9 @@ function drawLighting(shx, shy) {
     x.globalAlpha = Math.min(1, a); x.drawImage(soft('#ffffff'), (sx - rr2) * q, (sy - rr2) * q, rr2 * 2 * q, rr2 * 2 * q);
     if (col && lv > 1) tint.push([sx, sy, rr2, Math.min(1, a), col]);
   };
-  if (G.mouse.over && !G.menu && !G.mouse.onUI) { const m = toWorld(G.mouse.x, G.mouse.y); L(m.x, m.y, 125 * (1 + 0.04 * Math.sin(G.time * 17) + 0.03 * Math.sin(G.time * 29)), 1, '#ffc070'); }   // your torch
+   // your torch
   for (const l of G.lights) L(l.x, l.y, l.r * 1.5, l.life / l.max, l.col);
-  for (const r of G.rocks) { if (r.state === 'gem' && r.gemT < 2) L(r.x, r.y, 48, 0.8, RCOL[r.rarity]); else if (r.golden && r.state === 'rock') L(r.x, r.y, 62, 0.6, '#ffcc33'); }
+  { const lf = Math.max(0.35, gsc()); for (const r of G.rocks) { if (r.state === 'gem' && r.gemT < 2) L(r.x, r.y, 48 * lf, 0.8, RCOL[r.rarity]); else if (r.golden && r.state === 'rock') L(r.x, r.y, 62 * lf, 0.6, '#ffcc33'); } }
   for (const bo of G.bombs) if (bo.t >= 0) L(bo.x, bo.y, 95, 0.9, '#ffb04a');
   for (const m of G.meteors) { const t = m.t / m.dur; L(m.sx + (m.target.x - m.sx) * t, m.sy + (m.target.y - m.sy) * t, 85, 1, '#ff8a3a'); }
   for (const d of G.drills) if (d.target || d.y < 190) L(d.x, d.y, 30, 0.5, null);
@@ -1999,17 +2010,34 @@ function rockBody(r, bname) {
   ctx.restore();
   ctx.lineWidth = 1.6; ctx.strokeStyle = r.hard ? '#2a2f38' : '#08080c'; rockPath(style, s, seeded(seedN)); ctx.stroke();
 }
-const ROCK_BOX = 60;   // sprite covers -30..30 world units (rock + shadow)
+const ROCK_BOX = 60;
+// the sheet: square slots of S x S pixels, enough for the whole wall + spares; rebuilt when the size changes or a new wall is made
+const ATLAS = { c: null, ctx: null, S: 0, cols: 0, cap: 0, next: 0, free: [], id: 0, gen: -1 };
+function atlasReset(S) {
+  const [C, R] = gridDims(), need = C * R + 24, cols = Math.ceil(Math.sqrt(need));
+  if (!ATLAS.c) { ATLAS.c = document.createElement('canvas'); }
+  ATLAS.c.width = Math.min(8192, cols * S); ATLAS.c.height = Math.min(8192, Math.ceil(need / cols) * S);
+  ATLAS.ctx = ATLAS.c.getContext('2d'); ATLAS.S = S; ATLAS.cols = Math.max(1, Math.floor(ATLAS.c.width / S)); ATLAS.cap = ATLAS.cols * Math.floor(ATLAS.c.height / S);
+  ATLAS.next = 0; ATLAS.free = []; ATLAS.id++; ATLAS.gen = G.gridGen;
+}   // sprite covers -30..30 world units (rock + shadow)
 function drawRock(r, bname) {
   if (r.chest) { drawChest(r); return; }
-  const sc = K * DPR, key = r.costume + '|' + r.col + '|' + r.dir + '|' + r.tier + '.' + r.armor + '|' + bname + '|' + Math.round(sc * 100) + '|' + gx('shadows');
-  if (r.sprKey !== key) {
-    const S = Math.ceil(ROCK_BOX * sc);
-    const c = r.spr && r.spr.width === S ? r.spr : document.createElement('canvas');
-    c.width = c.height = S;
-    const sctx = c.getContext('2d'); sctx.setTransform(1, 0, 0, 1, 0, 0); sctx.clearRect(0, 0, S, S); sctx.setTransform(sc, 0, 0, sc, S / 2, S / 2);
-    const keep = ctx; ctx = sctx; rockBody(r, bname); ctx = keep;
-    r.spr = c; r.sprKey = key; PERF.rockSprites++;
+  const f = gsc(), sc = K * DPR * f, key = r.costume + '|' + r.col + '|' + r.dir + '|' + r.tier + '.' + r.armor + '|' + bname + '|' + Math.round(sc * 100) + '|' + gx('shadows');
+  const S = Math.ceil(ROCK_BOX * sc);
+  if (ATLAS.S !== S || ATLAS.gen !== G.gridGen) atlasReset(S);
+  if (r.sprKey !== key || r.atlasGen !== ATLAS.id) {
+    if (r.atlasGen !== ATLAS.id) r.slot = -1;
+    if (!(r.slot >= 0)) { r.slot = ATLAS.free.length ? ATLAS.free.pop() : ATLAS.next < ATLAS.cap ? ATLAS.next++ : -1; r.atlasGen = ATLAS.id; }
+    if (r.slot >= 0) {
+      const ax = (r.slot % ATLAS.cols) * S, ay = Math.floor(r.slot / ATLAS.cols) * S, a = ATLAS.ctx;
+      a.save(); a.setTransform(1, 0, 0, 1, 0, 0); a.beginPath(); a.rect(ax, ay, S, S); a.clip(); a.clearRect(ax, ay, S, S); a.setTransform(sc, 0, 0, sc, ax + S / 2, ay + S / 2);
+      const keep = ctx; ctx = a; rockBody(r, bname); ctx = keep; a.restore();
+    } else {   // atlas full (should not happen): fall back to its own little canvas
+      const c = r.spr && r.spr.width === S ? r.spr : document.createElement('canvas'); c.width = c.height = S;
+      const sctx = c.getContext('2d'); sctx.setTransform(sc, 0, 0, sc, S / 2, S / 2);
+      const keep = ctx; ctx = sctx; rockBody(r, bname); ctx = keep; r.spr = c;
+    }
+    r.sprKey = key; PERF.rockSprites++;
   }
   const born = clamp((G.time - r.born) / 0.35, 0, 1);
   const grow = 0.55 + 0.45 * ease(born);
@@ -2017,9 +2045,10 @@ function drawRock(r, bname) {
   const x = r.x + jx * 0.5, y = wy(r.y) + jy * 0.5, s = 23, q = s * 0.95;
   ctx.save();
   const sq = r.flash > 0 ? r.flash * 0.08 : 0;   // squash when hit
-  ctx.translate(x, y + sq * 10); ctx.scale(grow * (1 + sq), grow * (1 - sq));
+  ctx.translate(x, y + sq * 10 * f); ctx.scale(grow * f * (1 + sq), grow * f * (1 - sq));
   ctx.globalAlpha = born;
-  ctx.drawImage(r.spr, -ROCK_BOX / 2, -ROCK_BOX / 2, ROCK_BOX, ROCK_BOX);
+  if (r.slot >= 0) ctx.drawImage(ATLAS.c, (r.slot % ATLAS.cols) * S, Math.floor(r.slot / ATLAS.cols) * S, S, S, -ROCK_BOX / 2, -ROCK_BOX / 2, ROCK_BOX, ROCK_BOX);
+  else ctx.drawImage(r.spr, -ROCK_BOX / 2, -ROCK_BOX / 2, ROCK_BOX, ROCK_BOX);
   { const fx = BIOME_FX[bname]; if (fx && fx.liveSparks && !QUALITY.drop && gx('parts') > 0) liveSparks(r, bname, fx.liveSparks); }
   if (r.golden) {
     const sx = ((G.time * 40 + r.seed) % 90) - 45;
@@ -2176,7 +2205,7 @@ function drawChest(r) {
   const born = clamp((G.time - r.born) / 0.35, 0, 1), grow = 0.55 + 0.45 * ease(born);
   const body = gold ? ['#ffe27a', '#b07a10'] : ['#d9822b', '#7a400e'], band = gold ? '#fff6c0' : '#4a3a2a';
   const S = 20, LID = -6;   // half size, and where the lid meets the box
-  ctx.save(); ctx.translate(x, y); ctx.scale(grow, grow); ctx.globalAlpha = born * (open ? 1 - t * 0.6 : 1);
+  ctx.save(); ctx.translate(x, y); ctx.scale(grow * gsc(), grow * gsc()); ctx.globalAlpha = born * (open ? 1 - t * 0.6 : 1);
   ctx.fillStyle = 'rgba(0,0,0,0.4)'; rr(-S + 2, -S + 3, S * 2, S * 2, 5); ctx.fill();
   // box (below the lid)
   let g = ctx.createLinearGradient(-S, LID, S, S); g.addColorStop(0, body[0]); g.addColorStop(1, body[1]);
@@ -2557,21 +2586,20 @@ function renderWorld(shx, shy) {
   for (const r of G.rocks) if (r.state === 'rock' || r.state === 'open') drawRock(r, b.name);
   // hover outline + crack timer
   if (hover && hover !== G.heart) {
-    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,' + (0.5 + 0.3 * Math.sin(G.time * 8)) + ')'; rr(hover.x - 26, wy(hover.y) - 26, 52, 52, 9); ctx.stroke();
+    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,' + (0.5 + 0.3 * Math.sin(G.time * 8)) + ')'; const hf = gsc(); rr(hover.x - 26 * hf, wy(hover.y) - 26 * hf, 52 * hf, 52 * hf, 9 * hf); ctx.stroke();
     if ((hover.spawnT > 0 && hover.spawnMax > 0.6) || (hover.cool > 0 && hover.coolMax > 0.6)) {
       const frac = hover.spawnT > 0 ? 1 - hover.spawnT / hover.spawnMax : 1 - hover.cool / hover.coolMax;
-      progressRing(hover.x, wy(hover.y), 13, clamp(frac, 0, 1), hover.spawnT > 0 ? '#8fd4ff' : '#ffd84a', 1);
-      if (hover.cool > 3) txt(Math.ceil(hover.cool) + 's', hover.x, wy(hover.y) + 1, 9, '#ffffff', { font: FB, weight: 900 });
+      progressRing(hover.x, wy(hover.y), Math.max(7, 13 * hf), clamp(frac, 0, 1), hover.spawnT > 0 ? '#8fd4ff' : '#ffd84a', 1);
+      if (hover.cool > 3 && hf > 0.5) txt(Math.ceil(hover.cool) + 's', hover.x, wy(hover.y) + 1, 9, '#ffffff', { font: FB, weight: 900 });
     }
   }
   // finished rings stay full for a moment and pop, on every rock (not just the hovered one)
-  for (const r of G.rocks) if (r.ringT > 0 && r.state === 'rock') progressRing(r.x, wy(r.y), 13 * (1 + (0.3 - r.ringT) * 1.2), 1, '#7dff7a', r.ringT / 0.3);
   // minerals that popped out
   for (const r of G.rocks) {
     if (r.state !== 'gem') continue;
     const art = gemArt(r.gemKey, r.gem), rk = rank(r.rarity);
     const pop = r.gemT < 0.3 ? easeBack(r.gemT / 0.3) : 1;
-    let x = r.x, y = wy(r.y) - 4 - Math.sin(Math.min(1, r.gemT * 2) * Math.PI) * 4, sz = 26 * pop, alpha = 1;
+    const gf = Math.max(0.3, gsc()); let x = r.x, y = wy(r.y) - 4 * gf - Math.sin(Math.min(1, r.gemT * 2) * Math.PI) * 4 * gf, sz = 26 * pop * gf, alpha = 1;
     if (r.gemT >= 2) {   // fly to the Creditz counter
       const t = ease((r.gemT - 2) / 0.6);
       const target = toWorld(52, 40);
@@ -2579,17 +2607,17 @@ function renderWorld(shx, shy) {
       if (t > 0.97 && !r.arrived) { r.arrived = true; G.hudPulse = 1; }
     }
     if (rk >= 5 && r.gemT < 2.2 && gx('bg') > 0) {
-      const ra = rays(RCOL[r.rarity]), rs = 34 + rk * 3, fa = Math.min(1, r.gemT * 3) * clamp((2.2 - r.gemT) * 3, 0, 1);
+      const ra = rays(RCOL[r.rarity]), rs = (34 + rk * 3) * gf, fa = Math.min(1, r.gemT * 3) * clamp((2.2 - r.gemT) * 3, 0, 1);
       ctx.save(); ctx.translate(x, y); ctx.rotate(G.time * 0.8 + r.seed); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.55 * fa * pop; ctx.drawImage(ra, -rs, -rs, rs * 2, rs * 2); ctx.rotate(-G.time * 1.9); ctx.globalAlpha = 0.3 * fa * pop; ctx.drawImage(ra, -rs * 0.7, -rs * 0.7, rs * 1.4, rs * 1.4); ctx.restore();
     }
-    if (gx('shadows') && r.gemT < 2) { ctx.globalAlpha = 0.45 * pop; ctx.drawImage(soft('#000000'), r.x - 13, wy(r.y) + 7, 26, 8); ctx.globalAlpha = 1; }
+    if (gx('shadows') && r.gemT < 2) { ctx.globalAlpha = 0.45 * pop; ctx.drawImage(soft('#000000'), r.x - 13 * gf, wy(r.y) + 7 * gf, 26 * gf, 8 * gf); ctx.globalAlpha = 1; }
     drawGem(art, x, y, sz, { glow: RCOL[r.rarity], rank: rk, alpha, small: r.gemT < 2, rot: Math.sin(G.time * 2 + r.seed) * 0.08 });
     if (r.gemKey === 'Gold' || r.gemKey === 'Pure') {   // gold shine: rotating glints around it
       ctx.globalCompositeOperation = 'lighter';
       for (let k = 0; k < (r.gemKey === 'Pure' ? 5 : 3); k++) { const a2 = G.time * 2 + k * 2.1, tw = Math.max(0, Math.sin(G.time * 6 + k * 1.7)); ctx.globalAlpha = alpha * tw; star4(x + Math.cos(a2) * sz * 0.6, y + Math.sin(a2) * sz * 0.6, 2 + tw * 3, '#fff6c0'); }
       ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
     }
-    if (r.gemT < 2) {
+    if (r.gemT < 2 && gsc() >= 0.6) {
       const la = clamp((r.gemT - 0.15) * 4, 0, 1) * clamp((2 - r.gemT) * 4, 0, 1);
       ctx.globalAlpha = la;
       txt(art.name, r.x, wy(r.y) + 13, fitSize(art.name, 7.5, 44), '#ffffff', { stroke: 2.2 });
@@ -2656,7 +2684,7 @@ function renderWorld(shx, shy) {
   const lk = 0.7 * Math.min(1, 10 / Math.max(1, G.lights.length));
   for (const l of G.lights) { ctx.globalAlpha = (l.life / l.max) * lk; ctx.drawImage(soft(l.col), l.x - l.r, wy(l.y) - l.r, l.r * 2, l.r * 2); }
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-  for (const f of G.floats) { ctx.globalAlpha = clamp((1.5 - f.t) * 2, 0, 1); const sc = f.t < 0.15 ? easeBack(f.t / 0.15) : 1; txt(f.text, f.x, wy(f.y), f.size * sc, f.col, { stroke: 3 }); }
+  for (const f of G.floats) { ctx.globalAlpha = clamp((1.5 - f.t) * 2, 0, 1); const sc = f.t < 0.15 ? easeBack(f.t / 0.15) : 1; const fz = Math.max(0.5, gsc()); txt(f.text, f.x, wy(f.y), f.size * sc * fz, f.col, { stroke: 3 * fz }); }
   ctx.globalAlpha = 1;
   // the Heart's health bar
   if (G.heart) {
@@ -3409,9 +3437,10 @@ function idle(s, v) { if (!s.home) s.home = { x: (Math.random() - 0.5) * 380, y:
 // rock shapes around a point: 'sq' = 3x3, 'plus' = +, a number = a circle of that radius
 function inShape(r, x, y, shape) {
   const dx = Math.abs(r.x - x), dy = Math.abs(r.y - y);
-  if (shape === 'sq') return dx < 60 && dy < 60;
-  if (shape === 'plus') return (dx < 12 && dy < 60) || (dy < 12 && dx < 60);
-  return Math.hypot(r.x - x, r.y - y) < shape + 16;
+  const c = 48 * gsc();   // one rock step
+  if (shape === 'sq') return dx < c * 1.25 && dy < c * 1.25;
+  if (shape === 'plus') return (dx < c * 0.25 && dy < c * 1.25) || (dy < c * 0.25 && dx < c * 1.25);
+  return Math.hypot(r.x - x, r.y - y) < shape + 16 * gsc();
 }
 function areaCount(x, y, shape) { let n = 0; for (const r of G.rocks) if (r.state === 'rock' && r.spawnT <= 0 && inShape(r, x, y, shape)) n++; return n; }
 function droneCrack(r, n, d) {
@@ -3439,6 +3468,7 @@ function pickRock(d, s, o) {
     const taken = new Set(); for (const e of deployed()) if (e !== d) { const es = DRT.get(e.id); if (es && es.target) taken.add(es.target); }
     const l2 = list.filter(r => !taken.has(r)); if (l2.length) list = l2;
   }
+  if (list.length > 40) { const smp = []; for (let k = 0; k < 40; k++) smp.push(list[Math.floor(Math.random() * list.length)]); list = smp; }
   if (d.rank >= 3) {   // rank 3+: finish cracked rocks first, love golden rocks + chests; rank 4+: also stay close and aim for crowds
     let best = list[0], bs = -1e9;
     for (const r of list) {
@@ -3464,7 +3494,7 @@ function tickDrones() {
   // small drills shot out by Drillbomber bombs
   for (const p of G.dproj) {
     p.x += p.dx * 6; p.y += p.dy * 6; p.life -= DT; p.spin += 0.7;
-    for (const r of G.rocks) if (r.state === 'rock' && r.spawnT <= 0 && !p.hit.includes(r) && Math.abs(r.x - p.x) < 21 && Math.abs(r.y - p.y) < 21) {
+    for (const r of G.rocks) if (r.state === 'rock' && r.spawnT <= 0 && !p.hit.includes(r) && Math.abs(r.x - p.x) < 21 * gsc() && Math.abs(r.y - p.y) < 21 * gsc()) {
       p.hit.push(r); droneCrack(r, p.dmg, p.d); chunks(p.x, p.y, '#c9d2d9', 3, true); if (--p.pierce <= 0) { p.life = 0; break; }
     }
     if (Math.abs(p.x) > 240 || p.y < -110 || p.y > 175) p.life = 0;
@@ -3565,7 +3595,7 @@ function explodeDroneBomb(b) {
   droneSfx(b.d, 'dbomb');
 }
 // laser maths: a ray from the drone; "along" = how far down the ray a rock is, "perp" = how far to the side
-const laserLanes = R => { const n = 1 + Math.floor((R - 1) / 2), out = []; for (let k = 0; k < n; k++) out.push((k - (n - 1) / 2) * 44); return out; };
+const laserLanes = R => { const n = 1 + Math.floor((R - 1) / 2), out = []; for (let k = 0; k < n; k++) out.push((k - (n - 1) / 2) * 44 * gsc()); return out; };
 function rayFirst(ox, oy, a, lane) {
   const dx = Math.cos(a), dy = Math.sin(a); let best = null, bd = 900;
   for (const r of G.rocks) {
@@ -3573,11 +3603,11 @@ function rayFirst(ox, oy, a, lane) {
     const rx = r.x - ox, ry = r.y - oy, along = rx * dx + ry * dy;
     if (along < -10) continue;
     const perp = -rx * dy + ry * dx;
-    if (Math.abs(perp - lane) < 22 && along < bd) { bd = along; best = r; }
+    if (Math.abs(perp - lane) < 22 * gsc() && along < bd) { bd = along; best = r; }
   }
   return [best, bd];
 }
-function laserCount(d, x, y, a) { let n = 0; for (const lane of laserLanes(d.rank)) for (const r of G.rocks) { if (r.state !== 'rock') continue; const rx = r.x - x, ry = r.y - y, al = rx * Math.cos(a) + ry * Math.sin(a), pp = -rx * Math.sin(a) + ry * Math.cos(a); if (al > -10 && Math.abs(pp - lane) < 22) n++; } return n; }
+function laserCount(d, x, y, a) { let n = 0; for (const lane of laserLanes(d.rank)) for (const r of G.rocks) { if (r.state !== 'rock') continue; const rx = r.x - x, ry = r.y - y, al = rx * Math.cos(a) + ry * Math.sin(a), pp = -rx * Math.sin(a) + ry * Math.cos(a); if (al > -10 && Math.abs(pp - lane) < 22 * gsc()) n++; } return n; }
 const LASER_DIRS = [0, 1, 2, 3, 4, 5, 6, 7].map(k => k * Math.PI / 4);
 function laserAim(d, x, y) {
   if (d.rank < 3) { const f = freeRocks(); if (!f.length) return LASER_DIRS[rnd(0, 7)]; const r = f[rnd(0, f.length - 1)]; return Math.atan2(r.y - (y - 12), r.x - x); }   // aim at one random rock
@@ -3776,7 +3806,7 @@ function drawDrone(d, x, y, o) {
 function drawDroneWorld() {
   const b = BIOMES[G.biome];
   // tagged rocks: the alien ship already knows what's inside
-  for (const r of G.rocks) if (r.alienGem >= 0 && r.state === 'rock') { const p = 0.5 + 0.5 * Math.sin(G.time * 4 + r.seed); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25 + 0.2 * p; ctx.drawImage(soft('#7dff3a'), r.x - 30, wy(r.y) - 30, 60, 60); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; drawGem(gemArt(b.name, r.alienGem), r.x + 15, wy(r.y) - 15, 11, { glow: '#7dff3a', alpha: 0.85 }); }
+  for (const r of G.rocks) if (r.alienGem >= 0 && r.state === 'rock') { const p = 0.5 + 0.5 * Math.sin(G.time * 4 + r.seed); ctx.globalCompositeOperation = 'lighter'; const af = gsc(); ctx.globalAlpha = 0.25 + 0.2 * p; ctx.drawImage(soft('#7dff3a'), r.x - 30 * af, wy(r.y) - 30 * af, 60 * af, 60 * af); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; drawGem(gemArt(b.name, r.alienGem), r.x + 15 * af, wy(r.y) - 15 * af, 11 * Math.max(0.4, af), { glow: '#7dff3a', alpha: 0.85 }); }
   for (const g of G.rings) { const k = g.t / 0.45; ctx.globalAlpha = Math.max(0, 1 - k); ctx.strokeStyle = g.col; ctx.lineWidth = 3 * (1 - k) + 0.5; ctx.beginPath(); ctx.arc(g.x, wy(g.y), Math.max(1, g.r * ease(k)), 0, 6.283); ctx.stroke(); }
   ctx.globalAlpha = 1;
   for (const bo of G.dbombs) { const blink = Math.sin(bo.t * (8 + bo.t * 14)) > 0; hangBomb(bo.x, wy(bo.y), bo.big ? 6.5 : 4, { dark: '#222', accent: blink ? '#ff3030' : bo.col }, G.time, bo.drills); }
