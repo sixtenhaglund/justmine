@@ -118,17 +118,11 @@ const OLD_ORDER = ['Common Caverns', 'Magnetic Mountain', 'Heavy Hights', 'Cryst
 const EVENT_MINERALS = [['Starfallium', 'Secret', 'Meteor showers: x3 the best mineral here']];
 // the gold family: each biome's golden rocks drop that biome's gold; 1 in 20 is the Pure version (x5)
 const PURE_CHANCE = 1 / 20, GOLD_VALUE = 5, PURE_VALUE = 25;
-const goldenChance = () => upv('golden', 1) * (G.pet === 3 ? 1.5 : 1) / (perk(3) ? 125 : 250);
+const goldenChance = () => upv('golden', 1) / (perk(3) ? 125 : 250);
 // MUSEUM: every finished Book page is shown off in the museum and pays +5% Creditz forever (all gold minerals: +25%)
 const pagesDone = () => BIOMES.filter(b => b.minerals.every((m, i) => (G.found[b.name] || [])[i] > 0)).length;
 const allGoldFound = () => BIOMES.every((b, i) => (G.found.Gold || [])[i] > 0);
 const museumMult = () => 1 + 0.05 * pagesDone() + (allGoldFound() ? 0.25 : 0);
-// PETS: unlocked by the museum. They follow your pickaxe and help.
-const PETS = [
-  { name: 'Mole', need: 'Finish 3 Book pages', ok: () => pagesDone() >= 3, desc: 'Digs at the rock under your pickaxe every 3s' },
-  { name: 'Bat', need: 'Finish 8 Book pages', ok: () => pagesDone() >= 8, desc: 'Flies to a random rock and cracks it every 2.5s' },
-  { name: 'Golden Beetle', need: 'Find every biome\'s gold mineral', ok: () => allGoldFound(), desc: 'Golden rocks 50% more common, gold worth 50% more' },
-];
 // Shop: his 4 upgrade lines (his levels first, then new higher levels) + 5 new lines.
 const TUNE = { costExp: 0.75, endMul: 1.08, endCost: 1.5 };   // economy knobs (the balance sim tunes these)
 const pct = v => Math.round(v * 100) + '%';
@@ -232,11 +226,6 @@ const PERKS = [
   [7, 'Every hit breaks 2 layers of reinforced armour'], [8, 'Bomb cooldown 3 s'], [9, 'Quest boosts last 3 minutes'],
   [10, 'Start every rebirth with +25% Mining speed'], [11, '+1 more free Auto miner'], [12, 'Gold Rush lasts twice as long'],
 ];
-// pickaxes: unlocked by rocks broken (they stay through rebirths). Higher tiers give lucky double cracks.
-const PICKS = [
-  ['Wooden pickaxe', 0, 0, '#8b5a2b', '#b08a5a'], ['Stone pickaxe', 250, 0.05, '#8b5a2b', '#9a9a9a'], ['Iron pickaxe', 1000, 0.1, '#6a4a2a', '#d6dde4'],
-  ['Gold pickaxe', 3000, 0.15, '#5a3a1a', '#ffd04a'], ['Diamond pickaxe', 8000, 0.2, '#3a2a1a', '#7ff0ff'], ['Void pickaxe', 20000, 0.25, '#1a0a2a', '#b678ff'],
-];
 let HEART_REBIRTHS = 10; const HEART_HP = 400;
 const AUTO_SLOW = 2;
 const FPS = 30, DT = 1 / FPS;
@@ -250,11 +239,10 @@ const ACH = [
   ['crusher', 'Rock Crusher', 'Break 1 000 rocks'], ['empty', 'So Empty...', 'Find 100 empty rocks'], ['kaboom', 'KABOOM', 'Crack 15 rocks with one bomb'],
   ['mythic', 'Mythical!', 'Find a Mythical mineral or rarer'], ['celestial', 'Celestial!', 'Find a Celestial mineral'], ['golden', 'Golden Touch', 'Break a golden rock'],
   ['star', 'Shooting Star', 'Find Starfallium in a meteor shower'], ['rush', 'Gold Fever', 'Survive a Gold Rush'], ['hard', 'Iron Breaker', 'Break 10 reinforced rocks'],
-  ['quest10', 'Quest Master', 'Finish 10 quests'], ['chest10', 'Treasure Hunter', 'Open 10 chests'], ['chest50', 'Chest Master', 'Open 50 chests'], ['diamond', 'Diamond Hands', 'Unlock the Diamond pickaxe'], ['sphinx', 'Pharaoh', 'Find Sphinxium'],
+  ['quest10', 'Quest Master', 'Finish 10 quests'], ['chest10', 'Treasure Hunter', 'Open 10 chests'], ['chest50', 'Chest Master', 'Open 50 chests'], ['sphinx', 'Pharaoh', 'Find Sphinxium'],
   ['firefly', 'Firefly Catcher', 'Find Fireflium'], ['tempest', 'Storm Chaser', 'Find Tempestium'], ['phoenix', 'Rise From the Ashes', 'Find Phoenixium'],
   ['goldall', 'Gold Hoarder', 'Find every biome\'s gold mineral'], ['pure', 'Purely Golden', 'Find a Pure gold mineral'],
   ['mega', 'Team Effort', 'Break a Mega Rock'], ['rain50', 'Crystal Catcher', 'Catch 50 crystals in Crystal Rain'], ['curator', 'Curator', 'Finish 11 Book pages'],
-  ['pet', 'Best Friend', 'Unlock a pet'], ['zoo', 'Zookeeper', 'Unlock all 3 pets'],
   ['page', 'Collector', 'Complete a whole biome page in the Book'], ['all', 'Completionist', 'Find every mineral in the game'], ['heart', 'Heart of the Mountain', 'Break the Heart of the Mountain'],
 ];
 const FIND_ACH = { Sphinxium: 'sphinx', Fireflium: 'firefly', Tempestium: 'tempest', Phoenixium: 'phoenix' };
@@ -269,7 +257,7 @@ const G = Object.assign({
   menu: null, menuT: {}, bombs: [], bombCD: 0, bombPop: 0, drills: [], meteors: [],
   shower: 0, rush: 0, nextEvent: 240, heart: null, heartHP: HEART_HP, won: false, victory: 0,
   found: {}, ach: {}, achPop: [], visited: 1, reached: 1, buffs: {}, pick: 0, quests: [], questsDone: 0, boostT: 0,
-  stats: { rocks: 0, empty: 0, minerals: 0, time: 0, bombs: 0, hard: 0, chests: 0, rain: 0, mega: 0 }, pet: 0, mega: null, rain: 0, drops: [], petS: { x: 0, y: 32, t: 0, fly: null },
+  stats: { rocks: 0, empty: 0, minerals: 0, time: 0, bombs: 0, hard: 0, chests: 0, rain: 0, mega: 0 }, mega: null, rain: 0, drops: [],
   parts: [], lights: [], floats: [], toasts: [], amb: [], bolt: null,
   shake: 0, time: 0, saveT: 0, tp: 9, tpName: '', flash: 0, flashCol: '#fff', hudPulse: 0, clankT: 0,
   mouse: { x: -1, y: -1, down: false, over: false, onUI: false, swing: 0 },
@@ -298,7 +286,6 @@ const rebirthPart = () => G.rebirthMult > 1 ? G.rebirthMult * (1 + upv('reborn',
 // Mineral value: listed levels, then endless +10% steps
 const valueAt = lv => { const V = SHOPV.value; if (lv <= 0) return 1; if (lv <= V.length) return 1 + V[lv - 1]; return (1 + V[V.length - 1]) * Math.pow(1.1, lv - V.length); };
 const totalMult = () => rebirthPart() * creditzMult() * BIOMES[G.biome].bonus * valueAt(G.valueLevel) * museumMult() * (G.boostT > 0 ? boostMult() : 1) * (buffOn('cash') ? 2 : 1);
-const pickTier = () => { let t = 0; PICKS.forEach((p, i) => { if (G.stats.rocks >= p[1]) t = i; }); return t; };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const ease = t => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
 const easeBack = t => { t = clamp(t, 0, 1); const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
@@ -329,7 +316,7 @@ function save() {
       v: 4, creditz: G.creditz, high: G.high, cm: G.cmLevel, sp: G.spLevel, bomb: G.bombLevel, auto: G.autoLevel, levels: lv,
       rebirths: G.rebirths, rmult: G.rebirthMult, biomeName: BIOMES[G.biome].name, hue: G.crystalHue,
       found: G.found, ach: G.ach, reachedNames: BIOMES.filter((b, i) => G.reached & (1 << i)).map(b => b.name), visitedNames: BIOMES.filter((b, i) => G.visited & (1 << i)).map(b => b.name), stats: G.stats,
-      heartHP: G.heartHP, won: G.won, settings: G.settings, pick: G.pick, pet: G.pet, quests: G.quests, questsDone: G.questsDone, boostT: G.boostT, rate: G.rate || 0, savedAt: Date.now(),
+      heartHP: G.heartHP, won: G.won, settings: G.settings, quests: G.quests, questsDone: G.questsDone, boostT: G.boostT, rate: G.rate || 0, savedAt: Date.now(),
     }));
   } catch (e) {}
 }
@@ -366,8 +353,6 @@ function loadSave() {
     for (const k in G.stats) G.stats[k] = num(+G.stats[k], 0);
     G.heartHP = s.heartHP > 0 && s.heartHP <= HEART_HP ? s.heartHP : HEART_HP; G.won = !!s.won;
     if (s.settings) G.settings = { vol: clamp(s.settings.vol | 0, 0, 3), music: s.settings.music !== false };
-    G.pick = clamp(s.pick | 0, 0, PICKS.length - 1);
-    G.pet = clamp(s.pet | 0, 0, PETS.length);
     G.quests = Array.isArray(s.quests) ? s.quests.filter(q => q && QUEST_TYPES[q.type]) : [];
     G.questsDone = s.questsDone | 0; G.boostT = clamp(num(+s.boostT, 0), 0, 600);
     G.rate = num(+s.rate, 0);
@@ -540,7 +525,7 @@ function breakRock(rock, special) {
   if (rock.hard) { G.stats.hard++; quest('hard', 1); if (G.stats.hard >= 10) ach('hard'); }
   if (rock.golden) {
     const pure = Math.random() < PURE_CHANCE;
-    gemKey = pure ? 'Pure' : 'Gold'; i = G.biome; gain = (pure ? PURE_VALUE : GOLD_VALUE) * bestValue(b) * totalMult() * (G.pet === 3 ? 1.5 : 1); rar = pure ? 'Admin' : 'Exotic';
+    gemKey = pure ? 'Pure' : 'Gold'; i = G.biome; gain = (pure ? PURE_VALUE : GOLD_VALUE) * bestValue(b) * totalMult(); rar = pure ? 'Admin' : 'Exotic';
     ach('golden'); if (pure) ach('pure');
     G.flash = Math.max(G.flash, pure ? 0.7 : 0.45); G.flashCol = '#ffd84a'; coins(rock.x, rock.y, pure ? 40 : 22);
     G.lights.push({ x: rock.x, y: rock.y, r: pure ? 200 : 130, col: '#ffd84a', life: 1, max: 1 });
@@ -685,7 +670,6 @@ function hitRock(rock, by) {
     if (b.hitDarken) rock.bright -= 10;
     // pickaxe luck: a lucky hit cracks twice
     if ((by === 'mouse' || by === 'auto') && rock.costume < 4 && Math.random() < upv('crit', 0)) { rock.costume++; if (b.hitDarken) rock.bright -= 10; }
-    if (by === 'mouse' && rock.costume < 4 && Math.random() < PICKS[pickTier()][2]) { rock.costume++; if (b.hitDarken) rock.bright -= 10; G.floats.push({ x: rock.x, y: rock.y + 20, text: 'CRIT!', col: '#ffffff', t: 0, size: 10 }); }
     recolor(rock);
     rock.cool = wait0 + DT; rock.coolMax = rock.cool;
     rock.shake = 5; rock.flash = 1;
@@ -697,29 +681,6 @@ function hitRock(rock, by) {
 function hoverMega() {
   if (!G.mega || G.mouse.onUI || !G.mouse.over) return false;
   const w = toWorld(G.mouse.x, G.mouse.y); return Math.abs(w.x - G.mega.x) <= 46 && Math.abs(w.y - G.mega.y) <= 46;
-}
-function tickPet() {
-  const P = G.petS, w = toWorld(G.mouse.x, G.mouse.y);
-  if (!G.pet || !PETS[G.pet - 1].ok()) return;
-  const tx = isFinite(w.x) ? clamp(w.x + 22, -230, 230) : 0, ty = isFinite(w.y) ? clamp(w.y + 18, -100, 165) : 32;
-  P.t += DT;
-  if (G.pet === 2 && P.fly) {   // the bat flies to its rock and back
-    P.fly.t += DT * 2; const f = P.fly;
-    P.x = f.x0 + (f.r.x - f.x0) * Math.sin(Math.min(1, f.t) * Math.PI / 2); P.y = f.y0 + (f.r.y - f.y0) * Math.sin(Math.min(1, f.t) * Math.PI / 2);
-    if (f.t >= 1 && !f.hit) { f.hit = true; if (f.r.state === 'rock' && G.rocks.indexOf(f.r) >= 0 && f.r.spawnT <= 0) { f.r.cool = 0; hitRock(f.r, 'pet'); } }
-    if (f.t >= 1.6) P.fly = null;
-    return;
-  }
-  P.x += (tx - P.x) * 0.15; P.y += (ty - P.y) * 0.15;
-  if (G.pet === 1 && P.t >= 3) {   // mole: digs under your pickaxe
-    P.t = 0;
-    if (hoverMega()) hitMega(1);
-    else for (const r of G.rocks) if (r.state === 'rock' && r.spawnT <= 0 && Math.abs(w.x - r.x) <= 24 && Math.abs(w.y - r.y) <= 24) { r.cool = 0; hitRock(r, 'pet'); dust(r.x, r.y - 20, '#8a6a4a', 3); break; }
-  }
-  if (G.pet === 2 && P.t >= 2.5) {
-    P.t = 0; const free = G.rocks.filter(r => r.state === 'rock' && r.spawnT <= 0);
-    if (free.length) P.fly = { r: free[rnd(0, free.length - 1)], x0: P.x, y0: P.y, t: 0, hit: false };
-  }
 }
 function worldHover() {
   if (G.mouse.onUI || !G.mouse.over) return null;
@@ -773,7 +734,7 @@ function startRush() {
   G.rush = perk(12) ? 40 : 20; toast('GOLD RUSH! Golden rocks everywhere!', '#ffd84a'); AUDIO.sfx('rush');
   for (const r of G.rocks) if (r.state === 'rock' && !r.hard && !r.chest && Math.random() < 0.15) { r.golden = true; recolor(r); }
 }
-// MEGA ROCK: one giant rock over 2x2 cells. You, the robots, bombs and pets all chip at it before it crumbles.
+// MEGA ROCK: one giant rock over 2x2 cells. You, the robots and bombs all chip at it before it crumbles.
 const MEGA_HP = 40, MEGA_TIME = 45;
 function startMega() {
   if (G.heart) return false;
@@ -864,7 +825,7 @@ function ach(id) {
 }
 function checkAch() {
   const c = G.creditz;
-  if (pagesDone() >= 11) ach('curator'); if (PETS.some(p => p.ok())) ach('pet'); if (PETS.every(p => p.ok())) ach('zoo');
+  if (pagesDone() >= 11) ach('curator');
   if ((G.stats.rain || 0) >= 50) ach('rain50');
   if (c >= 1e3) ach('k1'); if (c >= 1e6) ach('m1'); if (c >= 1e9) ach('b1'); if (c >= 1e12) ach('t1');
   if (G.visited === (1 << BIOMES.length) - 1) ach('explorer');
@@ -872,7 +833,6 @@ function checkAch() {
   if (G.spLevel >= 5) ach('speed'); if (creditzMult() >= 100) ach('x100'); if (G.cmLevel >= SHOP.creditz.costs.length) ach('x400');
   if (G.bombLevel >= 5) ach('boom'); if (G.autoLevel >= SHOP.auto.costs.length) ach('robots'); if (G.luckLevel >= SHOP.luck.costs.length) ach('lucky');
   if (G.stats.rocks >= 1000) ach('crusher'); if (G.stats.empty >= 100) ach('empty');
-  if (pickTier() >= 4) ach('diamond');
   let all = true;
   for (const b of BIOMES) {
     const f = G.found[b.name] || [];
@@ -955,7 +915,6 @@ function tick() {
         if (G.mega && (m.cool -= DT) <= 0 && hoverMega() && G.mouse.down) { hitMega(1); m.cool = clamp(miningSpeed() * b.factor * 0.2, 0.15, 1.5); G.mouse.swing = 1; }
       }
     }
-    tickPet();
     for (const m of G.meteors) { m.t += DT; if (m.t >= m.dur && !m.done) { m.done = true; meteorImpact(m); } }
     G.meteors = G.meteors.filter(m => !m.done);
 
@@ -1191,7 +1150,7 @@ function startGame(fresh) {
   if (fresh) {
     wipeSave();
     Object.assign(G, LEVEL_DEFAULTS, { creditz: 0, shown: 0, high: 0, rebirths: 1, rebirthMult: 1, biome: 0, found: {}, ach: {}, visited: 1, reached: 1, pick: 0, quests: [], questsDone: 0, boostT: 0,
-      stats: { rocks: 0, empty: 0, minerals: 0, time: 0, bombs: 0, hard: 0, chests: 0, rain: 0, mega: 0 }, heartHP: HEART_HP, won: false, crystalHue: 0, pet: 0 });
+      stats: { rocks: 0, empty: 0, minerals: 0, time: 0, bombs: 0, hard: 0, chests: 0, rain: 0, mega: 0 }, heartHP: HEART_HP, won: false, crystalHue: 0 });
   } else loadSave();
   G.scene = 'play'; G.victory = 0; G.menu = null;
   if (fresh) G.away = null;
@@ -1997,33 +1956,6 @@ function drawMega(m, bname) {
   ctx.fillStyle = '#0b0c12'; rr(x - 1, y - 1, w + 2, 7, 3); ctx.fill();
   ctx.fillStyle = '#ffb36a'; rr(x, y, Math.max(0, w * m.hp / MEGA_HP), 5, 2.5); ctx.fill();
 }
-// pets in his flat style: thin dark outline, three shades of one colour
-function drawPet(kind, P) {
-  const x = P.x, y = wy(P.y) + Math.sin(G.time * 5) * 1.5;
-  ctx.save(); ctx.translate(x, y); ctx.lineWidth = 1; ctx.strokeStyle = '#120c08'; ctx.lineJoin = 'round';
-  if (kind === 1) {   // mole
-    ctx.fillStyle = '#6a4a32'; ctx.beginPath(); ctx.ellipse(0, 0, 9, 7, 0, 0, 6.283); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#8a6a4a'; ctx.beginPath(); ctx.ellipse(-2, -2, 5, 3.5, 0, 0, 6.283); ctx.fill();
-    ctx.fillStyle = '#ff9aa8'; ctx.beginPath(); ctx.arc(8, 0, 2, 0, 6.283); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#120c08'; ctx.beginPath(); ctx.arc(4, -2.5, 0.9, 0, 6.283); ctx.fill();
-    ctx.fillStyle = '#d8c0a8'; const dig = P.t < 0.3 ? 2 : 0; ctx.fillRect(2, 5 + dig, 3, 2.5); ctx.fillRect(-4, 5 - dig, 3, 2.5);
-  } else if (kind === 2) {   // bat
-    const fl = Math.sin(G.time * 18) * 0.6;
-    ctx.fillStyle = '#4a2a6a';
-    for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(sd * 3, 0); ctx.lineTo(sd * 12, -5 + fl * 6); ctx.lineTo(sd * 10, 1); ctx.lineTo(sd * 13, 3 + fl * 3); ctx.lineTo(sd * 4, 3); ctx.closePath(); ctx.fill(); ctx.stroke(); }
-    ctx.fillStyle = '#6a4a8a'; ctx.beginPath(); ctx.ellipse(0, 1, 4, 5, 0, 0, 6.283); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#8a6aaa'; ctx.beginPath(); ctx.moveTo(-3, -3); ctx.lineTo(-2, -7); ctx.lineTo(-0.5, -3.5); ctx.moveTo(3, -3); ctx.lineTo(2, -7); ctx.lineTo(0.5, -3.5); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#ffe27a'; ctx.fillRect(-2, -1, 1.2, 1.2); ctx.fillRect(0.8, -1, 1.2, 1.2);
-  } else {   // golden beetle
-    ctx.fillStyle = '#a86a00'; ctx.beginPath(); ctx.ellipse(0, 1, 7, 8, 0, 0, 6.283); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#ffc21a'; ctx.beginPath(); ctx.ellipse(-2.5, 1, 4, 7, 0, 0, 6.283); ctx.fill();
-    ctx.fillStyle = '#fff6a0'; ctx.beginPath(); ctx.ellipse(-3.5, -1, 1.6, 3, 0, 0, 6.283); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(0, 9); ctx.stroke();
-    ctx.fillStyle = '#5a3a00'; ctx.beginPath(); ctx.arc(0, -8, 3, 0, 6.283); ctx.fill(); ctx.stroke();
-    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35 + 0.2 * Math.sin(G.time * 4); ctx.drawImage(soft('#ffd84a'), -16, -16, 32, 32); ctx.globalCompositeOperation = 'source-over';
-  }
-  ctx.restore();
-}
 function drawDrill(d) {
   const x = d.x, y = wy(d.y) + Math.sin(G.time * 4 + d.spin) * 2;
   ctx.save(); ctx.translate(x, y);
@@ -2051,12 +1983,11 @@ function drawCursor(mx, my) {
   ctx.rotate(-0.5 + G.mouse.swing * 1.1 - (G.mouse.down ? 0.25 : 0));
   const sc = Math.max(0.9, K * 0.5); ctx.scale(sc, sc);
   ctx.lineJoin = 'round';
-  const pk = PICKS[Math.min(G.pick, pickTier())];
+  const pk = [0, 0, 0, '#8b5a2b', '#b08a5a'];   // one wooden pickaxe
   ctx.fillStyle = pk[3]; ctx.strokeStyle = '#120c06'; ctx.lineWidth = 1.6;
   rr(-2, -2, 4, 26, 1.5); ctx.fill(); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(-15, 2); ctx.quadraticCurveTo(0, -12, 15, 2); ctx.lineTo(12, 4); ctx.quadraticCurveTo(0, -4, -12, 4); ctx.closePath();
   const g = ctx.createLinearGradient(0, -10, 0, 4); g.addColorStop(0, lighten(pk[4], 0.5)); g.addColorStop(1, darken(pk[4], 0.25)); ctx.fillStyle = g; ctx.fill(); ctx.stroke();
-  if (pickTier() >= 4 && G.pick >= 4) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.4; ctx.drawImage(soft(pk[4]), -16, -14, 32, 22); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; }
   ctx.restore();
 }
 
@@ -2236,7 +2167,6 @@ function renderWorld(shx, shy) {
   for (const d of G.drills) if (d.target || d.y < 190) drawDrill(d);
   if (G.mega) drawMega(G.mega, b.name);
   for (const d of G.drops) drawGem(gemArt(b.name, d.i), d.x, wy(d.y), 22, { glow: RCOL[b.minerals[d.i][2]], rank: 3, rot: Math.sin(G.time * 3 + d.ph) * 0.3 });
-  if (G.pet && PETS[G.pet - 1].ok()) drawPet(G.pet, G.petS);
   // meteors
   for (const m of G.meteors) {
     const t = m.t / m.dur, x = m.sx + (m.target.x - m.sx) * t, y = m.sy + (m.target.y - m.sy) * t;
@@ -2578,7 +2508,7 @@ function renderRebirth() {
   btn('confirm', 150, 330, 200, 54, 'Confirm', { col: ok ? '#d49a1a' : '#5a5040', disabled: !ok, clickDisabled: true, size: 24, fn: () => tryRebirth() });
   ctx.globalAlpha = 1;
 }
-const BOOK_TABS = () => BIOMES.map(b => b.name).concat(['Events', 'Gold', 'Quests', 'Trophies', 'Perks', 'Pickaxes', 'Pets']);
+const BOOK_TABS = () => BIOMES.map(b => b.name).concat(['Events', 'Gold', 'Quests', 'Trophies', 'Perks']);
 const BOOK_QUESTS = BIOMES.length + 2;
 function renderBook() {
   const f = modalFrame('book', 720, 640); if (!f) return;
@@ -2671,35 +2601,6 @@ function renderBook() {
     ctx.fillStyle = 'rgba(255,120,40,0.1)'; rr(60, gy, 600, 44, 10); ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(255,140,60,0.6)'; ctx.stroke();
     drawIcon('heart', 84, gy + 22, 24, '#ff6a1a');
     txt(goal, 106, gy + 22, fitSize(goal, 13, 540, FB), G.won ? '#7dff7a' : '#ffb36a', { align: 'left', font: FB, weight: 900 });
-  } else if (T === BOOK_QUESTS + 4) {
-    const head = 'Pets  -  museum: ' + pagesDone() + ' / ' + BIOMES.length + ' pages done (Creditz x' + museumMult().toFixed(2) + ')';
-    txt(head, 360, Y + 6, fitSize(head, 15, 680), '#ffffff');
-    PETS.forEach((p, i) => {
-      const x = 30 + i * 224, y = Y + 30, got = p.ok(), sel = G.pet === i + 1;
-      ctx.fillStyle = sel ? 'rgba(125,255,122,0.1)' : 'rgba(255,255,255,0.04)'; rr(x, y, 212, 250, 12); ctx.fill();
-      ctx.lineWidth = sel ? 2.5 : 1; ctx.strokeStyle = sel ? '#7dff7a' : 'rgba(255,255,255,0.12)'; ctx.stroke();
-      ctx.save(); ctx.translate(x + 106, y + 70); ctx.scale(3.2, 3.2); if (!got) ctx.globalAlpha = 0.25; drawPet(i + 1, { x: 0, y: 32, t: 1 }); ctx.restore();
-      txt(got ? p.name : '???', x + 106, y + 136, 18, got ? '#ffffff' : '#7a8090');
-      txt(p.desc, x + 106, y + 160, fitSize(p.desc, 11, 196, FB), got ? '#c9e8c0' : '#6a7080', { font: FB, weight: 800 });
-      if (got) btn('pet' + i, x + 46, y + 196, 120, 32, sel ? 'Following' : 'Take along', { col: sel ? '#3a7a3a' : '#4b6bd8', size: 14, r: 8, fn: () => { G.pet = sel ? 0 : i + 1; AUDIO.sfx('click'); save(); } });
-      else txt(p.need, x + 106, y + 212, fitSize(p.need, 12, 196, FB), '#ff9a8a', { font: FB, weight: 900 });
-    });
-  } else {
-    const tier = pickTier();
-    txt('Pickaxes  -  break rocks to unlock them (you have broken ' + fmt(G.stats.rocks) + ')', 360, Y + 6, 15, '#ffffff');
-    PICKS.forEach((p, i) => {
-      const x = 30 + (i % 3) * 224, y = Y + 28 + Math.floor(i / 3) * 196, got = i <= tier, sel = G.pick === i;
-      ctx.fillStyle = sel ? 'rgba(125,255,122,0.1)' : 'rgba(255,255,255,0.04)'; rr(x, y, 212, 184, 12); ctx.fill();
-      ctx.lineWidth = sel ? 2.5 : 1; ctx.strokeStyle = sel ? '#7dff7a' : 'rgba(255,255,255,0.12)'; ctx.stroke();
-      ctx.save(); ctx.translate(x + 106, y + 58); ctx.rotate(-0.6); ctx.scale(2.2, 2.2);
-      ctx.fillStyle = got ? p[3] : '#1a1d24'; ctx.strokeStyle = '#120c06'; ctx.lineWidth = 1.4; rr(-2, -6, 4, 24, 1.5); ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(-15, -2); ctx.quadraticCurveTo(0, -16, 15, -2); ctx.lineTo(12, 0); ctx.quadraticCurveTo(0, -8, -12, 0); ctx.closePath();
-      ctx.fillStyle = got ? p[4] : '#2a2f3a'; ctx.fill(); ctx.stroke(); ctx.restore();
-      txt(p[0], x + 106, y + 112, fitSize(p[0], 17, 196), got ? '#ffffff' : '#7a8090');
-      txt(p[2] ? Math.round(p[2] * 100) + '% lucky double cracks' : 'No bonus', x + 106, y + 132, 11, got ? '#c9e8c0' : '#6a7080', { font: FB, weight: 800 });
-      if (got) btn('pick' + i, x + 46, y + 144, 120, 30, sel ? 'Selected' : 'Use', { col: sel ? '#3a7a3a' : '#4b6bd8', size: 15, r: 8, fn: () => { G.pick = i; AUDIO.sfx('click'); save(); } });
-      else txt('Break ' + fmt(p[1]) + ' rocks', x + 106, y + 160, 12, '#ff9a8a', { font: FB, weight: 900 });
-    });
   }
   ctx.globalAlpha = 1;
 }
@@ -2853,7 +2754,7 @@ function drawFps(rms) {
 }
 window.addEventListener('keydown', e => { if (e.code === 'F3') { QUALITY.show = !QUALITY.show; e.preventDefault(); } });
 requestAnimationFrame(frame);
-window.__JM = { museumMult, pagesDone, startMega, startRain, hitMega, PETS, QUALITY, PERF, dpr: () => DPR, setHeart: n => { HEART_REBIRTHS = n; }, isUnlocked, TUNE, RX, ROCK_MAX, HEART: HEART_REBIRTHS, REBIRTH_COSTS, costOf, canVisit, SHOPV, SHOP_ORDER, LVL_KEY, PICKS, fmt, quest, startRush, bombTier, pickTier, G, tick, render, BIOMES, SHOP, ART, UI, startGame, buy, teleport, tryRebirth, loadBiome, openMenu, dropBomb, miningSpeed, rebirthCost, canLoad, creditzMult, totalMult, perk, toScreen, toWorld, hitRegion, checkAch, startShower, resize };
+window.__JM = { museumMult, pagesDone, startMega, startRain, hitMega, QUALITY, PERF, dpr: () => DPR, setHeart: n => { HEART_REBIRTHS = n; }, isUnlocked, TUNE, RX, ROCK_MAX, HEART: HEART_REBIRTHS, REBIRTH_COSTS, costOf, canVisit, SHOPV, SHOP_ORDER, LVL_KEY, fmt, quest, startRush, bombTier, G, tick, render, BIOMES, SHOP, ART, UI, startGame, buy, teleport, tryRebirth, loadBiome, openMenu, dropBomb, miningSpeed, rebirthCost, canLoad, creditzMult, totalMult, perk, toScreen, toWorld, hitRegion, checkAch, startShower, resize };
 </script>
 </body>
 </html>
