@@ -1051,6 +1051,11 @@ function tick() {
     }
 
     tickDrones();
+    if (BIOME_FX[BIOMES[G.biome].name] && BIOME_FX[BIOMES[G.biome].name].molten && gx('parts') > 0) {   // embers rising from the cracks
+      const n = [0, 1, 2, 3][gx('parts')];
+      for (let k = 0; k < n; k++) { if (Math.random() > 0.35) continue; const r = G.rocks[Math.floor(Math.random() * G.rocks.length)]; if (!r || r.state !== 'rock' || r.costume < 1 || r.chest) continue;
+        const f = gsc(); G.parts.push({ kind: 'ember', x: r.x + (Math.random() - 0.5) * 34 * f, y: r.y + (Math.random() - 0.5) * 34 * f, vx: (Math.random() - 0.5) * 0.5, vy: 0.4 + Math.random() * 0.9, life: 40 + rnd(0, 30), max: 70, s: 0.8 + Math.random() * 1.2, col: Math.random() < 0.6 ? '#ffb04a' : '#ff5a1a', ph: Math.random() * 6 }); }
+    }
     if ((G.pass.pt = (G.pass.pt || 0) + DT) >= 10) { G.pass.pt -= 10; addXP(1); }   // playing = a little XP
     // who is hitting what?
     const hover = worldHover();
@@ -1094,6 +1099,7 @@ function tick() {
     p.x += p.vx; p.y += p.vy; p.life--;
     if (p.kind === 'chunk' && G.bombs.length) for (const bo of G.bombs) if (bo.t >= 0 && bombTier(bo.level).name === 'black') { p.vx += (bo.x - p.x) * 0.02; p.vy += (bo.y - p.y) * 0.02; }
     if (p.kind === 'chunk') { p.vy -= 0.45; p.rot += p.vr; if (p.y < -105 && p.vy < 0 && !p.bounced) { p.vy *= -0.35; p.vx *= 0.6; p.bounced = true; } }
+    else if (p.kind === 'ember') { p.vx = p.vx * 0.97 + Math.sin(G.time * 3 + p.ph) * 0.03; p.vy = p.vy * 0.99 + 0.01; }
     else if (p.kind === 'spark') { p.vx *= 0.92; p.vy = p.vy * 0.92 - 0.12; }
     else if (p.kind === 'dust' || p.kind === 'smoke') { p.vx *= 0.93; p.vy = p.vy * 0.93 + (p.kind === 'smoke' ? 0.05 : 0.01); p.s += p.grow || 0.4; }
     else if (p.kind === 'star') { p.vx *= 0.94; p.vy = p.vy * 0.94 - 0.03; }
@@ -1976,6 +1982,21 @@ function crackColours(bname, stage) {
   }
   return all[clamp(stage, 0, all.length - 1)];
 }
+// MOLTEN GLOW: the cracks again, thick, blurred and bright, in their own little picture (made once per crack stage)
+function crackGlow(r, bname, sc) {
+  const S = Math.ceil(ROCK_BOX * sc), key = r.costume + '|' + r.dir + '|' + bname + '|' + S;
+  if (r.glowKey === key) return r.glow;
+  const c = r.glow && r.glow.width === S ? r.glow : document.createElement('canvas'); c.width = c.height = S;
+  const x = c.getContext('2d'); x.clearRect(0, 0, S, S); x.setTransform(sc, 0, 0, sc, S / 2, S / 2);
+  const art = ART.rocks[bname][r.costume], s0 = 23, k = (s0 * 2 + 4) / art.w;
+  x.rotate((r.dir - 90) * Math.PI / 180); x.scale(k, k); x.translate(-(art.ox + art.w / 2), -(art.oy + art.w / 2));
+  x.lineCap = 'round'; x.lineJoin = 'round';
+  x.shadowColor = 'rgba(255,60,10,1)'; x.shadowBlur = 2.2 * sc * k;
+  for (const cr of art.cracks) { const w = (cr.sw || 0.5) * 1.35; x.strokeStyle = 'rgba(255,90,30,0.9)'; x.lineWidth = w * 1.6; x.stroke(path(cr.d)); }
+  x.shadowBlur = 0;
+  for (const cr of art.cracks) { const w = (cr.sw || 0.5) * 1.35; x.strokeStyle = 'rgba(255,220,140,0.9)'; x.lineWidth = w * 0.5; x.stroke(path(cr.d)); }
+  r.glow = c; r.glowKey = key; return c;
+}
 function rockBody(r, bname) {
   const b = BIOMES[G.biome], style = 'block';   // every biome uses his rounded-square rock again (Sixten asked)
   const s = 23, col = r.col, seedN = Math.floor(r.seed * 1000) + 7, born = 1;
@@ -2034,12 +2055,12 @@ function rockBody(r, bname) {
       }
       if (fx.molten) {   // molten crack: a red glow around it, then (below) a hot bright core
         const m = ctx.getTransform(), upx = Math.hypot(m.a, m.b) || 1;
-        ctx.save(); ctx.shadowColor = 'rgba(255,40,10,0.95)'; ctx.shadowBlur = 0.9 * upx; ctx.strokeStyle = cc; ctx.lineWidth = w * 1.1; ctx.stroke(path(c.d)); ctx.restore();
-        ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(255,60,20,0.14)'; ctx.lineWidth = w * 3; ctx.stroke(path(c.d)); ctx.globalCompositeOperation = 'source-over';
+        ctx.save(); ctx.shadowColor = 'rgba(255,40,10,0.95)'; ctx.shadowBlur = 1.3 * upx; ctx.strokeStyle = cc; ctx.lineWidth = w * 1.15; ctx.stroke(path(c.d)); ctx.restore();
+        ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(255,70,20,0.2)'; ctx.lineWidth = w * 3.2; ctx.stroke(path(c.d)); ctx.globalCompositeOperation = 'source-over';
       }
       if (lum > 90) { ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(cc, 0.22); ctx.lineWidth = w * 3.6; ctx.stroke(path(c.d)); ctx.globalCompositeOperation = 'source-over'; }
       ctx.globalAlpha = c.o || 1; ctx.strokeStyle = cc; ctx.lineWidth = w; ctx.stroke(path(c.d)); ctx.globalAlpha = 1;
-      if (fx.molten) { ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(lighten(cc, 0.6), 0.85); ctx.lineWidth = w * 0.38; ctx.stroke(path(c.d)); ctx.globalCompositeOperation = 'source-over'; }
+      if (fx.molten) { ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(mix(cc, '#ffd27a', 0.65), 0.9); ctx.lineWidth = w * 0.45; ctx.stroke(path(c.d)); ctx.strokeStyle = 'rgba(255,250,220,0.55)'; ctx.lineWidth = w * 0.16; ctx.stroke(path(c.d)); ctx.globalCompositeOperation = 'source-over'; }
     });
     // a thin light edge under each crack so it looks chiselled into the rock
     ctx.translate(0.22, 0.28);
@@ -2091,7 +2112,13 @@ function drawRock(r, bname) {
   ctx.globalAlpha = born;
   if (r.slot >= 0) ctx.drawImage(ATLAS.c, (r.slot % ATLAS.cols) * S, Math.floor(r.slot / ATLAS.cols) * S, S, S, -ROCK_BOX / 2, -ROCK_BOX / 2, ROCK_BOX, ROCK_BOX);
   else ctx.drawImage(r.spr, -ROCK_BOX / 2, -ROCK_BOX / 2, ROCK_BOX, ROCK_BOX);
-  { const fx = BIOME_FX[bname]; if (fx && fx.molten && r.costume > 0 && gx('parts') > 0) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = born * (0.04 + 0.035 * r.costume) * (0.7 + 0.3 * Math.sin(G.time * 3 + r.seed)); ctx.drawImage(soft('#ff3a1a'), -26, -26, 52, 52); ctx.globalAlpha = born; ctx.globalCompositeOperation = 'source-over'; } }
+  { const fx = BIOME_FX[bname]; if (fx && fx.molten && r.costume > 0 && ART.rocks[bname][r.costume].cracks.length) {
+      const breathe = 0.55 + 0.45 * Math.sin(G.time * 2.4 + r.seed * 3);   // the glow slowly breathes like hot metal
+      ctx.globalCompositeOperation = 'lighter';
+      if (f >= 0.4) { ctx.globalAlpha = born * (0.35 + 0.12 * r.costume) * breathe; ctx.drawImage(crackGlow(r, bname, sc), -ROCK_BOX / 2, -ROCK_BOX / 2, ROCK_BOX, ROCK_BOX); }   // tiny rocks (huge walls): skip it, too small to see
+      if (gx('parts') > 0) { ctx.globalAlpha = born * (0.05 + 0.04 * r.costume) * (0.6 + 0.4 * breathe); ctx.drawImage(soft('#ff3a1a'), -28, -28, 56, 56); }
+      ctx.globalAlpha = born; ctx.globalCompositeOperation = 'source-over';
+    } }
   { const fx = BIOME_FX[bname]; if (fx && fx.liveSparks && !QUALITY.drop && gx('parts') > 0) liveSparks(r, bname, fx.liveSparks); }
   if (r.golden) {
     const sx = ((G.time * 40 + r.seed) % 90) - 45;
@@ -2776,6 +2803,7 @@ function renderWorld(shx, shy) {
       const s = p.s; ctx.beginPath(); ctx.moveTo(-s * (0.5 + p.pts[0] * 0.5), -s * 0.6); ctx.lineTo(s * (0.5 + p.pts[1] * 0.5), -s * 0.4); ctx.lineTo(s * 0.4, s * (0.4 + p.pts[2] * 0.4)); ctx.lineTo(-s * 0.6, s * 0.5); ctx.closePath(); ctx.fill(); if (!p.hi) p.hi = lighten(p.col, 0.4); ctx.save(); ctx.clip(); ctx.fillStyle = p.hi; ctx.globalAlpha = a * 0.7; ctx.fillRect(-s, -s, s * 2, s * 0.45); ctx.restore(); ctx.stroke();
       ctx.restore();
     } else if (p.kind === 'dust' || p.kind === 'smoke') { ctx.globalAlpha = a * (p.kind === 'smoke' ? 0.55 : 0.35); ctx.drawImage(soft(p.col), x - p.s, y - p.s, p.s * 2, p.s * 2); }
+    else if (p.kind === 'ember') { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a * (0.6 + 0.4 * Math.sin(G.time * 10 + p.ph)); ctx.drawImage(soft(p.col), x - p.s * 3, y - p.s * 3, p.s * 6, p.s * 6); ctx.fillStyle = '#fff2c0'; ctx.fillRect(x - p.s * 0.4, y - p.s * 0.4, p.s * 0.8, p.s * 0.8); ctx.globalCompositeOperation = 'source-over'; }
     else if (p.kind === 'spark') { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; ctx.strokeStyle = p.col; ctx.lineWidth = p.s; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - p.vx * 2, y + p.vy * 2); ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; }
     else if (p.kind === 'star') { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; star4(x, y, p.s * 1.6, p.col); ctx.globalCompositeOperation = 'source-over'; }
     else if (FALLERS[p.kind]) { drawBit(p, x, y, a); }
