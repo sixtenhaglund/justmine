@@ -57,7 +57,7 @@ const RCOL = { Common: '#a4a4a4', Uncommon: '#4dff4d', Rare: '#2eb0ff', Epic: '#
 const rank = r => RARITIES.indexOf(r);
 
 // ---------------- his numbers ----------------
-// minerals: [chance "1 in N", Creditz, rarity]. Checked top to bottom like his stack of ifs:
+// minerals: [chance "1 in N", Creditz, rarity]. 2026-11-17: Transcendant x4, Acendant x5, Celestial x6 rarer (and worth x2). Checked top to bottom like his stack of ifs:
 // the first that hits wins, if none hit the rock is empty.
 // bonus = NEW: a Creditz bonus per biome so every new biome really pays more (his late biomes paid less).
 const BIOMES = [
@@ -68,44 +68,44 @@ const BIOMES = [
   { name: 'Heavy Hights', factor: 20, req: 40000, bonus: 2, bright: [-3, 0], amb: 'heavy', style: 'heavy', accent: '#ff2a2a',
     minerals: [[4, 45, 'Rare'], [8, 80, 'Epic'], [12, 150, 'Epic'], [18, 250, 'Legendary'], [25, 500, 'Mythical'], [31, 1050, 'Angelic']] },
   { name: 'Crystal Cave', factor: 50, req: 300000, bonus: 3, rainbow: true, amb: 'shimmer', style: 'hex', accent: '#ff8af2',
-    minerals: [[5, 55, 'Rare'], [7, 120, 'Epic'], [10, 270, 'Legendary'], [14, 520, 'Mythical'], [25, 1080, 'Angelic'], [36, 2100, 'Celestial']] },
+    minerals: [[5, 55, 'Rare'], [7, 120, 'Epic'], [10, 270, 'Legendary'], [14, 520, 'Mythical'], [25, 1080, 'Angelic'], [216, 4200, 'Celestial']] },
   { name: 'Red Ravines', factor: 100, req: 2000000, bonus: 7, bright: [-50, 0], hitDarken: true, amb: 'embers', style: 'strata', accent: '#ff5a2a',
-    minerals: [[4, 130, 'Epic'], [8, 300, 'Legendary'], [17, 550, 'Mythical'], [25, 1200, 'Angelic'], [40, 2250, 'Celestial']] },
+    minerals: [[4, 130, 'Epic'], [8, 300, 'Legendary'], [17, 550, 'Mythical'], [25, 1200, 'Angelic'], [240, 4500, 'Celestial']] },
   { name: 'Cryo Cliffs', factor: 150, req: 12000000, bonus: 15, bright: [0, 20], amb: 'snow', style: 'ice', accent: '#8fdcff',
     minerals: [[4, 140, 'Epic'], [7, 320, 'Legendary'], [13, 580, 'Mythical'], [20, 1500, 'Angelic']] },
   { name: 'Sandy Spires', factor: 200, req: 60000000, bonus: 17, bright: [-15, 10], amb: 'sand', style: 'sand', accent: '#ffcf6a', isNew: true,
     minerals: [[4, 180, 'Rare'], [7, 400, 'Epic'], [12, 800, 'Legendary'], [20, 1700, 'Mythical'], [30, 3600, 'Angelic']] },
   { name: 'Jungle Depths', factor: 250, req: 300000000, bonus: 23.6, bright: [-25, 5], amb: 'jungle', style: 'boulder', accent: '#7fe05a', isNew: true,
-    minerals: [[4, 240, 'Epic'], [7, 550, 'Legendary'], [12, 1100, 'Mythical'], [20, 2400, 'Angelic'], [33, 5000, 'Transcendant']] },
+    minerals: [[4, 240, 'Epic'], [7, 550, 'Legendary'], [12, 1100, 'Mythical'], [20, 2400, 'Angelic'], [132, 10000, 'Transcendant']] },
   { name: 'Toxic Tunnels', factor: 330, req: 1500000000, bonus: 35, bright: [-30, 0], amb: 'bubbles', style: 'blob', accent: '#8dff3a', isNew: true,
-    minerals: [[4, 300, 'Epic'], [7, 700, 'Legendary'], [12, 1400, 'Mythical'], [20, 3000, 'Angelic'], [35, 6500, 'Transcendant']] },
+    minerals: [[4, 300, 'Epic'], [7, 700, 'Legendary'], [12, 1400, 'Mythical'], [20, 3000, 'Angelic'], [140, 13000, 'Transcendant']] },
   { name: 'Storm Peaks', factor: 430, req: 8000000000, bonus: 31.6, bright: [-20, 10], amb: 'storm', style: 'slate', accent: '#a8c4ff', isNew: true,
-    minerals: [[4, 450, 'Epic'], [8, 1000, 'Legendary'], [13, 2100, 'Mythical'], [20, 4500, 'Angelic'], [32, 9500, 'Transcendant'], [50, 20000, 'Celestial']] },
+    minerals: [[4, 450, 'Epic'], [8, 1000, 'Legendary'], [13, 2100, 'Mythical'], [20, 4500, 'Angelic'], [128, 19000, 'Transcendant'], [300, 40000, 'Celestial']] },
   { name: 'Lava Lake', factor: 560, req: 40000000000, bonus: 64.9, bright: [-10, 10], amb: 'lava', style: 'basalt', accent: '#ff8a2a', isNew: true,
-    minerals: [[4, 550, 'Legendary'], [8, 1300, 'Mythical'], [14, 2800, 'Angelic'], [24, 6000, 'Transcendant'], [40, 13000, 'Acendant']] },
+    minerals: [[4, 550, 'Legendary'], [8, 1300, 'Mythical'], [14, 2800, 'Angelic'], [96, 12000, 'Transcendant'], [200, 26000, 'Acendant']] },
   { name: 'Void Valley', factor: 730, req: 200000000000, bonus: 62.7, bright: [-20, 10], amb: 'void', style: 'shard', accent: '#b678ff', isNew: true,
-    minerals: [[4, 700, 'Legendary'], [8, 1600, 'Mythical'], [14, 3500, 'Angelic'], [22, 8000, 'Transcendant'], [40, 18000, 'Acendant'], [60, 40000, 'Celestial']] },
+    minerals: [[4, 700, 'Legendary'], [8, 1600, 'Mythical'], [14, 3500, 'Angelic'], [88, 16000, 'Transcendant'], [200, 36000, 'Acendant'], [360, 80000, 'Celestial']] },
   { name: 'Mushroom Marsh', factor: 950, req: 1500000000000, bonus: 70.8, bright: [-15, 10], amb: 'spores', style: 'block', accent: '#ff9ad8', isNew: true,
-    minerals: [[4, 1100, 'Legendary'], [8, 2500, 'Mythical'], [14, 5400, 'Angelic'], [22, 12000, 'Transcendant'], [40, 28000, 'Acendant'], [60, 62000, 'Celestial']] },
+    minerals: [[4, 1100, 'Legendary'], [8, 2500, 'Mythical'], [14, 5400, 'Angelic'], [88, 24000, 'Transcendant'], [200, 56000, 'Acendant'], [360, 124000, 'Celestial']] },
   { name: 'Bone Basin', factor: 1250, req: 7200000000000, bonus: 80.1, bright: [-15, 10], amb: 'bonedust', style: 'block', accent: '#e8e0c8', isNew: true,
-    minerals: [[4, 1700, 'Legendary'], [8, 3800, 'Mythical'], [14, 8400, 'Angelic'], [22, 19000, 'Transcendant'], [40, 43000, 'Acendant'], [60, 96000, 'Celestial']] },
+    minerals: [[4, 1700, 'Legendary'], [8, 3800, 'Mythical'], [14, 8400, 'Angelic'], [88, 38000, 'Transcendant'], [200, 86000, 'Acendant'], [360, 192000, 'Celestial']] },
   { name: 'Clockwork Canyon', factor: 1600, req: 86000000000000, bonus: 88.3, bright: [-15, 10], amb: 'gears', style: 'block', accent: '#e8c070', isNew: true,
-    minerals: [[4, 2600, 'Legendary'], [8, 6000, 'Mythical'], [14, 13000, 'Angelic'], [22, 30000, 'Transcendant'], [40, 67000, 'Acendant'], [60, 150000, 'Celestial']] },
+    minerals: [[4, 2600, 'Legendary'], [8, 6000, 'Mythical'], [14, 13000, 'Angelic'], [88, 60000, 'Transcendant'], [200, 134000, 'Acendant'], [360, 300000, 'Celestial']] },
   { name: 'Amber Abyss', factor: 2100, req: 1000000000000000, bonus: 99.7, bright: [-15, 10], amb: 'amberdrip', style: 'block', accent: '#ffb030', isNew: true,
-    minerals: [[4, 4000, 'Legendary'], [8, 9200, 'Mythical'], [14, 20000, 'Angelic'], [22, 46000, 'Transcendant'], [40, 100000, 'Acendant'], [60, 230000, 'Celestial']] },
+    minerals: [[4, 4000, 'Legendary'], [8, 9200, 'Mythical'], [14, 20000, 'Angelic'], [88, 92000, 'Transcendant'], [200, 200000, 'Acendant'], [360, 460000, 'Celestial']] },
   { name: 'Neon Nexus', factor: 2700, req: 12000000000000000, bonus: 108.9, bright: [-15, 10], amb: 'neon', style: 'block', accent: '#7afcff', isNew: true,
-    minerals: [[4, 6300, 'Legendary'], [8, 14000, 'Mythical'], [14, 31000, 'Angelic'], [22, 72000, 'Transcendant'], [40, 160000, 'Acendant'], [60, 360000, 'Celestial']] },
+    minerals: [[4, 6300, 'Legendary'], [8, 14000, 'Mythical'], [14, 31000, 'Angelic'], [88, 144000, 'Transcendant'], [200, 320000, 'Acendant'], [360, 720000, 'Celestial']] },
   { name: 'Glacier Gorge', factor: 3500, req: 150000000000000000, bonus: 119.4, bright: [-15, 10], amb: 'glacier', style: 'block', accent: '#a8e0ff', isNew: true,
-    minerals: [[4, 9700, 'Legendary'], [8, 22000, 'Mythical'], [14, 49000, 'Angelic'], [22, 110000, 'Transcendant'], [40, 250000, 'Acendant'], [60, 550000, 'Celestial']] },
+    minerals: [[4, 9700, 'Legendary'], [8, 22000, 'Mythical'], [14, 49000, 'Angelic'], [88, 220000, 'Transcendant'], [200, 500000, 'Acendant'], [360, 1100000, 'Celestial']] },
   { name: 'Sulfur Swamp', factor: 4550, req: 1800000000000000000, bonus: 131.3, bright: [-15, 10], amb: 'sulfur', style: 'block', accent: '#fff27a', isNew: true,
-    minerals: [[4, 15000, 'Legendary'], [8, 34000, 'Mythical'], [14, 75000, 'Angelic'], [22, 170000, 'Transcendant'], [40, 390000, 'Acendant'], [60, 860000, 'Celestial']] },
+    minerals: [[4, 15000, 'Legendary'], [8, 34000, 'Mythical'], [14, 75000, 'Angelic'], [88, 340000, 'Transcendant'], [200, 780000, 'Acendant'], [360, 1720000, 'Celestial']] },
   { name: 'Sky Summit', factor: 5900, req: 21000000000000000000, bonus: 142.8, bright: [-15, 10], amb: 'sky', style: 'block', accent: '#d8ecff', isNew: true,
-    minerals: [[4, 23000, 'Legendary'], [8, 53000, 'Mythical'], [14, 120000, 'Angelic'], [22, 270000, 'Transcendant'], [40, 600000, 'Acendant'], [60, 1300000, 'Celestial']] },
+    minerals: [[4, 23000, 'Legendary'], [8, 53000, 'Mythical'], [14, 120000, 'Angelic'], [88, 540000, 'Transcendant'], [200, 1200000, 'Acendant'], [360, 2600000, 'Celestial']] },
   { name: 'Prism Plateau', factor: 7700, req: 260000000000000000000, bonus: 154.2, bright: [-15, 10], amb: 'prism', style: 'block', accent: '#e0c8ff', isNew: true,
-    minerals: [[4, 36000, 'Legendary'], [8, 83000, 'Mythical'], [14, 180000, 'Angelic'], [22, 410000, 'Transcendant'], [40, 930000, 'Acendant'], [60, 2100000, 'Celestial']] },
+    minerals: [[4, 36000, 'Legendary'], [8, 83000, 'Mythical'], [14, 180000, 'Angelic'], [88, 820000, 'Transcendant'], [200, 1860000, 'Acendant'], [360, 4200000, 'Celestial']] },
   // hardness climbs smoothly to Heart Hollow's 10k (Sixten asked); bonuses grow with hardness^0.4 so the pace stays ~75 min
   { name: 'Heart Hollow', factor: 10000, req: 3.1e+21, bonus: 180, bright: [-15, 10], amb: 'heart', style: 'block', accent: '#ff6a8a', isNew: true,
-    minerals: [[4, 56000, 'Legendary'], [8, 130000, 'Mythical'], [14, 280000, 'Angelic'], [22, 640000, 'Transcendant'], [40, 1400000, 'Acendant'], [60, 3200000, 'Celestial']] },
+    minerals: [[4, 56000, 'Legendary'], [8, 130000, 'Mythical'], [14, 280000, 'Angelic'], [88, 1280000, 'Transcendant'], [200, 2800000, 'Acendant'], [360, 6400000, 'Celestial']] },
 ];
 const BIOME_INDEX = name => BIOMES.findIndex(b => b.name === name);
 // how each biome's rocks crack and break. crack/glow/hi colour the cracks, deco decorates them, brk is the break effect
@@ -154,7 +154,7 @@ const museumMult = () => 1 + 0.05 * pagesDone() + (allGoldFound() ? 0.25 : 0);
 const TUNE = { costExp: 0.75, endMul: 1.08, endCost: 1.5 };   // economy knobs (the balance sim tunes these)
 const pct = v => Math.round(v * 100) + '%';
 const SHOP = {
-  creditz: { title: 'Creditz', name: l => 'x' + fmt(cmValue(l + 1)) + ' Creditz', icon: 'gem', col: '#f2b51f', endless: true,
+  creditz: { endCost: 2.2, title: 'Creditz', name: l => 'x' + fmt(cmValue(l + 1)) + ' Creditz', icon: 'gem', col: '#f2b51f', endless: true,
     costs: [15, 300, 800, 2000, 5000, 36000, 90000, 2.4e5, 7.5e5, 2.4e6, 7.5e6, 2.4e7, 7.5e7, 2.4e8, 7.5e8],
     desc: l => 'Every mineral worth x' + fmt(cmValue(l + 1)) + ' (now x' + fmt(creditzMult()) + ')' },
   speed: { title: 'Mining speed', name: l => '+' + [10, 25, 50, 75, 100, 150, 200, 300, 500, 900, 1400, 2200, 3500, 5000, 8000, 12000, 18000][l] + '% Mining speed', icon: 'pick', col: '#36c2ff',
@@ -327,7 +327,7 @@ const roboSlow = () => G.roboLevel ? SHOPV.robo[G.roboLevel - 1] : AUTO_SLOW;
 const rebirthsDone = () => G.rebirths - 1;
 // upgrade prices grow with your rebirth multiplier, so later runs still have things worth buying
 
-function costOf(kind, lvl) { const L = SHOP[kind].costs; const c = lvl < L.length ? L[lvl] : SHOP[kind].endless ? L[L.length - 1] * Math.pow(TUNE.endCost, lvl - L.length + 1) : undefined; if (c === undefined) return undefined; const v = c * Math.pow(G.rebirthMult, TUNE.costExp); if (v < 1000) return Math.round(v); const p = Math.pow(10, Math.floor(Math.log10(v)) - 1); return Math.round(v / p) * p; }
+function costOf(kind, lvl) { const L = SHOP[kind].costs; const c = lvl < L.length ? L[lvl] : SHOP[kind].endless ? L[L.length - 1] * Math.pow(SHOP[kind].endCost || TUNE.endCost, lvl - L.length + 1) : undefined; if (c === undefined) return undefined; const v = c * Math.pow(G.rebirthMult, TUNE.costExp); if (v < 1000) return Math.round(v); const p = Math.pow(10, Math.floor(Math.log10(v)) - 1); return Math.round(v / p) * p; }
 const perk = n => rebirthsDone() >= n;
 const rebirthCost = () => { const i = G.rebirths - 1; return i < REBIRTH_COSTS.length ? REBIRTH_COSTS[i] : REBIRTH_COSTS[REBIRTH_COSTS.length - 1] * Math.pow(4, i - REBIRTH_COSTS.length + 1); };
 const bombCooldown = () => Math.max(1, (perk(8) ? 3 : perk(1) ? 4 : 5) - upv('fuse', 0));
