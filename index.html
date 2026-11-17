@@ -223,7 +223,8 @@ const upv = (k, d) => G[LVL_KEY[k]] ? SHOPV[k][G[LVL_KEY[k]] - 1] : d;   // curr
 const BASE_SPEED = 1.5;
 const BOMB_STRENGTH = [0, 0.6, 0.5, 0.4, 0.2, 0.1, 0.08, 0.065, 0.05, 0.04, 0.03];
 const BOMB_EXTRA = [[0, 0], [0, 0], [10, 30], [30, 50], [50, 80], [80, 100], [100, 120], [120, 140], [140, 160], [160, 180], [180, 200]];
-const REBIRTH_COSTS = [9.2e9, 1.9e11, 2.6e14, 2.5e18, 3.3e19, 4.2e20, 1e21, 3.2e21, 1.4e22, 7e22, 3.2e23, 1.5e24];
+// 2026-11-17: all cheaper, the early ones much cheaper (rebirth 1 is 1/4 of before, later ones about 3/4)
+const REBIRTH_COSTS = [2.5e9, 6e10, 9e13, 1.1e18, 1.8e19, 2.5e20, 7.5e20, 2.4e21, 1e22, 5e22, 2.4e23, 1.1e24];
 const PERKS = [
   [1, 'Bomb cooldown 5 s -> 4 s'], [2, 'Start every rebirth with +10% Mining speed'], [3, 'Golden rocks twice as common + first 3 biomes stay visited'],
   [4, '+1 free Auto miner, forever'], [5, 'Meteor showers twice as often'], [6, 'Start with x2 Creditz + first 6 biomes stay visited'],
