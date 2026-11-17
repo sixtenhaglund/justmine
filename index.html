@@ -809,6 +809,44 @@ function bombTier(L) {
   if (L === MAX_BOMB - 2) return { name: 'blue', tint: ['#bfe8ff', '#1a4aff'], glow: '#3a8aff', spark: '#7ad0ff', flash: '#9ad0ff', ring: '#6ab0ff' };
   return { name: 'orange', tint: null, glow: '#ffb347', spark: '#ffcf5a', flash: '#ffd27a', ring: '#ffd27a' };
 }
+function bhState(bo) {
+  const R = bombRadius(bo) * 1.2, life = clamp(bo.t / 0.7, 0, 1), T = bo.t, born = ease(Math.min(1, T / 0.15)), dying = Math.pow(life, 3);
+  return { R, life, T, born, dying, eh: Math.max(1.5, R * 0.3 * born * (1 - dying * 0.92)), dr: R * 0.85 * born * (1 - 0.5 * life) };
+}
+function bhDisk(bx, by, H2, from, to) {   // the accretion disk: hot gas spinning around the hole, white-hot inside, orange outside
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  const cols = ['#ffffff', '#ffe6a8', '#ffb347', '#ff6a1a', '#a02a0a'];
+  for (let k = 0; k < 5; k++) {
+    const r = H2.eh * 1.25 + (H2.dr - H2.eh * 1.25) * (k / 4);
+    if (r <= 0) continue;
+    ctx.globalAlpha = (0.95 - k * 0.15) * (1 - H2.dying); ctx.lineWidth = Math.max(1, (6 - k) * vsc() * 1.3); ctx.strokeStyle = cols[k];
+    ctx.setLineDash([r * 0.7, r * 0.12]); ctx.lineDashOffset = -H2.T * r * (16 - k * 2);
+    ctx.beginPath(); ctx.ellipse(bx, by, r, r * 0.26, -0.18, from, to); ctx.stroke();
+  }
+  ctx.setLineDash([]); ctx.restore();
+}
+function drawBlackHoles(shx, shy) {   // part 2: the black core, the photon ring, light bent over the top, front of the disk
+  const list = G.bombs.filter(bo => bo.t >= 0 && bombTier(bo.level).name === 'black'); if (!list.length) return;
+  ctx.setTransform(DPR * K, 0, 0, DPR * K, DPR * (CX + shx), DPR * (CY + shy));
+  for (const bo of list) {
+    const H2 = bhState(bo), bx = bo.x, by = wy(bo.y), eh = H2.eh, fade = 1 - H2.dying;
+    // the shadow: perfectly black
+    ctx.globalAlpha = 1; ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.arc(bx, by, eh, 0, 6.283); ctx.fill();
+    ctx.globalCompositeOperation = 'lighter';
+    // light bent OVER the top and UNDER the bottom of the hole (gravity bends the back of the disk into view)
+    ctx.globalAlpha = 0.9 * fade; ctx.lineWidth = Math.max(1.5, eh * 0.22); ctx.strokeStyle = '#ffb347';
+    ctx.beginPath(); ctx.ellipse(bx, by - eh * 0.12, eh * 1.42, eh * 1.3, -0.18, Math.PI * 1.03, Math.PI * 1.97); ctx.stroke();
+    ctx.globalAlpha = 0.55 * fade; ctx.lineWidth = Math.max(1, eh * 0.12); ctx.strokeStyle = '#ffe6a8';
+    ctx.beginPath(); ctx.ellipse(bx, by + eh * 0.08, eh * 1.25, eh * 1.15, -0.18, Math.PI * 0.05, Math.PI * 0.95); ctx.stroke();
+    // photon ring: a razor-thin bright circle right at the edge
+    ctx.globalAlpha = 0.95 * fade; ctx.lineWidth = Math.max(1, eh * 0.07); ctx.strokeStyle = '#fff4dc'; ctx.beginPath(); ctx.arc(bx, by, eh * 1.06, 0, 6.283); ctx.stroke();
+    ctx.globalCompositeOperation = 'source-over';
+    bhDisk(bx, by, H2, 0, Math.PI);   // the front of the disk crosses in front of the hole
+    // the end: everything collapses into one white-hot point
+    if (H2.life > 0.8) { const p = (H2.life - 0.8) / 0.2; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = p; ctx.drawImage(soft('#ffffff'), bx - H2.R * 0.35 * p, by - H2.R * 0.35 * p, H2.R * 0.7 * p, H2.R * 0.7 * p); star4(bx, by, H2.R * 0.4 * p, '#ffffff'); ctx.globalCompositeOperation = 'source-over'; }
+  }
+  ctx.globalAlpha = 1;
+}
 function bombRadius(bo) { return 0.42 * bombArt(bo).size * 1.15 * bo.size / 100 * (1 + 0.15 * G.radiusLevel) * gsc(); }
 function bombTouches(bo, rock) {
   const rad = bombRadius(bo);
@@ -824,7 +862,7 @@ function dropBomb(wx, wy) {
     const a = Math.random() * 6.283, d = k ? (50 + Math.random() * 70) * gsc() : 0;
     const x = clamp(wx + Math.cos(a) * d, -230, 230), y = clamp(wy + Math.sin(a) * d, -100, 165);
     G.bombs.push({ x, y, size: 1 + rnd(ex[0], ex[1]), speed: 100, ghost: k ? -20 * k : 0, dir: 90 + rnd(0, 180), level: L, hits: new Set(), t: k ? -0.08 * k : 0 });
-    G.lights.push({ x, y, r: (120 + L * 35) * vsc(), col: bombTier(L).glow, life: 0.8, max: 0.8 });
+    if (bombTier(L).name !== 'black') G.lights.push({ x, y, r: (120 + L * 35) * vsc(), col: bombTier(L).glow, life: 0.8, max: 0.8 });
     smoke(x, y, 6 + L * 2, 30 + L * 10);
     for (let i = 0; i < 10 + L * 4; i++) {
       const aa = Math.random() * 6.283, v = 3 + Math.random() * (4 + L);
@@ -1786,7 +1824,7 @@ function drawLighting(shx, shy) {
    // your torch
   for (const l of G.lights) L(l.x, l.y, l.r * 1.5, l.life / l.max, l.col);
   { const lf = Math.max(0.35, gsc()); for (const r of G.rocks) { if (r.state === 'gem' && r.gemT < 2) L(r.x, r.y, 48 * lf, 0.8, RCOL[r.rarity]); else if (r.golden && r.state === 'rock') L(r.x, r.y, 62 * lf, 0.6, '#ffcc33'); } }
-  for (const bo of G.bombs) if (bo.t >= 0) L(bo.x, bo.y, 95 * vsc(), 0.9, '#ffb04a');
+  for (const bo of G.bombs) if (bo.t >= 0 && bombTier(bo.level).name !== 'black') L(bo.x, bo.y, 95 * vsc(), 0.9, '#ffb04a');
   for (const m of G.meteors) { const t = m.t / m.dur; L(m.sx + (m.target.x - m.sx) * t, m.sy + (m.target.y - m.sy) * t, 85, 1, '#ff8a3a'); }
   for (const d of G.drills) if (d.target || d.y < 190) L(d.x, d.y, 30 * vsc(), 0.5, null);
   for (const d of G.drops) L(d.x, d.y, 34, 0.7, RCOL[b.minerals[d.i][2]]);
@@ -2778,6 +2816,7 @@ function render() {
   drawForeground();
   drawLighting(shx, shy);
   drawBloom();
+  drawBlackHoles(shx, shy);
   drawGrade();
   setScreen();
   if (G.mouse.over && !G.mouse.onUI && inWorld(G.mouse.x, G.mouse.y)) drawCursor(G.mouse.x, G.mouse.y);
@@ -2868,45 +2907,18 @@ function renderWorld(shx, shy) {
   for (const bo of G.bombs) {
     if (bo.t < 0) continue;
     const art = bombArt(bo), tier = bombTier(bo.level), a = clamp(1 - bo.ghost / 100, 0, 1), px = art.size * bo.size / 100 * (1 + 0.15 * G.radiusLevel) * gsc(), bx = bo.x, by = wy(bo.y);
-    if (tier.name === 'black') {   // BLACK HOLE: dark veil, light streaks spiralling in, a glowing accretion disk, a pitch-black core
-      const R = bombRadius(bo) * 1.2, life = clamp(bo.t / 0.7, 0, 1), T = bo.t, born = ease(Math.min(1, T / 0.15)), dying = Math.pow(life, 3);
-      // 1. the veil: space around it goes dark
-      const g = ctx.createRadialGradient(bx, by, 0, bx, by, R * 1.8); g.addColorStop(0, 'rgba(0,0,0,0.95)'); g.addColorStop(0.45, 'rgba(12,0,30,0.6)'); g.addColorStop(1, 'rgba(10,0,25,0)');
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(bx, by, R * 1.8, 0, 6.283); ctx.fill();
+    if (tier.name === 'black') {   // BLACK HOLE (part 1, under everything): dark veil, light falling in, back of the disk
+      const H2 = bhState(bo), R = H2.R;
+      const g = ctx.createRadialGradient(bx, by, H2.eh * 0.8, bx, by, R * 1.9); g.addColorStop(0, 'rgba(0,0,0,0.97)'); g.addColorStop(0.35, 'rgba(4,0,10,0.75)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalAlpha = H2.born; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(bx, by, R * 1.9, 0, 6.283); ctx.fill();
       ctx.globalCompositeOperation = 'lighter';
-      // 2. light streaks spiralling in (each one curls tighter as it falls)
-      for (let k = 0; k < 22; k++) {
-        const f = ((T * 1.6 + k / 22 * 1.7) % 1), r0 = R * 1.5 * (1 - f) + R * 0.12, ang = k * 2.39 + T * 5 + f * 3.2;
-        ctx.globalAlpha = Math.sin(f * Math.PI) * 0.8 * born * (1 - dying); ctx.strokeStyle = k % 3 === 0 ? '#ffffff' : k % 3 === 1 ? '#c890ff' : '#ff7ad8'; ctx.lineWidth = (1 + 1.5 * f) * vsc();
-        ctx.beginPath(); ctx.arc(bx, by, r0, ang, ang + 0.5 + f * 0.6); ctx.stroke();
+      for (let k = 0; k < 20; k++) {   // streaks of light curling in
+        const f = ((H2.T * 1.5 + k / 20 * 1.7) % 1), r0 = R * 1.6 * (1 - f) + H2.eh, ang = k * 2.39 + H2.T * 5 + f * 3.4;
+        ctx.globalAlpha = Math.sin(f * Math.PI) * 0.7 * H2.born * (1 - H2.dying); ctx.strokeStyle = k % 3 ? '#ffd9a0' : '#ffffff'; ctx.lineWidth = (0.8 + 1.4 * f) * vsc();
+        ctx.beginPath(); ctx.arc(bx, by, r0, ang, ang + 0.4 + f * 0.7); ctx.stroke();
       }
-      // 3. accretion disk: a tilted spinning ring; the back half goes behind the core, the front half in front
-      const dr = R * 0.62 * born * (1 - 0.55 * life), tilt = -0.35;
-      const disk = (from, to) => {
-        for (let k = 0; k < 4; k++) {
-          const rr3 = dr * (0.55 + k * 0.17);
-          ctx.globalAlpha = (0.85 - k * 0.17) * (1 - dying); ctx.lineWidth = (5 - k) * vsc() * 1.4; ctx.strokeStyle = ['#ffffff', '#ffb0f0', '#c060ff', '#6a2aff'][k];
-          ctx.setLineDash([dr * 0.5, dr * 0.18]); ctx.lineDashOffset = -T * dr * (14 - k * 2);
-          ctx.beginPath(); ctx.ellipse(bx, by, rr3, rr3 * 0.32, tilt, from, to); ctx.stroke();
-        }
-        ctx.setLineDash([]);
-      };
-      disk(Math.PI, Math.PI * 2);
-      // glow behind the core
-      ctx.globalAlpha = 0.7 * born * (1 - dying); ctx.drawImage(soft('#9a4aff'), bx - R * 0.8, by - R * 0.8, R * 1.6, R * 1.6);
-      ctx.globalCompositeOperation = 'source-over';
-      // 4. the event horizon: pure black, with a thin bright photon ring
-      const eh = Math.max(1.5, R * 0.27 * born * (1 - dying * 0.9) * (1 + 0.06 * Math.sin(T * 30)));
-      ctx.globalAlpha = 1; ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.arc(bx, by, eh, 0, 6.283); ctx.fill();
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.lineWidth = 2 * vsc(); ctx.strokeStyle = 'rgba(240,220,255,' + (0.9 * (1 - dying)) + ')'; ctx.beginPath(); ctx.arc(bx, by, eh * 1.12, 0, 6.283); ctx.stroke();
-      disk(0, Math.PI);
-      // 5. gravity lens: a ring that rushes inwards
-      const ring = R * 1.3 * (1 - ease(life));
-      ctx.globalAlpha = 0.6 * (1 - life); ctx.lineWidth = 3 * vsc(); ctx.strokeStyle = '#b678ff'; ctx.beginPath(); ctx.arc(bx, by, Math.max(1, ring), 0, 6.283); ctx.stroke();
-      // 6. the last moment: everything collapses into a white-hot point
-      if (life > 0.8) { const p = (life - 0.8) / 0.2; ctx.globalAlpha = p; ctx.drawImage(soft('#ffffff'), bx - R * 0.3 * p, by - R * 0.3 * p, R * 0.6 * p, R * 0.6 * p); star4(bx, by, R * 0.35 * p, '#ffffff'); }
       ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+      bhDisk(bx, by, H2, Math.PI, Math.PI * 2);
       continue;
     }
     ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; ctx.drawImage(soft(tier.glow), bx - px, by - px, px * 2, px * 2); ctx.globalCompositeOperation = 'source-over';
