@@ -480,6 +480,7 @@ function loadBiome(i, fromTeleport) {
   G.rocks = []; G.meteors = []; G.bombs = []; G.mega = null; G.drops = []; G.rain = 0;
   G.drills.forEach(d => { d.target = null; });
   G.menu = null; G.regenWait = -1; G.mouse.down = false;
+  if (G.biomeFx && !G.biomeFx.out) G.biomeFx.out = 0.001;   // you went somewhere: the 'next biome' banner slides away fast
   if (fromTeleport) { G.loading = 30; G.tp = 0; G.tpName = BIOMES[i].name; G.amb = []; AUDIO.setSong(i); }
   G.heart = null;
   if (i === BIOMES.length - 1 && rebirthsDone() >= HEART_REBIRTHS && !G.won) G.heart = { hp: G.heartHP, cool: 0, shake: 0, flash: 0 };
@@ -1127,7 +1128,7 @@ function tick() {
   for (const g of G.rings) g.t += DT; compact(G.rings, g => g.t < 0.45);
   if (G.xpPops) { for (const p of G.xpPops) p.t += DT; G.xpPops = G.xpPops.filter(p => p.t < 1.6); }
   if (G.crateFx) G.crateFx.t += DT; if (G.mergeFx) G.mergeFx.t += DT;
-  if (G.biomeFx && (G.biomeFx.t += DT) > 5.5) G.biomeFx = null;
+  if (G.biomeFx && ((G.biomeFx.t += DT) > 5.5 || (G.biomeFx.out && (G.biomeFx.out += DT) > 0.35))) G.biomeFx = null;
   // enough Creditz for the next biome? show the banner once for that biome
   if (G.scene === 'play') { const nb = nextBiome(); if (nb > 0 && G.creditz >= BIOMES[nb].req && !(G.nbShown & (1 << nb))) { G.nbShown = (G.nbShown || 0) | (1 << nb); if (!(G.reached & (1 << nb))) { G.biomeFx = { i: nb, t: 0 }; AUDIO.sfx('ach'); G.flash = Math.max(G.flash, 0.25); G.flashCol = BIOMES[nb].accent; } } }
   for (const l of G.lights) l.life -= DT;
@@ -4564,8 +4565,8 @@ function renderBiomeFx() {
   const F = G.biomeFx; if (F && !GFX.splash) { G.biomeFx = null; return; }
   if (!F || G.crateFx || G.mergeFx || G.menu) return;
   setScreen();
-  const b = BIOMES[F.i], t = F.t, a = Math.min(1, t * 4, (5.5 - t) * 2), slide = ease(Math.min(1, t * 2.5)), pop = easeBack(Math.min(1, t / 0.4));
-  const bh = Math.min(200, Math.max(130, H * 0.28)), cy = H * 0.42, y = cy - bh / 2;
+  const ko = F.out ? ease(Math.min(1, F.out / 0.35)) : 0, b = BIOMES[F.i], t = F.t, a = Math.min(1, t * 4, (5.5 - t) * 2) * (1 - ko), slide = ease(Math.min(1, t * 2.5)), pop = easeBack(Math.min(1, t / 0.4));
+  const bh = Math.min(200, Math.max(130, H * 0.28)) * (1 - ko * 0.35), cy = H * 0.42 - ko * 50, y = cy - bh / 2;
   ctx.save(); ctx.globalAlpha = a;
   // turning light rays behind the band, in the biome's colour
   ctx.save(); ctx.translate(W / 2, cy); ctx.rotate(G.time * 0.4); ctx.globalCompositeOperation = 'lighter';
