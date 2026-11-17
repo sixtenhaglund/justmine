@@ -2,14 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#07080c">
 <title>Just Mine ©</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
 <style>
   html, body { margin: 0; height: 100%; background: #07080c; overflow: hidden; }
-  canvas { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; touch-action: none; user-select: none; -webkit-user-select: none; }
+  canvas { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
 </style>
 </head>
 <body>
@@ -610,7 +614,7 @@ function openChest(r) {
 function emit(kind, x, y, n, o) {
   o = o || {};
   const cols = Array.isArray(o.col) ? o.col : [o.col || '#ffffff'];
-  for (let i = 0; i < n; i++) {
+  for (let i = 0, N = pn(n); i < N; i++) {
     const a = Math.random() * 6.283, v = (o.sp || 3) * (0.4 + Math.random());
     const col = o.col === 'rainbow' ? hueShift('#ff4040', Math.random() * 360) : cols[i % cols.length];
     G.parts.push({ kind, x: x + rnd(-10, 10), y: y + rnd(-10, 10), vx: Math.cos(a) * v, vy: Math.sin(a) * v + (o.up || 3), rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4,
@@ -674,7 +678,7 @@ function hitRock(rock, by) {
     rock.cool = wait0 + DT; rock.coolMax = rock.cool;
     rock.shake = 5; rock.flash = 1;
     chunks(rock.x, rock.y, rock.col, 3, true);
-    if (by === 'mouse') { AUDIO.sfx('hit', rock.costume); G.mouse.swing = 1; }
+    if (by === 'mouse') { AUDIO.sfx('hit', rock.costume); G.mouse.swing = 1; hitSparks(rock); }
     else if (by === 'auto') AUDIO.sfx('tick');
   } else breakRock(rock, by);
 }
@@ -1016,23 +1020,23 @@ function tick() {
 }
 // ---------------- particles ----------------
 function chunks(x, y, col, n, small) {
-  for (let i = 0; i < n; i++) {
+  for (let i = 0, N = pn(n); i < N; i++) {
     const a = Math.random() * 6.283, v = (small ? 1.5 : 2.5) + Math.random() * (small ? 2 : 4);
     G.parts.push({ kind: 'chunk', x: x + rnd(-12, 12), y: y + rnd(-12, 12), vx: Math.cos(a) * v, vy: Math.sin(a) * v + 3, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.5,
       s: small ? rnd(2, 4) : rnd(4, 9), col: Math.random() < 0.5 ? col : darken(col, 0.25), life: 30 + rnd(0, 25), max: 55, pts: [Math.random(), Math.random(), Math.random()] });
   }
 }
 function dust(x, y, col, n) {
-  for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, v = 0.5 + Math.random() * 1.5; G.parts.push({ kind: 'dust', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, s: 10 + rnd(0, 10), life: 24 + rnd(0, 14), max: 38, col: lighten(col, 0.3) }); }
+  for (let i = 0, N = pn(n); i < N; i++) { const a = Math.random() * 6.283, v = 0.5 + Math.random() * 1.5; G.parts.push({ kind: 'dust', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, s: 10 + rnd(0, 10), life: 24 + rnd(0, 14), max: 38, col: lighten(col, 0.3) }); }
 }
 function smoke(x, y, n, sz) {
-  for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, v = 1 + Math.random() * 3; G.parts.push({ kind: 'smoke', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, s: sz * (0.5 + Math.random() * 0.6), grow: 0.8, life: 30 + rnd(0, 20), max: 50, col: '#4a4540' }); }
+  for (let i = 0, N = pn(n); i < N; i++) { const a = Math.random() * 6.283, v = 1 + Math.random() * 3; G.parts.push({ kind: 'smoke', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, s: sz * (0.5 + Math.random() * 0.6), grow: 0.8, life: 30 + rnd(0, 20), max: 50, col: '#4a4540' }); }
 }
 function coins(x, y, n) {
-  for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI, v = 3 + Math.random() * 5; G.parts.push({ kind: 'coin', x, y, vx: Math.cos(a) * v * (Math.random() < 0.5 ? -1 : 1), vy: Math.sin(a) * v + 3, rot: Math.random() * 6, s: 2.5 + Math.random() * 2, life: 40 + rnd(0, 20), max: 60, col: '#ffd84a' }); }
+  for (let i = 0, N = pn(n); i < N; i++) { const a = Math.random() * Math.PI, v = 3 + Math.random() * 5; G.parts.push({ kind: 'coin', x, y, vx: Math.cos(a) * v * (Math.random() < 0.5 ? -1 : 1), vy: Math.sin(a) * v + 3, rot: Math.random() * 6, s: 2.5 + Math.random() * 2, life: 40 + rnd(0, 20), max: 60, col: '#ffd84a' }); }
 }
 function sparkle(x, y, col, n) {
-  for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, v = 1 + Math.random() * 4; G.parts.push({ kind: 'star', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v + 1, s: 2 + Math.random() * 3, life: 20 + rnd(0, 20), max: 40, col }); }
+  for (let i = 0, N = pn(n); i < N; i++) { const a = Math.random() * 6.283, v = 1 + Math.random() * 4; G.parts.push({ kind: 'star', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v + 1, s: 2 + Math.random() * 3, life: 20 + rnd(0, 20), max: 40, col }); }
 }
 function toast(text, col) {
   const last = G.toasts[G.toasts.length - 1];
@@ -1042,10 +1046,12 @@ function toast(text, col) {
 }
 
 // ---------------- ambient effects per biome (screen space, 0..1 coordinates) ----------------
+const AMBM = () => [0, 0.5, 1][gx('amb')] * (QUALITY.drop ? 0.6 : 1);   // Weather setting
 function tickAmbient() {
   const type = G.scene === 'title' ? 'dust' : BIOMES[G.biome].amb;
   const A = G.amb, R = Math.random;
-  const want = AMB_X[type] ? Math.round(AMB_X[type].n * (QUALITY.low ? 0.5 : 1)) : Math.round({ dust: 40, sparks: 26, heavy: 45, shimmer: 50, embers: 55, snow: 110, bubbles: 40, void: 70, sand: 70, jungle: 34, storm: 120, lava: 50 }[type] * (QUALITY.low ? 0.5 : 1));
+  const want = AMB_X[type] ? Math.round(AMB_X[type].n * AMBM()) : Math.round({ dust: 40, sparks: 26, heavy: 45, shimmer: 50, embers: 55, snow: 110, bubbles: 40, void: 70, sand: 70, jungle: 34, storm: 120, lava: 50 }[type] * AMBM());
+  if (A.length > want) A.splice(want);
   while (A.length < want) {
     const p = { x: R(), y: R(), t: 0, life: 4 + R() * 6, s: R(), ph: R() * 6.28, type };
     if (type === 'embers' || type === 'bubbles' || type === 'lava') p.y = 1 + R() * 0.2;
@@ -1143,7 +1149,7 @@ function tryRebirth() {
 function openMenu(m) {
   if (m && (!canLoad() || G.victory)) return;
   G.menu = G.menu === m ? null : m;
-  G.mouse.down = false;
+  G.mouse.down = false; PAN.x = PAN.y = 0; G.bombArm = false;
   if (G.menu) { G.menuT[G.menu] = G.menuT[G.menu] || 0; AUDIO.sfx('open'); }
 }
 function startGame(fresh) {
@@ -1333,10 +1339,66 @@ const AUDIO = (() => {
 // ====================================================================
 const cv = document.getElementById('c');
 let ctx = cv.getContext('2d');   // "let" so sprites can be drawn with the same drawing code
-// quality: low mode drops the canvas to 1x and trims effects when the game runs slow
-const QUALITY = { low: false, auto: true, show: false, fps: 60, ms: 16, slowT: 0, fastT: 0 };
+// ---------------- GRAPHICS SETTINGS ----------------
+// Every option is just a number: which button in its row is picked. A preset fills in all of them at once.
+// TOUCH = a phone or tablet (a "coarse pointer" is a finger instead of a mouse)
+const TOUCH = !!((window.matchMedia && matchMedia('(pointer: coarse)').matches) || ('ontouchstart' in window));
+const GFX_ROWS = [
+  ['preset', 'Preset', ['Low', 'Medium', 'High', 'Ultra', 'Custom']],
+  ['res', 'Resolution', ['50%', '75%', '100%', 'Sharp', 'Max']],
+  ['light', 'Lighting', ['Off', 'Simple', 'Full']],
+  ['bloom', 'Bloom glow', ['Off', 'Soft', 'Strong']],
+  ['shadows', 'Shadows', ['Off', 'Hard', 'Soft']],
+  ['bg', 'Background', ['Flat', 'Detailed', 'Deep']],
+  ['parts', 'Particles', ['Few', 'Normal', 'Many', 'Insane']],
+  ['amb', 'Weather', ['Off', 'Some', 'Full']],
+  ['grade', 'Colour grading', ['Off', 'On']],
+  ['grain', 'Film grain', ['Off', 'On']],
+  ['trail', 'Pickaxe FX', ['Off', 'On']],
+  ['shake', 'Screen shake', ['Off', 'Low', 'Full']],
+  ['fpsCap', 'FPS limit', ['30', '60', 'None']],
+  ['auto', 'Auto quality', ['Off', 'On']],
+  ['fps', 'Show FPS', ['Off', 'On']],
+  ['ui', 'Menu size', ['Auto', 'Small', 'Normal', 'Big']],
+];
+const GFX_PRESETS = [   // Low, Medium, High, Ultra
+  { res: 1, light: 0, bloom: 0, shadows: 1, bg: 0, parts: 0, amb: 1, grade: 0, grain: 0, trail: 0 },
+  { res: 2, light: 1, bloom: 0, shadows: 1, bg: 1, parts: 1, amb: 2, grade: 1, grain: 0, trail: 1 },
+  { res: 3, light: 2, bloom: 1, shadows: 2, bg: 2, parts: 2, amb: 2, grade: 1, grain: 0, trail: 1 },
+  { res: 4, light: 2, bloom: 2, shadows: 2, bg: 2, parts: 3, amb: 2, grade: 1, grain: 1, trail: 1 },
+];
+const GFX_KEY = 'justmine.gfx.v1';
+function gfxDefaults() { const p = TOUCH ? 1 : 2; return Object.assign({ preset: p, shake: 2, fpsCap: 2, auto: 1, fps: 0, ui: 0 }, GFX_PRESETS[p]); }
+const GFX = gfxDefaults();
+try { const s = JSON.parse(localStorage.getItem(GFX_KEY) || 'null'); if (s) for (const [k, , opts] of GFX_ROWS) if (typeof s[k] === 'number' && s[k] >= 0 && s[k] < opts.length) GFX[k] = s[k] | 0; } catch (e) {}
+function setGfx(key, v) {
+  GFX[key] = v;
+  if (key === 'preset') { if (v < 4) Object.assign(GFX, GFX_PRESETS[v]); }
+  else if (key in GFX_PRESETS[0]) GFX.preset = 4;   // you changed one thing yourself: now it's Custom
+  QUALITY.drop = 0; QUALITY.show = !!GFX.fps;
+  try { localStorage.setItem(GFX_KEY, JSON.stringify(GFX)); } catch (e) {}
+  resize();
+}
+// quality: if the game keeps running slow, Auto quality "drops" 1 or 2 steps and turns the heavy stuff down
+const QUALITY = { drop: 0, show: !!GFX.fps, fps: 60, ms: 16, slowT: 0, fastT: 0 };
+// the setting as it really is right now (your choice, lowered while Auto quality has dropped)
+function gx(key) {
+  const v = GFX[key], d = QUALITY.drop;
+  if (!d) return v;
+  switch (key) {
+    case 'res': return Math.min(v, d >= 2 ? 1 : 2);
+    case 'bloom': case 'grain': return 0;
+    case 'light': return Math.min(v, 1);
+    case 'parts': return Math.min(v, d >= 2 ? 0 : 1);
+    case 'bg': return Math.min(v, d >= 2 ? 0 : 1);
+    case 'grade': return d >= 2 ? 0 : v;
+  }
+  return v;
+}
 const PERF = { rockSprites: 0, gemSprites: 0 };
-const MAX_PARTS = () => QUALITY.low ? 160 : 420;
+const MAX_PARTS = () => [140, 320, 600, 1000][gx('parts')];
+// how many particles an effect makes: Few = half, Insane = 2.4x
+const pn = n => n > 0 ? Math.max(1, Math.round(n * [0.5, 1, 1.6, 2.4][gx('parts')])) : 0;
 let W = 960, H = 640, DPR = 1, K = 2, CX = 480, CY = 320;
 const FH = '"Lilita One", "Arial Black", Impact, sans-serif', FB = '"Nunito", "Segoe UI", Arial, sans-serif';
 const TOP = 88, BOT = 92;
@@ -1368,9 +1430,12 @@ function soft(col) {
   return c;
 }
 function resize() {
-  DPR = Math.min(QUALITY.low ? 1 : 1.5, window.devicePixelRatio || 1);   // 1.5x looks the same as 2.5x and is up to 2.8x fewer pixels
+  // DPR = how many real screen pixels we draw per CSS pixel. Fewer = blurrier but much faster.
+  const dev = window.devicePixelRatio || 1;
+  DPR = [0.5, 0.75, 1, Math.min(1.5, dev), Math.min(3, dev)][gx('res')];
   W = window.innerWidth; H = window.innerHeight;
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  cv.style.width = W + 'px'; cv.style.height = H + 'px';   // phones: 100vh can be taller than the real screen
   K = Math.min((W - 24) / 470, (H - TOP - BOT - 10) / 262);
   K = Math.max(0.5, K);
   CX = W / 2; CY = TOP + (H - TOP - BOT) / 2;
@@ -1457,7 +1522,155 @@ function drawBg(bi, shx, shy) {
     }
     src = tintBg.c;
   }
-  ctx.drawImage(src, shx * DPR - 4 * DPR, shy * DPR - 4 * DPR, cv.width + 8 * DPR, cv.height + 8 * DPR);
+  const m = gx('bg') >= 2 ? 14 : 4;   // extra edge so parallax never shows the border
+  ctx.drawImage(src, (shx - m) * DPR, (shy - m) * DPR, cv.width + 2 * m * DPR, cv.height + 2 * m * DPR);
+}
+
+// ====================================================================
+//  EFFECTS ON TOP (all of them can be turned off in Settings)
+//  The trick behind most of them: draw a soft picture ONCE into a small
+//  hidden canvas, then just stamp/stretch it every frame. Stamping is cheap.
+// ====================================================================
+const fxCache = new Map();
+function fxCanvas(key, w, h, build) {
+  let c = fxCache.get(key);
+  if (!c) { c = document.createElement('canvas'); c.width = w; c.height = h; build(c.getContext('2d'), w, h); fxCache.set(key, c); }
+  return c;
+}
+// a round light that stays bright most of the way out (soft() fades fast)
+const softWide = () => fxCanvas('wide', 64, 64, (x) => { const g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, '#fff'); g.addColorStop(0.55, 'rgba(255,255,255,0.8)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); });
+// one light shaft: bright in the middle, soft at the sides, fading out downwards
+const beamSprite = col => fxCanvas('beam' + col, 64, 256, (x, w, h) => {
+  let g = x.createLinearGradient(0, 0, w, 0); g.addColorStop(0, rgba(col, 0)); g.addColorStop(0.5, rgba(col, 1)); g.addColorStop(1, rgba(col, 0)); x.fillStyle = g; x.fillRect(0, 0, w, h);
+  x.globalCompositeOperation = 'destination-in'; g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, w, h);
+});
+// a strip of fog that repeats left-to-right without a seam (blobs near an edge are drawn on the other side too)
+const fogSprite = col => fxCanvas('fog' + col, 512, 128, (x, w, h) => {
+  const R = seeded(4242);
+  for (let k = 0; k < 46; k++) { const fx = R() * w, fy = h * (0.35 + R() * 0.4), r = 20 + R() * 46; for (const ox of [-w, 0, w]) { const g = x.createRadialGradient(fx + ox, fy, 0, fx + ox, fy, r); g.addColorStop(0, rgba(col, 0.5)); g.addColorStop(1, rgba(col, 0)); x.fillStyle = g; x.fillRect(fx + ox - r, fy - r, r * 2, r * 2); } }
+});
+// film grain: a square of random grey dots
+const grainSprite = () => fxCanvas('grain', 128, 128, (x, w, h) => {
+  const d = x.createImageData(w, h);
+  for (let i = 0; i < d.data.length; i += 4) { const v = Math.random() * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; }
+  x.putImageData(d, 0, 0);
+});
+const MOTES = Array.from({ length: 46 }, () => ({ x: Math.random(), y: Math.random(), v: 0.004 + Math.random() * 0.012, ph: Math.random() * 6.28, s: 0.8 + Math.random() * 1.6 }));
+const bgCols = bi => ART.backdrops[BIOMES[bi].name];
+// parallax: the cave wall slides a little against the mouse, so it feels far away
+const PAR = { x: 0, y: 0 };
+function tickParallax() {
+  let tx = 0, ty = 0;
+  if (gx('bg') >= 2 && G.mouse.over && !G.menu) { tx = clamp((G.mouse.x - W / 2) / W, -0.5, 0.5) * -12; ty = clamp((G.mouse.y - H / 2) / H, -0.5, 0.5) * -8; }
+  PAR.x += (tx - PAR.x) * 0.06; PAR.y += (ty - PAR.y) * 0.06;
+}
+function drawFog(bi, alpha, speed, y, scale) {
+  const f = fogSprite(mix(bgCols(bi)[0], '#ffffff', 0.3)), fw = Math.max(W, 700) * scale, fh = fw / 4, off = ((G.time * speed) % fw + fw) % fw;
+  ctx.globalAlpha = alpha;
+  for (let x0 = -off; x0 < W; x0 += fw) ctx.drawImage(f, x0, y - fh / 2, fw, fh);
+  ctx.globalAlpha = 1;
+}
+// light shafts + dust in the light + fog along the floor (behind the rocks)
+function drawBackFx(shx) {
+  const lv = gx('bg'); if (!lv) return;
+  const bi = G.scene === 'title' ? 0 : G.biome, acc = mix(BIOMES[bi].accent, '#ffffff', 0.45);
+  setScreen();
+  ctx.globalCompositeOperation = 'lighter';
+  const beam = beamSprite(acc);
+  for (let k = 0; k < 4; k++) {
+    const bx = W * (0.1 + k * 0.27) + Math.sin(G.time * 0.13 + k * 2) * 24, bw = (90 + (k % 2) * 60) * clamp(W / 1100, 0.6, 1.6);
+    ctx.save(); ctx.translate(bx + shx * 0.3 + PAR.x * 0.5, -30); ctx.rotate(0.3 - k * 0.05);
+    ctx.globalAlpha = 0.06 + 0.035 * Math.sin(G.time * 0.5 + k * 1.9);
+    ctx.drawImage(beam, -bw / 2, 0, bw, H * 1.2); ctx.restore();
+  }
+  if (lv >= 2) for (const m of MOTES) {
+    const y = ((m.y - G.time * m.v) % 1 + 1) % 1, x = m.x + Math.sin(G.time * 0.4 + m.ph) * 0.015;
+    ctx.globalAlpha = 0.18 + 0.18 * Math.sin(G.time * 1.7 + m.ph); ctx.fillStyle = acc; ctx.fillRect(x * W, y * H, m.s, m.s);
+  }
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  if (G.scene === 'play') drawFog(bi, 0.3, 9, toScreen(0, -102).y + 4, 1);
+}
+function drawFrontFx() {
+  if (gx('bg') < 2 || G.scene !== 'play') return;
+  setScreen(); drawFog(G.biome, 0.14, -15, toScreen(0, -102).y + 22, 1.4);
+}
+// LIGHTING: a dark layer with soft holes cut out wherever light falls.
+// "destination-out" means: drawing here ERASES the dark layer instead of painting on it.
+const LIGHT = { c: null, dark: new Map() };
+function drawLighting(shx, shy) {
+  const lv = gx('light'); if (!lv || G.scene !== 'play') return;
+  const b = BIOMES[G.biome];
+  const w = Math.max(2, Math.ceil(W / 4)), h = Math.max(2, Math.ceil(H / 4));
+  if (!LIGHT.c) LIGHT.c = document.createElement('canvas');
+  const c = LIGHT.c; if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+  const x = c.getContext('2d'), q = w / W;
+  x.globalCompositeOperation = 'copy'; x.globalAlpha = 1;
+  x.fillStyle = rgba(mix(bgCols(G.biome)[0], '#000000', 0.85), lv > 1 ? 0.6 : 0.42); x.fillRect(0, 0, w, h);
+  x.globalCompositeOperation = 'destination-out';
+  // the work light over the rock wall: a wide oval so every rock stays easy to see
+  const g0 = toScreen(0, 32), R0 = 290 * K * q;
+  x.save(); x.translate((g0.x + shx) * q, (g0.y + shy) * q); x.scale(1, 0.64); x.globalAlpha = 0.9; x.drawImage(softWide(), -R0, -R0, R0 * 2, R0 * 2); x.restore();
+  const tint = [];
+  const L = (wx, wy2, r, a, col) => {
+    if (!(r > 0) || !(a > 0) || !isFinite(wx) || !isFinite(wy2)) return;
+    const p = toScreen(wx, wy2), sx = p.x + shx, sy = p.y + shy, rr2 = r * K;
+    x.globalAlpha = Math.min(1, a); x.drawImage(soft('#ffffff'), (sx - rr2) * q, (sy - rr2) * q, rr2 * 2 * q, rr2 * 2 * q);
+    if (col && lv > 1) tint.push([sx, sy, rr2, Math.min(1, a), col]);
+  };
+  if (G.mouse.over && !G.menu && !G.mouse.onUI) { const m = toWorld(G.mouse.x, G.mouse.y); L(m.x, m.y, 125, 1, '#ffc070'); }   // your torch
+  for (const l of G.lights) L(l.x, l.y, l.r * 1.5, l.life / l.max, l.col);
+  for (const r of G.rocks) { if (r.state === 'gem' && r.gemT < 2) L(r.x, r.y, 48, 0.8, RCOL[r.rarity]); else if (r.golden && r.state === 'rock') L(r.x, r.y, 62, 0.6, '#ffcc33'); }
+  for (const bo of G.bombs) if (bo.t >= 0) L(bo.x, bo.y, 95, 0.9, '#ffb04a');
+  for (const m of G.meteors) { const t = m.t / m.dur; L(m.sx + (m.target.x - m.sx) * t, m.sy + (m.target.y - m.sy) * t, 85, 1, '#ff8a3a'); }
+  for (const d of G.drills) if (d.target || d.y < 190) L(d.x, d.y, 30, 0.5, null);
+  for (const d of G.drops) L(d.x, d.y, 34, 0.7, RCOL[b.minerals[d.i][2]]);
+  if (G.heart) L(0, 32, 160 + Math.sin(G.time * 3) * 16, 0.9, '#ff6a3a');
+  if (b.amb === 'lava') L(0, -150, 300, 0.55, '#ff6a1a');
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1;
+  ctx.drawImage(c, 0, 0, cv.width, cv.height);
+  if (tint.length) {   // Full: coloured light spills onto the rocks around it
+    setScreen(); ctx.globalCompositeOperation = 'lighter';
+    for (const [sx, sy, r, a, col] of tint) { ctx.globalAlpha = a * 0.2; ctx.drawImage(soft(col), sx - r, sy - r, r * 2, r * 2); }
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  }
+}
+// BLOOM: bright things glow. Shrink the picture, keep only its bright parts
+// (multiplying a picture by itself makes dark colours MUCH darker but leaves bright ones bright),
+// then stretch it back over the screen. Stretching a tiny picture blurs it for free.
+const BLOOM = {};
+function bloomCv(k, w, h) { let c = BLOOM[k]; if (!c) c = BLOOM[k] = document.createElement('canvas'); if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } return c; }
+function drawBloom() {
+  const lv = gx('bloom'); if (!lv) return;
+  const w1 = Math.max(4, Math.ceil(cv.width / 6)), h1 = Math.max(4, Math.ceil(cv.height / 6));
+  const a = bloomCv('a', w1, h1), ax = a.getContext('2d');
+  ax.globalAlpha = 1; ax.imageSmoothingEnabled = true; ax.imageSmoothingQuality = 'high';
+  ax.globalCompositeOperation = 'copy'; ax.drawImage(cv, 0, 0, w1, h1);
+  ax.globalCompositeOperation = 'multiply'; ax.drawImage(a, 0, 0); ax.drawImage(a, 0, 0); ax.drawImage(a, 0, 0);   // x^8
+  const b = bloomCv('b', Math.max(2, Math.ceil(w1 / 4)), Math.max(2, Math.ceil(h1 / 4))), bx = b.getContext('2d');
+  bx.globalCompositeOperation = 'copy'; bx.imageSmoothingQuality = 'high'; bx.drawImage(a, 0, 0, b.width, b.height);
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = true;
+  ctx.globalCompositeOperation = 'screen';
+  ctx.globalAlpha = lv > 1 ? 0.7 : 0.5; ctx.drawImage(a, 0, 0, cv.width, cv.height);
+  ctx.globalAlpha = lv > 1 ? 0.8 : 0.45; ctx.drawImage(b, 0, 0, cv.width, cv.height);
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+}
+// COLOUR GRADING: tint the whole picture towards the biome's colour + darker corners. And film grain.
+function drawGrade() {
+  const bi = G.scene === 'title' ? 0 : G.biome;
+  if (gx('grade')) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = 'soft-light'; ctx.globalAlpha = 0.28; ctx.fillStyle = BIOMES[bi].accent; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+    setScreen();
+    overlay('vignette2', 1, x => { const g = x.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.38, W / 2, H / 2, Math.hypot(W, H) * 0.56); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.5)'); x.fillStyle = g; x.fillRect(0, 0, W, H); });
+  }
+  if (gx('grain')) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    if (!LIGHT.grain || LIGHT.grainCtx !== ctx) { LIGHT.grain = ctx.createPattern(grainSprite(), 'repeat'); LIGHT.grainCtx = ctx; }
+    ctx.save(); ctx.translate(Math.floor(Math.random() * 128), Math.floor(Math.random() * 128));
+    ctx.globalCompositeOperation = 'overlay'; ctx.globalAlpha = 0.07; ctx.fillStyle = LIGHT.grain; ctx.fillRect(-128, -128, cv.width + 128, cv.height + 128);
+    ctx.restore(); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  }
 }
 
 // ---------------- ambient drawing ----------------
@@ -1552,8 +1765,10 @@ function rockPath(style, s, R) {
 function rockBody(r, bname) {
   const b = BIOMES[G.biome], style = 'block';   // every biome uses his rounded-square rock again (Sixten asked)
   const s = 23, col = r.col, seedN = Math.floor(r.seed * 1000) + 7, born = 1;
-  // shadow
-  ctx.save(); ctx.translate(2, 4); ctx.fillStyle = 'rgba(0,0,0,0.4)'; rockPath(style, s, seeded(seedN)); ctx.fill(); ctx.restore();
+  // shadow (Shadows setting: Off / Hard / Soft). shadowBlur is measured in real pixels, so it is scaled by K * DPR.
+  const sh = gx('shadows'), px = K * DPR;
+  if (sh === 1) { ctx.save(); ctx.translate(2, 4); ctx.fillStyle = 'rgba(0,0,0,0.4)'; rockPath(style, s, seeded(seedN)); ctx.fill(); ctx.restore(); }
+  else if (sh === 2) { ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 6 * px; ctx.shadowOffsetX = 1.5 * px; ctx.shadowOffsetY = 4.5 * px; ctx.fillStyle = '#000'; rockPath(style, s, seeded(seedN)); ctx.fill(); ctx.restore(); }
   // body with bevel light
   const g = ctx.createLinearGradient(-s, -s, s, s);
   g.addColorStop(0, lighten(col, 0.28)); g.addColorStop(0.45, col); g.addColorStop(1, darken(col, 0.42));
@@ -1578,6 +1793,8 @@ function rockBody(r, bname) {
     for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.moveTo(0, 0); const a = k * 2.09 + r.seed; ctx.lineTo(Math.cos(a) * s * 1.2, Math.sin(a) * s * 1.2); ctx.stroke(); } ctx.shadowBlur = 0; }
   if (style === 'shard') { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = born * (0.3 + 0.15 * Math.sin(G.time * 2 + r.seed)); ctx.drawImage(soft('#9a4aff'), -s, -s, s * 2, s * 2); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = born; }
   if (style === 'hex') { ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1; for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * s * 1.12, Math.sin(a) * s * 1.12); ctx.stroke(); } }
+  // Soft shadows: light from the top, a little darkness collecting at the bottom (his colours stay the same in the middle)
+  if (sh === 2) { const ao = ctx.createLinearGradient(0, -s, 0, s); ao.addColorStop(0, 'rgba(255,255,255,0.12)'); ao.addColorStop(0.3, 'rgba(255,255,255,0)'); ao.addColorStop(0.7, 'rgba(0,0,0,0)'); ao.addColorStop(1, 'rgba(0,0,0,0.3)'); ctx.fillStyle = ao; ctx.fillRect(-s, -s, s * 2, s * 2); }
   // speckles
   for (let k = 0; k < 6; k++) { ctx.fillStyle = rgba(R() < 0.5 ? darken(col, 0.4) : lighten(col, 0.3), 0.5); ctx.beginPath(); ctx.arc(-s + R() * s * 2, -s + R() * s * 2, 0.8 + R() * 2, 0, 6.283); ctx.fill(); }
   // cracks (his for his biomes, new sets for the new ones)
@@ -1617,7 +1834,7 @@ function rockBody(r, bname) {
 const ROCK_BOX = 60;   // sprite covers -30..30 world units (rock + shadow)
 function drawRock(r, bname) {
   if (r.chest) { drawChest(r); return; }
-  const sc = K * DPR, key = r.costume + '|' + r.col + '|' + r.dir + '|' + r.tier + '.' + r.armor + '|' + bname + '|' + Math.round(sc * 100);
+  const sc = K * DPR, key = r.costume + '|' + r.col + '|' + r.dir + '|' + r.tier + '.' + r.armor + '|' + bname + '|' + Math.round(sc * 100) + '|' + gx('shadows');
   if (r.sprKey !== key) {
     const S = Math.ceil(ROCK_BOX * sc);
     const c = r.spr && r.spr.width === S ? r.spr : document.createElement('canvas');
@@ -1634,7 +1851,7 @@ function drawRock(r, bname) {
   ctx.translate(x, y); ctx.scale(grow, grow);
   ctx.globalAlpha = born;
   ctx.drawImage(r.spr, -ROCK_BOX / 2, -ROCK_BOX / 2, ROCK_BOX, ROCK_BOX);
-  { const fx = BIOME_FX[bname]; if (fx && fx.liveSparks && !QUALITY.low) liveSparks(r, bname, fx.liveSparks); }
+  { const fx = BIOME_FX[bname]; if (fx && fx.liveSparks && !QUALITY.drop && gx('parts') > 0) liveSparks(r, bname, fx.liveSparks); }
   if (r.golden) {
     const sx = ((G.time * 40 + r.seed) % 90) - 45;
     ctx.save(); rr(-q, -q, q * 2, q * 2, 7); ctx.clip();
@@ -1979,16 +2196,40 @@ function drawDrill(d) {
 // ---------------- the player's pickaxe cursor ----------------
 function drawCursor(mx, my) {
   setScreen();
-  ctx.save(); ctx.translate(mx, my);
-  ctx.rotate(-0.5 + G.mouse.swing * 1.1 - (G.mouse.down ? 0.25 : 0));
-  const sc = Math.max(0.9, K * 0.5); ctx.scale(sc, sc);
-  ctx.lineJoin = 'round';
-  const pk = [0, 0, 0, '#8b5a2b', '#b08a5a'];   // one wooden pickaxe
-  ctx.fillStyle = pk[3]; ctx.strokeStyle = '#120c06'; ctx.lineWidth = 1.6;
-  rr(-2, -2, 4, 26, 1.5); ctx.fill(); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(-15, 2); ctx.quadraticCurveTo(0, -12, 15, 2); ctx.lineTo(12, 4); ctx.quadraticCurveTo(0, -4, -12, 4); ctx.closePath();
-  const g = ctx.createLinearGradient(0, -10, 0, 4); g.addColorStop(0, lighten(pk[4], 0.5)); g.addColorStop(1, darken(pk[4], 0.25)); ctx.fillStyle = g; ctx.fill(); ctx.stroke();
+  const rot = -0.5 + G.mouse.swing * 1.1 - (G.mouse.down ? 0.25 : 0), sc = Math.max(0.9, K * 0.5);
+  // swing trail: faint copies of the pickaxe where it just was (like motion blur)
+  if (GFX.trail && G.mouse.swing > 0.12) {
+    ctx.save(); ctx.translate(mx, my); ctx.scale(sc, sc); ctx.globalCompositeOperation = 'lighter';
+    for (let k = 1; k <= 3; k++) { ctx.save(); ctx.rotate(rot + k * 0.22 * G.mouse.swing); ctx.globalAlpha = G.mouse.swing * (0.32 - k * 0.08); ironPick(true); ctx.restore(); }
+    ctx.restore();
+  }
+  ctx.save(); ctx.translate(mx, my); ctx.rotate(rot); ctx.scale(sc, sc);
+  ironPick(false);
   ctx.restore();
+}
+// the iron pickaxe from the first version: brown handle, shiny steel head
+function ironPick(ghost) {
+  ctx.lineJoin = 'round';
+  if (ghost) {
+    ctx.fillStyle = '#9ab8ff';
+    ctx.beginPath(); ctx.moveTo(-15, 2); ctx.quadraticCurveTo(0, -12, 15, 2); ctx.lineTo(12, 4); ctx.quadraticCurveTo(0, -4, -12, 4); ctx.closePath(); ctx.fill();
+    rr(-2, -2, 4, 26, 1.5); ctx.fill(); return;
+  }
+  ctx.fillStyle = '#8b5a2b'; ctx.strokeStyle = '#120c06'; ctx.lineWidth = 1.6;
+  rr(-2, -2, 4, 26, 1.5); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#a8743c'; ctx.fillRect(-1, 0, 1, 22);   // wood light side
+  ctx.beginPath(); ctx.moveTo(-15, 2); ctx.quadraticCurveTo(0, -12, 15, 2); ctx.lineTo(12, 4); ctx.quadraticCurveTo(0, -4, -12, 4); ctx.closePath();
+  const g = ctx.createLinearGradient(0, -10, 0, 4); g.addColorStop(0, '#f4f8fb'); g.addColorStop(1, '#8e9aa6'); ctx.fillStyle = g; ctx.fill(); ctx.stroke();
+  if (GFX.trail) {   // a glint sliding along the steel
+    const t = (G.time * 0.7) % 2.2 - 0.6;
+    if (t > 0 && t < 1) { const gx2 = -13 + t * 26, gy2 = -4 - Math.sin(t * Math.PI) * 4.5; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.sin(t * Math.PI) * 0.9; star4(gx2, gy2, 3.2, '#ffffff'); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; }
+  }
+}
+// little sparks where the pickaxe hits
+function hitSparks(rock) {
+  if (!GFX.trail) return;
+  const m = toWorld(G.mouse.x, G.mouse.y), x = clamp(m.x, rock.x - 20, rock.x + 20), y = clamp(m.y, rock.y - 20, rock.y + 20);
+  for (let i = 0, N = pn(5); i < N; i++) { const a = Math.random() * 6.283, v = 2 + Math.random() * 4; G.parts.push({ kind: 'spark', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v + 2, life: 9, max: 9, col: i % 2 ? '#ffffff' : '#ffd27a', s: 1.4 }); }
 }
 
 // ====================================================================
@@ -2094,12 +2335,21 @@ function render() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = '#07080c'; ctx.fillRect(0, 0, cv.width, cv.height);
   if (G.scene === 'loading') { setScreen(); txt('Loading...', W / 2, H / 2, 28, '#ffffff'); return; }
-  const shx = G.shake ? (Math.random() - 0.5) * G.shake * 2 : 0, shy = G.shake ? (Math.random() - 0.5) * G.shake * 2 : 0;
-  drawBg(G.scene === 'title' ? 0 : G.biome, shx * 0.4, shy * 0.4);
+  const shk = G.shake * [0, 0.45, 1][GFX.shake];   // Screen shake setting
+  const shx = shk ? (Math.random() - 0.5) * shk * 2 : 0, shy = shk ? (Math.random() - 0.5) * shk * 2 : 0;
+  tickParallax();
+  drawBg(G.scene === 'title' ? 0 : G.biome, shx * 0.4 + PAR.x, shy * 0.4 + PAR.y);
+  drawBackFx(shx);
   drawAmbient(false);
-  if (G.scene === 'title') { renderTitle(); drawAmbient(true); finishUI(); return; }
+  if (G.scene === 'title') { drawAmbient(true); drawBloom(); drawGrade(); renderTitle(); renderSettings(); finishUI(); return; }
   renderWorld(shx, shy);
   drawAmbient(true);
+  drawFrontFx();
+  drawLighting(shx, shy);
+  drawBloom();
+  drawGrade();
+  setScreen();
+  if (G.mouse.over && !G.mouse.onUI && inWorld(G.mouse.x, G.mouse.y)) drawCursor(G.mouse.x, G.mouse.y);
   renderHUD();
   renderMenus();
   renderOverlays();
@@ -2150,6 +2400,7 @@ function renderWorld(shx, shy) {
       x = x + (target.x - x) * t; y = y + (wy(target.y) - y) * t - Math.sin(t * Math.PI) * 60; sz *= 1 - t * 0.6; alpha = 1 - t * 0.3;
       if (t > 0.97 && !r.arrived) { r.arrived = true; G.hudPulse = 1; }
     }
+    if (gx('shadows') && r.gemT < 2) { ctx.globalAlpha = 0.45 * pop; ctx.drawImage(soft('#000000'), r.x - 13, wy(r.y) + 7, 26, 8); ctx.globalAlpha = 1; }
     drawGem(art, x, y, sz, { glow: RCOL[r.rarity], rank: rk, alpha, small: r.gemT < 2, rot: Math.sin(G.time * 2 + r.seed) * 0.08 });
     if (r.gemKey === 'Gold' || r.gemKey === 'Pure') {   // gold shine: rotating glints around it
       ctx.globalCompositeOperation = 'lighter';
@@ -2228,8 +2479,6 @@ function renderWorld(shx, shy) {
     const g = ctx.createLinearGradient(x, 0, x + w, 0); g.addColorStop(0, '#ff3a1a'); g.addColorStop(1, '#ffc21a');
     ctx.fillStyle = g; rr(x, y, Math.max(0, w * G.heart.hp / HEART_HP), 6, 3); ctx.fill();
   }
-  // cursor
-  if (G.mouse.over && !G.mouse.onUI && inWorld(G.mouse.x, G.mouse.y)) drawCursor(G.mouse.x, G.mouse.y);
 }
 
 // ---------------- HUD + dock ----------------
@@ -2277,6 +2526,7 @@ function renderHUD() {
   btn('vol', W - 52, 12, 40, 36, '', { icon: 'speaker', col: G.settings.vol === 3 ? '#7a3030' : '#3a4a6a', r: 10, fn: () => { G.settings.vol = (G.settings.vol + 1) % 4; AUDIO.applyVolume(); AUDIO.sfx('click'); save(); } });
   setScreen();
   if (G.settings.vol < 3) { ctx.fillStyle = '#ffffff'; for (let k = 0; k < 3 - G.settings.vol; k++) ctx.fillRect(W - 24 + k * 4, 38 - k * 4, 3, 4 + k * 4); } else txt('x', W - 22, 36, 13, '#ff8a8a', { font: FB, weight: 900 });
+  btn('gear', W - 144, 12, 40, 36, '', { icon: 'gear', col: G.menu === 'settings' ? '#5a6a8a' : '#3a4a6a', r: 10, fn: () => { AUDIO.sfx('click'); openSettings(); } });
   btn('music', W - 98, 12, 40, 36, '', { icon: 'note', col: G.settings.music ? '#3a4a6a' : '#7a3030', r: 10, fn: () => { G.settings.music = !G.settings.music; AUDIO.applyVolume(); AUDIO.sfx('click'); save(); } });
   // next biome chip (right side, under the best score)
   const nbi = nextBiome();
@@ -2290,8 +2540,10 @@ function renderHUD() {
     txt(lab, nx + cw2 / 2, ny + 10.5, fitSize(lab, 11, cw2 - 14, FB), G.creditz >= nbB.req ? '#7dff7a' : '#ffffff', { font: FB, weight: 900, shadow: false });
   }
   setScreen();
-  txt('BEST ' + fmt(G.high), W - 108, 30, 12, '#ffd84a', { align: 'right', font: FB, weight: 900 });
-  if (G.rebirthMult > 1) txt('Rebirth x' + fmt(G.rebirthMult), W - 108, 46, 11, '#ffb36a', { align: 'right', font: FB, weight: 800 });
+  if (W >= 760) {
+    txt('BEST ' + fmt(G.high), W - 154, 30, 12, '#ffd84a', { align: 'right', font: FB, weight: 900 });
+    if (G.rebirthMult > 1) txt('Rebirth x' + fmt(G.rebirthMult), W - 154, 46, 11, '#ffb36a', { align: 'right', font: FB, weight: 800 });
+  }
   // event banners (bars drain to exactly 0)
   const ev = G.shower > 0 ? ['METEOR SHOWER', G.shower / 15, '#ff8a3a', '#ffb04a'] : G.rush > 0 ? ['GOLD RUSH', G.rush / (perk(12) ? 40 : 20), '#ffc21a', '#ffe27a']
     : G.mega ? ['MEGA ROCK', G.mega.t / MEGA_TIME, '#ff8a3a', '#ffb36a'] : G.rain > 0 ? ['CRYSTAL RAIN', G.rain / 15, '#6ab0ff', '#9ad8ff'] : null;
@@ -2315,14 +2567,15 @@ function renderHUD() {
   // bomb chip: the ring fills to 100%, then pops when the bomb is ready
   if (G.bombLevel > 0) {
     const cx = 44, cy = H - 44, r = 26, ready = G.bombCD <= 0, tier = bombTier(G.bombLevel);
-    region('bombchip', cx - r, cy - r, r * 2, r * 2, null);
+    region('bombchip', cx - r, cy - r - 4, r * 2, r * 2 + 18, () => { if (G.bombCD > 0) return; G.bombArm = !G.bombArm; AUDIO.sfx('click'); });
+    if (G.bombArm) { ctx.fillStyle = 'rgba(255,90,40,' + (0.25 + 0.2 * Math.sin(G.time * 10)) + ')'; ctx.beginPath(); ctx.arc(cx, cy, r + 8, 0, 6.283); ctx.fill(); }
     ctx.fillStyle = 'rgba(10,12,18,0.75)'; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.283); ctx.fill();
     const frac = ready ? 1 : clamp(1 - G.bombCD / bombCooldown(), 0, 1);
     const pop = 1 + G.bombPop * 0.25;
     ctx.lineWidth = 4 * pop; ctx.lineCap = 'round'; ctx.strokeStyle = ready ? (tier.name === 'orange' ? '#ffb04a' : tier.spark) : '#6a7080';
     ctx.beginPath(); ctx.arc(cx, cy, (r - 3) * pop, -Math.PI / 2, -Math.PI / 2 + 6.283 * Math.max(0.001, frac)); ctx.stroke(); ctx.lineCap = 'butt';
     drawIcon('bomb', cx, cy - 2, 26, tier.name === 'orange' ? '#2a2d36' : tier.name === 'black' ? '#14081f' : tier.name === 'white' ? '#e9f0ff' : '#2a5aff');
-    txt(ready ? 'SPACE' : Math.ceil(G.bombCD) + 's', cx, cy + r + 9, 10, ready ? '#ffd27a' : '#9aa0aa', { font: FB, weight: 900 });
+    txt(G.bombArm ? (G.touch ? 'TAP A ROCK' : 'CLICK A SPOT') : ready ? (G.touch ? 'TAP' : 'SPACE') : Math.ceil(G.bombCD) + 's', cx, cy + r + 9, 10, ready ? '#ffd27a' : '#9aa0aa', { font: FB, weight: 900 });
   }
   // chest buffs with timers
   let bi = 0;
@@ -2371,19 +2624,85 @@ function renderAway() {
 }
 // ---------------- menus ----------------
 function menuOpen(id) { const t = G.menuT[id] || 0; return t > 0.01 ? t : 0; }
+// Menu size: on a phone, shrinking a menu until it fits makes the text too tiny to read.
+// So menus stay big enough and you drag them around with your finger instead (that's PAN).
+function uiScale(fit) {
+  const n = Math.min(1, fit);
+  switch (GFX.ui) {
+    case 1: return Math.min(0.8, fit);
+    case 2: return n;
+    case 3: return Math.max(1, Math.min(1.3, fit));
+    default: return TOUCH || G.touch ? Math.max(n, 0.8) : n;
+  }
+}
+const PAN = { x: 0, y: 0 };
+function panned(x0, y0, pw, ph, store) {
+  let px = 0, py = 0;
+  if (pw > W - 16) px = clamp(PAN.x, W - 8 - pw - x0, 8 - x0);
+  if (ph > H - 16) py = clamp(PAN.y, H - 8 - ph - y0, 8 - y0);
+  if (store) { PAN.x = px; PAN.y = py; }
+  PAN.can = pw > W - 16 || ph > H - 16;
+  return { x: x0 + px, y: y0 + py };
+}
 function modalFrame(id, w, h) {
   const t = menuOpen(id); if (!t) return null;
   UI.live = G.menu === id;
-  const s = Math.min(1, (W - 20) / w, (H - TOP - 20) / h) * (0.85 + 0.15 * easeBack(t));
+  const s0 = uiScale(Math.min((W - 20) / w, (H - TOP - 20) / h)), s = s0 * (0.85 + 0.15 * easeBack(t));
   setScreen();
   ctx.globalAlpha = 1; ctx.fillStyle = 'rgba(3,4,8,' + 0.55 * t + ')'; ctx.fillRect(0, 0, W, H);
   if (G.menu === id) region('backdrop', 0, 0, W, H, () => { G.menu = null; });
-  uiFrame(W / 2 - w * s / 2, TOP / 2 + H / 2 - h * s / 2, s);
+  const p = panned(W / 2 - w * s / 2, TOP / 2 + H / 2 - h * s / 2, w * s, h * s, t >= 1);
+  uiFrame(p.x, p.y, s);
   ctx.globalAlpha = Math.min(1, t * 1.4);
   return { w, h };
 }
+// ---------------- SETTINGS: graphics + sound ----------------
+function openSettings() {
+  G.menu = G.menu === 'settings' ? null : 'settings';
+  G.mouse.down = false; PAN.x = PAN.y = 0;
+  if (G.menu) { G.menuT.settings = G.menuT.settings || 0; AUDIO.sfx('open'); }
+}
+const fsOk = () => !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+const isFs = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+function toggleFullscreen() {
+  try {
+    if (isFs()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else { const el = document.documentElement; const p = (el.requestFullscreen || el.webkitRequestFullscreen).call(el); if (p && p.catch) p.catch(() => {}); }
+  } catch (e) {}
+}
+const SOUND_ROWS = [
+  ['vol', 'Volume', ['Loud', 'Medium', 'Quiet', 'Off'], () => G.settings.vol, v => { G.settings.vol = v; AUDIO.applyVolume(); }],
+  ['music', 'Music', ['Off', 'On'], () => G.settings.music ? 1 : 0, v => { G.settings.music = !!v; AUDIO.applyVolume(); }],
+];
+function renderSettings() {
+  const two = W > H * 1.05;   // landscape: two columns, portrait (phones): one long column
+  const rows = GFX_ROWS.map(r => [r[0], r[1], r[2], () => GFX[r[0]], v => setGfx(r[0], v)]).concat(SOUND_ROWS);
+  const colW = 410, rowH = 34, perCol = two ? Math.ceil(rows.length / 2) : rows.length;
+  const w = two ? colW * 2 + 50 : colW + 40, h = 96 + perCol * rowH + 64;
+  const f = modalFrame('settings', w, h); if (!f) return;
+  panel(0, 0, w, h, 'SETTINGS', '#6a7a9a');
+  closeBtn(w - 46, 12);
+  const pre = GFX_ROWS[0][2][GFX.preset];
+  txt(QUALITY.drop ? 'Auto quality has turned things down a bit because the game was running slow' : 'Preset: ' + pre + (TOUCH ? '  -  phone/tablet' : '') + '   (' + Math.round(QUALITY.fps) + ' FPS)', w / 2, 44, 12, QUALITY.drop ? '#ffb36a' : '#9aa3b5', { font: FB, weight: 800 });
+  rows.forEach((r, i) => {
+    const col = two ? Math.floor(i / perCol) : 0, k = two ? i % perCol : i;
+    const x = 22 + col * (colW + 6), y = 66 + k * rowH;
+    if (i === GFX_ROWS.length) { ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(x, y - 3, colW - 4, 1); }
+    const [key, label, opts, get, set] = r, cur = get();
+    txt(label, x + 4, y + 13, fitSize(label, 13, 118, FB), '#dfe4ee', { align: 'left', font: FB, weight: 900, shadow: false });
+    const sx = x + 124, sw = (colW - 130) / opts.length;
+    opts.forEach((o, j) => {
+      const on = cur === j;
+      btn('set_' + key + j, sx + j * sw, y, sw - 3, 27, o, { col: on ? (key === 'preset' ? '#c48a12' : '#3a9a4a') : '#343c50', size: 12, r: 7, fn: () => { if (cur !== j) { set(j); AUDIO.sfx('click'); if (G.scene === 'play') save(); } } });
+    });
+  });
+  const by = 66 + perCol * rowH + 12;
+  if (fsOk()) btn('set_fs', w / 2 - 190, by, 180, 36, isFs() ? 'Exit fullscreen' : 'Fullscreen', { col: '#3a5fd0', size: 15, r: 9, fn: () => { AUDIO.sfx('click'); toggleFullscreen(); } });
+  btn('set_reset', fsOk() ? w / 2 + 10 : w / 2 - 90, by, 180, 36, 'Reset graphics', { col: '#5a4a6a', size: 15, r: 9, fn: () => { const d = gfxDefaults(); for (const k in d) GFX[k] = d[k]; setGfx('preset', GFX.preset); AUDIO.sfx('click'); } });
+  UI.live = true; setScreen(); ctx.globalAlpha = 1;
+}
 function renderMenus() {
-  renderShop(); renderBiomes(); renderRebirth(); renderBook();
+  renderShop(); renderBiomes(); renderRebirth(); renderBook(); renderSettings();
   UI.live = true;
   setScreen(); ctx.globalAlpha = 1;
 }
@@ -2391,11 +2710,12 @@ function renderShop() {
   const t = menuOpen('shop'); if (!t) return;
   UI.live = G.menu === 'shop';
   const w = 620, h = 560;
-  const s = Math.min(1, (H - TOP - 20) / (h + 20), (W - 16) / w);
+  const s = uiScale(Math.min((H - TOP - 20) / (h + 20), (W - 16) / w));
   const x = W - (w * s + 8) * ease(t);
   setScreen();
   if (G.menu === 'shop') region('backdrop', 0, 0, W, H, () => { G.menu = null; });
-  uiFrame(x, TOP + 4, s);
+  const p = t >= 1 ? panned(x, TOP + 4, w * s, (h + 20) * s, true) : { x, y: TOP + 4 };
+  uiFrame(p.x, p.y, s);
   ctx.globalAlpha = Math.min(1, t * 1.5);
   panel(0, 14, w, h, 'SHOP', '#3a5fd0');
   closeBtn(w - 44, 26);
@@ -2671,13 +2991,17 @@ function renderTitle() {
   txt('©', ww / 2 + sz * 0.22, -sz * 0.3, sz * 0.35, '#ffe27a', { stroke: 4 });
   ctx.save(); ctx.translate(-ww / 2 - sz * 0.45, 0); ctx.rotate(Math.sin(G.time * 3) * 0.2); drawIcon('pick', 0, 0, sz * 0.8, '#d6dde4'); ctx.restore();
   ctx.restore();
-  txt('Hold the mouse on rocks to mine them. Find rare minerals. Rebirth. Go deeper.', W / 2, cy + sz * 0.75, fitSize('Hold the mouse on rocks to mine them. Find rare minerals. Rebirth. Go deeper.', 16, W - 40, FB), '#d6dbe6', { font: FB, weight: 800 });
+  const how = TOUCH ? 'Hold your finger on rocks to mine them. Find rare minerals. Rebirth. Go deeper.' : 'Hold the mouse on rocks to mine them. Find rare minerals. Rebirth. Go deeper.';
+  txt(how, W / 2, cy + sz * 0.75, fitSize(how, 16, W - 40, FB), '#d6dbe6', { font: FB, weight: 800 });
   const save = hasSave(), bw = 240, by = H * 0.56;
   btn('play', W / 2 - bw / 2, by, bw, 60, save ? 'Continue' : 'Play', { col: '#3aa04a', size: 28, fn: () => { AUDIO.init(); AUDIO.sfx('click'); G.confirmNew = 0; startGame(false); } });
-  if (save) btn('new', W / 2 - bw / 2 + 30, by + 74, bw - 60, 40, G.confirmNew > 0 ? 'Sure? Click again' : 'New game', { col: G.confirmNew > 0 ? '#b03a3a' : '#4a5470', size: 17,
+  if (save) btn('new', W / 2 - bw / 2 + 30, by + 74, bw - 60, 40, G.confirmNew > 0 ? (TOUCH ? 'Sure? Tap again' : 'Sure? Click again') : 'New game', { col: G.confirmNew > 0 ? '#b03a3a' : '#4a5470', size: 17,
     fn: () => { AUDIO.init(); AUDIO.sfx('click'); if (G.confirmNew > 0) { G.confirmNew = 0; startGame(true); } else G.confirmNew = 3; } });
   setScreen();
-  txt('SPACE or right-click = Bomb    B Biomes  -  S Shop  -  R Rebirth  -  K Book  -  M mute', W / 2, H - 52, fitSize('SPACE or right-click = Bomb    B Biomes  -  S Shop  -  R Rebirth  -  K Book  -  M mute', 13, W - 30, FB), '#9aa3b5', { font: FB, weight: 800 });
+  const keys = TOUCH ? 'Bomb: tap the bomb button, then tap a rock    -    Settings: the gear button' : 'SPACE or right-click = Bomb    B Biomes  -  S Shop  -  R Rebirth  -  K Book  -  M mute  -  F3 FPS';
+  btn('gear', W - 56, 14, 44, 40, '', { icon: 'gear', col: '#3a4a6a', r: 10, fn: () => { AUDIO.init(); AUDIO.sfx('click'); openSettings(); } });
+  setScreen();
+  txt(keys, W / 2, H - 52, fitSize(keys, 13, W - 30, FB), '#9aa3b5', { font: FB, weight: 800 });
   if (G.high > 0) txt('BEST  ' + fmt(G.high) + ' Creditz', W / 2, H - 76, 15, '#ffd84a', { font: FB, weight: 900 });
   txt('a game by Sixten', W - 16, H - 20, 13, '#8a90a0', { align: 'right', font: FB, weight: 800 });
 }
@@ -2687,24 +3011,52 @@ function renderTitle() {
 // ====================================================================
 function setMouse(e) { G.mouse.x = e.clientX; G.mouse.y = e.clientY; G.mouse.over = true; }
 function hitRegion(x, y) { for (let i = UI.regions.length - 1; i >= 0; i--) { const r = UI.regions[i]; if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return r; } return null; }
-cv.addEventListener('pointermove', e => setMouse(e));
+// TOUCH: a finger has no "hover", so buttons fire when you LIFT your finger (and only if it didn't slide),
+// which lets you drag big menus around without pressing a button by accident. Mouse buttons still fire on press.
+const PTR = { id: null, sx: 0, sy: 0, moved: false, region: null, px: 0, py: 0 };
+cv.addEventListener('pointermove', e => {
+  if (e.pointerType === 'touch' && PTR.id !== e.pointerId) return;   // a second finger doesn't move the pickaxe
+  setMouse(e);
+  if (PTR.id === e.pointerId && PTR.region) {
+    const dx = e.clientX - PTR.sx, dy = e.clientY - PTR.sy;
+    if (!PTR.moved && Math.hypot(dx, dy) > 12) PTR.moved = true;
+    if (PTR.moved && G.menu) { PAN.x = PTR.px + dx; PAN.y = PTR.py + dy; }
+  }
+});
 cv.addEventListener('pointerdown', e => {
+  const touch = e.pointerType === 'touch' || e.pointerType === 'pen';
+  if (touch && PTR.id !== null) return;   // ignore extra fingers
+  G.touch = touch;
   setMouse(e);
   AUDIO.init();
   try { cv.setPointerCapture(e.pointerId); } catch (err) {}
   const r = hitRegion(G.mouse.x, G.mouse.y);
-  if (r) { if (r.fn) r.fn(); G.mouse.down = !!(e.button === 0 && !r.fn && r.id === 'none'); G.mouse.onUI = true; if (e.button === 0) G.mouse.down = false; return; }
+  if (touch) {
+    Object.assign(PTR, { id: e.pointerId, sx: e.clientX, sy: e.clientY, moved: false, region: r, px: PAN.x, py: PAN.y });
+    if (r) { G.mouse.onUI = true; G.mouse.down = false; return; }
+  } else if (r) { if (r.fn) r.fn(); G.mouse.onUI = true; G.mouse.down = false; return; }
   if (G.scene !== 'play') return;
-  if (e.button === 2) { const w = toWorld(G.mouse.x, G.mouse.y); dropBomb(w.x, w.y); return; }
+  if (G.bombArm || e.button === 2) { const w = toWorld(G.mouse.x, G.mouse.y); G.bombArm = false; dropBomb(w.x, w.y); return; }
   G.mouse.down = true;
 });
-window.addEventListener('pointerup', () => { G.mouse.down = false; });
-cv.addEventListener('pointerleave', () => { G.mouse.over = false; G.mouse.down = false; });
+function endPointer(e, fire) {
+  G.mouse.down = false;
+  if (PTR.id !== e.pointerId) return;
+  const r = PTR.region; PTR.id = null; PTR.region = null;
+  if (fire && r && !PTR.moved) { const r2 = hitRegion(e.clientX, e.clientY); if (r2 && r2.id === r.id && r2.fn) r2.fn(); }
+  G.mouse.over = false; G.mouse.x = G.mouse.y = -999;   // finger lifted: no pickaxe, no hover
+}
+window.addEventListener('pointerup', e => endPointer(e, true));
+window.addEventListener('pointercancel', e => endPointer(e, false));
+cv.addEventListener('pointerleave', e => { if (e.pointerType === 'touch') return; G.mouse.over = false; G.mouse.down = false; });
+cv.addEventListener('wheel', e => { if (G.menu && PAN.can) { PAN.y -= e.deltaY; PAN.x -= e.deltaX; } }, { passive: true });
+window.addEventListener('orientationchange', () => setTimeout(resize, 200));
+if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
 cv.addEventListener('contextmenu', e => e.preventDefault());
 window.addEventListener('keydown', e => {
   AUDIO.init();
   if (e.code === 'Space') { G.keys.Space = true; e.preventDefault(); }
-  if (e.code === 'Escape') { G.menu = null; if (G.victory) G.victory = 0; }
+  if (e.code === 'Escape') { G.menu = null; G.bombArm = false; if (G.victory) G.victory = 0; }
   if (e.code === 'KeyM') { G.settings.vol = G.settings.vol === 3 ? 0 : 3; AUDIO.applyVolume(); save(); }
   if (e.code === 'KeyH' && G.scene === 'play' && !e.repeat) { giveCreditz(1e29); toast('+100 Oc Creditz (test key H)', '#ffd84a'); }   // TEMP test key
   if (G.scene === 'play' && !e.repeat) {
@@ -2727,32 +3079,38 @@ if (document.fonts && document.fonts.load) {
   Promise.all([document.fonts.load('40px "Lilita One"'), document.fonts.load('900 16px "Nunito"')]).catch(() => {}).then(() => { bgKey = ''; ready(); });
   setTimeout(() => { if (G.scene === 'loading') ready(); }, 2500);   // offline? use fallback fonts
 } else ready();
-let last = 0, acc = 0;
+let last = 0, acc = 0, lastDraw = 0;
 function frame(t) {
-  if (!last) last = t;
+  requestAnimationFrame(frame);
+  if (!last) last = lastDraw = t;
   const dt = Math.min(0.25, (t - last) / 1000);
   acc += dt; last = t;
   while (acc >= DT) { tick(); acc -= DT; }
+  // FPS limit: the game still runs 30 ticks a second, we just skip drawing some screen frames
+  const cap = [1000 / 30, 1000 / 60, 0][GFX.fpsCap];
+  if (cap && t - lastDraw < cap - 3) return;
+  const ddt = Math.min(0.25, (t - lastDraw) / 1000); lastDraw = t;
   const r0 = performance.now(); render(); const rms = performance.now() - r0;
-  watchQuality(dt, rms);
+  watchQuality(ddt, rms);
   if (QUALITY.show) drawFps(rms);
-  requestAnimationFrame(frame);
 }
-// measures frame time; if the game keeps running slow it switches to low quality (and back when it's fast again)
+// measures frame time; if the game keeps running slow, Auto quality steps the graphics down (and back up when it's fast again)
 function watchQuality(dt, rms) {
   if (dt <= 0) return;
   QUALITY.ms = QUALITY.ms * 0.95 + dt * 1000 * 0.05; QUALITY.fps = 1000 / QUALITY.ms; QUALITY.rms = (QUALITY.rms || rms) * 0.95 + rms * 0.05;
-  if (!QUALITY.auto || G.scene !== 'play') return;
-  if (!QUALITY.low && QUALITY.ms > 26) { if ((QUALITY.slowT += dt) > 3) { QUALITY.low = true; QUALITY.slowT = 0; resize(); toast('Low quality mode on (press F3 to see FPS)', '#9aa0aa'); } } else QUALITY.slowT = 0;
-  if (QUALITY.low && QUALITY.ms < 13) { if ((QUALITY.fastT += dt) > 20) { QUALITY.low = false; QUALITY.fastT = 0; resize(); } } else QUALITY.fastT = 0;
+  if (!GFX.auto) { if (QUALITY.drop) { QUALITY.drop = 0; resize(); } return; }
+  if (G.scene !== 'play' || G.menu === 'settings') return;
+  const goal = GFX.fpsCap === 0 ? 1000 / 30 : 1000 / 60;   // the frame time we are aiming for
+  if (QUALITY.drop < 2 && QUALITY.ms > goal * 1.6) { if ((QUALITY.slowT += dt) > 3) { QUALITY.drop++; QUALITY.slowT = 0; resize(); toast('Auto quality: graphics turned down a bit', '#9aa0aa'); } } else QUALITY.slowT = 0;
+  if (QUALITY.drop > 0 && QUALITY.ms < goal * 0.8) { if ((QUALITY.fastT += dt) > 20) { QUALITY.drop--; QUALITY.fastT = 0; resize(); } } else QUALITY.fastT = 0;
 }
 function drawFps(rms) {
   setScreen();
-  const lab = Math.round(QUALITY.fps) + ' FPS  ' + QUALITY.ms.toFixed(1) + ' ms  draw ' + (QUALITY.rms || 0).toFixed(1) + ' ms  ' + (QUALITY.low ? 'LOW' : 'HIGH') + ' ' + DPR + 'x';
+  const lab = Math.round(QUALITY.fps) + ' FPS  ' + QUALITY.ms.toFixed(1) + ' ms  draw ' + (QUALITY.rms || 0).toFixed(1) + ' ms  ' + GFX_ROWS[0][2][GFX.preset] + (QUALITY.drop ? ' -' + QUALITY.drop : '') + ' ' + DPR + 'x';
   ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(W - 250, H - 22, 246, 18);
   ctx.font = '900 11px ' + FB; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillStyle = QUALITY.fps < 40 ? '#ff8a8a' : '#7dff7a'; ctx.fillText(lab, W - 8, H - 12.5);
 }
-window.addEventListener('keydown', e => { if (e.code === 'F3') { QUALITY.show = !QUALITY.show; e.preventDefault(); } });
+window.addEventListener('keydown', e => { if (e.code === 'F3') { setGfx('fps', GFX.fps ? 0 : 1); e.preventDefault(); } });
 requestAnimationFrame(frame);
 window.__JM = { museumMult, pagesDone, startMega, startRain, hitMega, QUALITY, PERF, dpr: () => DPR, setHeart: n => { HEART_REBIRTHS = n; }, isUnlocked, TUNE, RX, ROCK_MAX, HEART: HEART_REBIRTHS, REBIRTH_COSTS, costOf, canVisit, SHOPV, SHOP_ORDER, LVL_KEY, fmt, quest, startRush, bombTier, G, tick, render, BIOMES, SHOP, ART, UI, startGame, buy, teleport, tryRebirth, loadBiome, openMenu, dropBomb, miningSpeed, rebirthCost, canLoad, creditzMult, totalMult, perk, toScreen, toWorld, hitRegion, checkAch, startShower, resize };
 </script>
