@@ -1974,16 +1974,22 @@ function rockPath(style, s, R) {
 // A rock's look only changes when it cracks (or the screen is resized), so its body is drawn once
 // into a small sprite and then just stamped every frame. Animated bits (shine, flash) go on top.
 // Each crack keeps its colour from stage to stage: a crack that continues a crack of the stage before
-// (they share a point) gets that crack's colour, a brand-new crack gets the next colour.
+// gets that crack's look (colour, thickness, see-through); a brand-new crack gets its own.
 const CRACK_COLS = {};
 function crackColours(bname, stage) {
   let all = CRACK_COLS[bname];
   if (!all) {
+    const samples = d => { const P = crackPts(d), o = []; for (let k = 1; k < P.length; k++) { const [a, b] = P[k - 1], [c, e] = P[k], n = Math.max(1, Math.ceil(Math.hypot(c - a, e - b) / 0.3)); for (let j = 0; j <= n; j++) o.push([a + (c - a) * j / n, b + (e - b) * j / n]); } return o.length ? o : P; };
+    const covered = (A, B) => A.filter(p => B.some(q => Math.abs(p[0] - q[0]) < 0.35 && Math.abs(p[1] - q[1]) < 0.35)).length / A.length;
     all = CRACK_COLS[bname] = []; let next = 0, prev = [];
     for (let st = 0; st < ART.rocks[bname].length; st++) {
-      const cur = ART.rocks[bname][st].cracks.map(c => new Set(crackPts(c.d).map(p => Math.round(p[0] * 10) + ',' + Math.round(p[1] * 10))));
-      const idx = cur.map(pts => { const p = prev.find(q => [...pts].some(k => q.pts.has(k))); return p ? p.ci : next++; });
-      all.push(idx); prev = cur.map((pts, i) => ({ pts, ci: idx[i] }));
+      const cur = ART.rocks[bname][st].cracks.map(c => ({ c, smp: samples(c.d) }));
+      const sty = cur.map(({ c, smp }) => {
+        let best = null, bf = 0.5;
+        for (const p of prev) { const f = covered(p.smp, smp); if (f > bf) { bf = f; best = p; } }
+        return best ? best.sty : { c: c.c, sw: c.sw, o: c.o, ci: next++ };
+      });
+      all.push(sty); prev = cur.map((x, i) => ({ smp: x.smp, sty: sty[i] }));
     }
   }
   return all[clamp(stage, 0, all.length - 1)];
@@ -2052,11 +2058,11 @@ function rockBody(r, bname) {
     const pal = crackPalette(bname, col);
     shown.forEach(i => {
       const c = art.cracks[i];
-      const cc = c.c || pal[cidx[i] % 3], w = (c.sw || 0.5) * 1.35, lum = hexRgb(cc).reduce((a, x) => a + x, 0) / 3;
+      const st = cidx[i], cc = st.c || pal[st.ci % 3], w = (st.sw || 0.5) * 1.35, lum = hexRgb(cc).reduce((a, x) => a + x, 0) / 3;
       if (fx.jagged) {   // thin, jagged, tapering cracks (Cryo Cliffs)
         const jw = w * fx.jagged, sd = c.d.length * 131 + i;
         if (lum > 90) { ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(cc, 0.18); jaggedCrack(c, jw * 3.2, sd); ctx.globalCompositeOperation = 'source-over'; }
-        ctx.globalAlpha = c.o || 1; ctx.strokeStyle = cc; jaggedCrack(c, jw, sd); ctx.globalAlpha = 1;
+        ctx.globalAlpha = st.o || 1; ctx.strokeStyle = cc; jaggedCrack(c, jw, sd); ctx.globalAlpha = 1;
         return;
       }
       if (fx.molten) {   // molten crack: a red glow around it, then (below) a hot bright core
@@ -2065,12 +2071,12 @@ function rockBody(r, bname) {
         ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(255,70,20,0.2)'; ctx.lineWidth = w * 3.2; ctx.stroke(path(c.d)); ctx.globalCompositeOperation = 'source-over';
       }
       if (lum > 90) { ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(cc, 0.22); ctx.lineWidth = w * 3.6; ctx.stroke(path(c.d)); ctx.globalCompositeOperation = 'source-over'; }
-      ctx.globalAlpha = c.o || 1; ctx.strokeStyle = cc; ctx.lineWidth = w; ctx.stroke(path(c.d)); ctx.globalAlpha = 1;
+      ctx.globalAlpha = st.o || 1; ctx.strokeStyle = cc; ctx.lineWidth = w; ctx.stroke(path(c.d)); ctx.globalAlpha = 1;
       if (fx.molten) { ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(mix(cc, '#ffd27a', 0.65), 0.9); ctx.lineWidth = w * 0.45; ctx.stroke(path(c.d)); ctx.strokeStyle = 'rgba(255,250,220,0.55)'; ctx.lineWidth = w * 0.16; ctx.stroke(path(c.d)); ctx.globalCompositeOperation = 'source-over'; }
     });
     // a thin light edge under each crack so it looks chiselled into the rock
     ctx.translate(0.22, 0.28);
-    if (!fx.jagged) for (const i of shown) { const c = art.cracks[i]; ctx.strokeStyle = rgba(lighten(col, 0.5), 0.22); ctx.lineWidth = (c.sw || 0.5) * 0.4; ctx.stroke(path(c.d)); }
+    if (!fx.jagged) for (const i of shown) { const c = art.cracks[i]; ctx.strokeStyle = rgba(lighten(col, 0.5), 0.22); ctx.lineWidth = (cidx[i].sw || 0.5) * 0.4; ctx.stroke(path(c.d)); }
     ctx.translate(-0.22, -0.28);
     if (fx.deco) crackDeco(fx.deco, shown.map(i => art.cracks[i]));
     ctx.restore();
