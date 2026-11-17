@@ -14,6 +14,15 @@
 <style>
   html, body { margin: 0; height: 100%; background: #07080c; overflow: hidden; }
   canvas { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+  #codebox { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(3,4,8,0.7); z-index: 5; font-family: "Nunito", "Segoe UI", Arial, sans-serif; }
+  #codebox .cb { background: linear-gradient(#252b3a, #151923); border: 2px solid #1a8a4a; border-radius: 16px; padding: 18px 20px; width: min(340px, 86vw); color: #fff; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
+  #codebox b { font-family: "Lilita One", "Arial Black", sans-serif; font-weight: 400; font-size: 24px; letter-spacing: 1px; color: #7dff7a; }
+  #codebox input { display: block; width: 100%; box-sizing: border-box; margin: 14px 0; padding: 10px 12px; font-size: 18px; font-weight: 800; border-radius: 10px; border: 2px solid #3a4256; background: #0b0d14; color: #fff; outline: none; }
+  #codebox input:focus { border-color: #7dff7a; }
+  #codebox .row { display: flex; gap: 10px; }
+  #codebox button { flex: 1; padding: 10px; font-size: 16px; font-weight: 900; border: 0; border-radius: 10px; color: #fff; background: #3aa04a; cursor: pointer; }
+  #codebox button + button { background: #4a5470; }
+  #codebox p { min-height: 18px; margin: 10px 0 0; color: #ff8a8a; font-weight: 800; }
 </style>
 </head>
 <body>
@@ -134,8 +143,8 @@ const SHOP = {
   creditz: { title: 'Creditz', name: l => 'x' + fmt(cmValue(l + 1)) + ' Creditz', icon: 'gem', col: '#f2b51f', endless: true,
     costs: [15, 300, 800, 2000, 5000, 36000, 90000, 2.4e5, 7.5e5, 2.4e6, 7.5e6, 2.4e7, 7.5e7, 2.4e8, 7.5e8],
     desc: l => 'Every mineral worth x' + fmt(cmValue(l + 1)) + ' (now x' + fmt(creditzMult()) + ')' },
-  speed: { title: 'Mining speed', name: l => '+' + [10, 25, 50, 75, 100, 150, 200, 300, 500, 900, 1400, 2200, 3500][l] + '% Mining speed', icon: 'pick', col: '#36c2ff',
-    costs: [20, 150, 400, 1200, 4000, 6e5, 6e6, 6e7, 6e8, 6e9, 5e10, 4e11, 3e12],
+  speed: { title: 'Mining speed', name: l => '+' + [10, 25, 50, 75, 100, 150, 200, 300, 500, 900, 1400, 2200, 3500, 5000, 8000, 12000, 18000][l] + '% Mining speed', icon: 'pick', col: '#36c2ff',
+    costs: [20, 150, 400, 1200, 4000, 6e5, 6e6, 6e7, 6e8, 6e9, 5e10, 4e11, 3e12, 2.5e13, 2e14, 1.6e15, 1.3e16],
     desc: l => miningSpeed() + 's -> ' + SHOPV.speed[l] + 's per crack' },
   bomb: { title: 'Bomb', name: l => 'Bomb level ' + (l + 1), icon: 'bomb', col: '#ff6a2a',
     costs: [200, 1000, 5000, 15000, 1e6, 3e7, 3e8, 3e9, 3e10, 3e11],
@@ -144,81 +153,101 @@ const SHOP = {
     costs: [500, 2000, 6000, 20000, 80000, 1.2e6, 9e6, 7.5e7, 6e8, 4.5e9, 3.6e10, 3e11, 3e12, 3e13],
     desc: l => (l + 1) + ' robot' + (l ? 's' : '') + ' that mine rocks for you' },
   luck: { title: 'Luck', name: l => 'Luck ' + (l + 1), icon: 'clover', col: '#3fd27a', isNew: true,
-    costs: [5000, 50000, 5e5, 5e6, 5e7, 1.5e9, 1.5e10, 1.5e11, 5e11, 5e12],
+    costs: [5000, 50000, 5e5, 5e6, 5e7, 1.5e9, 1.5e10, 1.5e11, 5e11, 5e12, 5e13, 5e14, 5e15, 5e16],
     desc: l => pct(SHOPV.luck[l]) + ' chance an empty rock gets a second roll' },
   regen: { title: 'Fast regen', name: l => 'Fast regen ' + (l + 1), icon: 'clock', col: '#4ad0d0', isNew: true,
-    costs: [3000, 30000, 3e5, 3e6, 3e7, 9e8],
+    costs: [3000, 30000, 3e5, 3e6, 3e7, 9e8, 9e9, 9e10],
     desc: l => 'New rocks can be mined after ' + SHOPV.regen[l] + 's (was 2s)' },
   radius: { title: 'Bomb radius', name: l => 'Bomb radius +' + (l + 1) * 15 + '%', icon: 'bomb', col: '#ff9a3a', isNew: true,
-    costs: [20000, 2e5, 2e6, 2e7, 2e8, 6e9, 6e10, 6e11],
+    costs: [20000, 2e5, 2e6, 2e7, 2e8, 6e9, 6e10, 6e11, 6e12, 6e13, 6e14, 6e15],
     desc: l => 'Bigger explosions' },
   cluster: { title: 'Cluster bombs', name: l => 'Cluster bombs +' + (l + 1), icon: 'cluster', col: '#ff5a5a', isNew: true,
-    costs: [2e5, 4e6, 8e7, 1.6e9, 3.2e10],
+    costs: [2e5, 4e6, 8e7, 1.6e9, 3.2e10, 6.4e11, 1.3e13, 2.6e14],
     desc: l => 'Every bomb drops ' + (l + 1) + ' extra bomb' + (l ? 's' : '') },
   robo: { title: 'Robot speed', name: l => 'Robot speed ' + (l + 1), icon: 'gear', col: '#9ae05a', isNew: true,
-    costs: [8000, 6e4, 6e5, 7e6, 8e7, 1e9, 1.2e10, 1.5e11, 2e12, 3e13],
+    costs: [8000, 6e4, 6e5, 7e6, 8e7, 1e9, 1.2e10, 1.5e11, 2e12, 3e13, 5e14, 1e16],
     desc: l => 'Robots crack at ' + Math.round(100 / SHOPV.robo[l]) + '% of your speed' },
   crit: { title: 'Crit cracks', name: l => 'Crit cracks ' + (l + 1), icon: 'pick', col: '#ff5ab0', isNew: true,
-    costs: [2000, 2e4, 2e5, 2e6, 2e7, 2e8, 2e9, 2e10, 2e11, 2e12],
+    costs: [2000, 2e4, 2e5, 2e6, 2e7, 2e8, 2e9, 2e10, 2e11, 2e12, 2e13, 2e14, 2e15, 2e16, 2e17],
     desc: l => pct(SHOPV.crit[l]) + ' chance a crack counts double (you and robots)' },
   value: { title: 'Mineral value', name: l => 'Mineral value +' + pct(valueAt(l + 1) - 1), icon: 'gem', col: '#ffd84a', isNew: true, endless: true,
     costs: [1e4, 6e4, 4e5, 2.5e6, 1.5e7, 1e8, 6e8, 4e9, 2.5e10, 1.5e11, 1e12, 8e12, 6e13],
     desc: l => 'Every mineral gives +' + pct(valueAt(l + 1) - 1) + ' Creditz' },
   fuse: { title: 'Quick fuse', name: l => 'Quick fuse ' + (l + 1), icon: 'clock', col: '#ff8a5a', isNew: true,
-    costs: [5e4, 5e5, 5e6, 5e7, 5e8],
+    costs: [5e4, 5e5, 5e6, 5e7, 5e8, 5e9, 5e10, 5e11],
     desc: l => 'Bomb cooldown -' + SHOPV.fuse[l] + 's (never below 1s)' },
   factory: { title: 'Robot factory', name: l => 'Robot factory ' + (l + 1), icon: 'robot', col: '#5ad0a0', isNew: true,
     costs: [1e7, 6e7, 4e8, 2.5e9, 1.5e10, 1e11],
     desc: l => '+' + (l + 1) + ' extra robot' + (l ? 's' : '') + ' on top of Auto miner' },
   double: { title: 'Double drop', name: l => 'Double drop ' + (l + 1), icon: 'gem', col: '#7ad0ff', isNew: true,
-    costs: [3e4, 3e5, 3e6, 3e7, 3e8, 3e9, 3e10, 3e11, 3e12, 3e13],
+    costs: [3e4, 3e5, 3e6, 3e7, 3e8, 3e9, 3e10, 3e11, 3e12, 3e13, 3e14, 3e15, 3e16, 3e17, 3e18],
     desc: l => pct(SHOPV.double[l]) + ' chance a rock drops 2 minerals' },
   rare: { title: 'Rare luck', name: l => 'Rare luck ' + (l + 1), icon: 'clover', col: '#b05cff', isNew: true,
-    costs: [1e5, 1e6, 1e7, 1e8, 1e9, 1e10],
+    costs: [1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14],
     desc: l => 'Mythical and rarer minerals are ' + pct(SHOPV.rare[l]) + ' more likely' },
   golden: { title: 'Golden touch', name: l => 'Golden touch ' + (l + 1), icon: 'gem', col: '#e8ae1c', isNew: true,
-    costs: [5e4, 5e5, 5e6, 5e7, 5e8, 5e9],
+    costs: [5e4, 5e5, 5e6, 5e7, 5e8, 5e9, 5e10, 5e11, 5e12],
     desc: l => 'Golden rocks x' + SHOPV.golden[l] + ' as common' },
   meteor: { title: 'Meteor magnet', name: l => 'Meteor magnet ' + (l + 1), icon: 'bomb', col: '#ff9a3a', isNew: true,
-    costs: [1e5, 1e6, 1e7, 1e8, 1e9, 1e10],
+    costs: [1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13],
     desc: l => 'Events ' + pct(SHOPV.meteor[l]) + ' more often, more meteors per shower' },
   quest: { title: 'Quest bonus', name: l => 'Quest bonus ' + (l + 1), icon: 'scroll', col: '#7dff7a', isNew: true,
-    costs: [2e4, 2e5, 2e6, 2e7, 2e8],
+    costs: [2e4, 2e5, 2e6, 2e7, 2e8, 2e9, 2e10, 2e11, 2e12],
     desc: l => 'Quest boosts become x' + SHOPV.quest[l] + ' and last 30s longer per level' },
   offline: { title: 'Offline mining', name: l => 'Offline mining ' + (l + 1), icon: 'clock', col: '#9ab0ff', isNew: true,
-    costs: [1e4, 1e5, 1e6, 1e7, 1e8, 1e9],
+    costs: [1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12],
     desc: l => 'Earn ' + pct(SHOPV.offline[l]) + ' of your Creditz/s while away (max ' + SHOPV.offcap[l] + 'h)' },
   reborn: { title: 'Rebirth power', name: l => 'Rebirth power ' + (l + 1), icon: 'rebirth', col: '#ffb36a', isNew: true,
-    costs: [1e8, 1e9, 1e10, 1e11, 1e12],
+    costs: [1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15, 1e16, 1e17],
     desc: l => 'Your rebirth multiplier counts +' + pct(SHOPV.reborn[l]) + ' (needs 1 rebirth)' },
+  dspeed: { title: 'Drone engines', name: l => 'Drone engines ' + (l + 1), icon: 'drone', col: '#6ad0ff', isNew: true,
+    costs: [1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12],
+    desc: l => 'Your drones act ' + Math.round((1 / SHOPV.dspeed[l] - 1) * 100) + '% faster' },
+  dpower: { title: 'Drone power', name: l => 'Drone power ' + (l + 1), icon: 'drone', col: '#ff7a5a', isNew: true,
+    costs: [5e5, 5e6, 5e7, 5e8, 5e9, 5e10],
+    desc: l => pct(SHOPV.dpower[l]) + ' chance a drone hit cracks one extra time' },
+  cluck: { title: 'Crate luck', name: l => 'Crate luck ' + (l + 1), icon: 'clover', col: '#c48aff', isNew: true,
+    costs: [1e6, 1e7, 1e8, 1e9, 1e10],
+    desc: l => pct(SHOPV.cluck[l]) + ' chance a crate drone comes out one rank higher' },
+  xpboost: { title: 'Pass XP boost', name: l => 'Pass XP +' + pct(SHOPV.xpboost[l]), icon: 'trophy', col: '#7dff3a', isNew: true,
+    costs: [5e4, 5e5, 5e6, 5e7, 5e8, 5e9],
+    desc: l => 'Get ' + pct(SHOPV.xpboost[l]) + ' more Alien Pass XP' },
+  chestup: { title: 'Chest finder', name: l => 'Chest finder ' + (l + 1), icon: 'gem', col: '#c8741a', isNew: true,
+    costs: [3e4, 3e5, 3e6, 3e7, 3e8, 3e9],
+    desc: l => 'Chests x' + SHOPV.chestup[l] + ' as common' },
   storm: { title: 'Lightning rod', name: l => 'Lightning rod ' + (l + 1), icon: 'gear', col: '#a8c4ff', isNew: true, biome: 'Storm Peaks',
-    costs: [1e9, 5e9, 2.5e10, 1.2e11, 6e11],
+    costs: [1e9, 5e9, 2.5e10, 1.2e11, 6e11, 3e12, 1.5e13, 7.5e13],
     desc: l => 'Storm Peaks only: lightning breaks a rock every ' + SHOPV.storm[l] + 's' },
 };
 const SHOPV = {
   creditz: [1.5, 2, 3, 4, 6, 8, 12, 16, 25, 40, 60, 100, 150, 250, 400],
-  speed: [1.125, 0.75, 0.375, 0.15, 0.01, 0.006, 0.004, 0.0025, 0.0015, 0.001, 0.0006, 0.0004, 0.00025],
-  luck: [0.08, 0.15, 0.22, 0.3, 0.38, 0.45, 0.52, 0.6, 0.66, 0.72],
-  regen: [1.6, 1.2, 0.9, 0.6, 0.4, 0.25],
-  robo: [1.8, 1.6, 1.4, 1.25, 1.1, 1.0, 0.8, 0.6, 0.45, 0.33],
-  crit: [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5],
+  speed: [1.125, 0.75, 0.375, 0.15, 0.01, 0.006, 0.004, 0.0025, 0.0015, 0.001, 0.0006, 0.0004, 0.00025, 0.00016, 0.0001, 0.00006, 0.00004],
+  luck: [0.08, 0.15, 0.22, 0.3, 0.38, 0.45, 0.52, 0.6, 0.66, 0.72, 0.77, 0.81, 0.85, 0.88],
+  regen: [1.6, 1.2, 0.9, 0.6, 0.4, 0.25, 0.15, 0.1],
+  robo: [5.4, 4.8, 4.2, 3.75, 3.3, 3.0, 2.4, 1.8, 1.35, 1.0, 0.85, 0.7],
+  crit: [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75],
   value: [0.1, 0.2, 0.35, 0.5, 0.75, 1, 1.5, 2, 3, 4, 5, 6.5, 8],
-  fuse: [0.5, 1, 1.5, 2, 2.5],
-  double: [0.04, 0.08, 0.12, 0.16, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45],
-  rare: [0.1, 0.2, 0.3, 0.45, 0.6, 0.8],
-  golden: [1.5, 2, 3, 4, 5, 6],
-  meteor: [0.2, 0.4, 0.6, 0.8, 1, 1.25],
-  quest: [2.2, 2.4, 2.6, 2.8, 3],
-  offline: [0.05, 0.1, 0.15, 0.2, 0.25, 0.3], offcap: [1, 1.5, 2, 3, 4, 6],
-  reborn: [0.1, 0.2, 0.3, 0.4, 0.5],
-  storm: [20, 15, 10, 7, 5],
+  fuse: [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4],
+  double: [0.04, 0.08, 0.12, 0.16, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7],
+  rare: [0.1, 0.2, 0.3, 0.45, 0.6, 0.8, 1, 1.25, 1.5, 2],
+  golden: [1.5, 2, 3, 4, 5, 6, 7, 8, 10],
+  meteor: [0.2, 0.4, 0.6, 0.8, 1, 1.25, 1.5, 1.75, 2],
+  quest: [2.2, 2.4, 2.6, 2.8, 3, 3.25, 3.5, 3.75, 4],
+  offline: [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.5], offcap: [1, 1.5, 2, 3, 4, 6, 8, 10, 12],
+  reborn: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.75, 0.9, 1, 1.25],
+  storm: [20, 15, 10, 7, 5, 4, 3, 2],
+  dspeed: [0.92, 0.85, 0.78, 0.72, 0.66, 0.6, 0.55, 0.5],
+  dpower: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
+  cluck: [0.04, 0.08, 0.12, 0.16, 0.2],
+  xpboost: [0.1, 0.2, 0.35, 0.5, 0.75, 1],
+  chestup: [1.25, 1.5, 1.75, 2, 2.5, 3],
 };
 // shop tabs: every upgrade line lives in one tab
-const SHOP_TABS = [['Mining', 'pick', ['creditz', 'speed', 'crit', 'value', 'regen']], ['Bombs', 'bomb', ['bomb', 'radius', 'cluster', 'fuse']], ['Robots', 'robot', ['auto', 'robo', 'factory']],
-  ['Luck', 'clover', ['luck', 'rare', 'double', 'golden']], ['Special', 'gem', ['meteor', 'quest', 'offline', 'reborn', 'storm']]];
+const SHOP_TABS = [['Mining', 'pick', ['creditz', 'speed', 'crit', 'value', 'regen']], ['Bombs', 'bomb', ['bomb', 'radius', 'cluster', 'fuse']], ['Robots', 'robot', ['auto', 'robo', 'factory', 'dspeed', 'dpower', 'cluck']],
+  ['Luck', 'clover', ['luck', 'rare', 'double', 'golden', 'chestup']], ['Special', 'gem', ['meteor', 'quest', 'offline', 'reborn', 'storm', 'xpboost']]];
 const SHOP_ORDER = SHOP_TABS.flatMap(t => t[2]);
 const LVL_KEY = { creditz: 'cmLevel', speed: 'spLevel', bomb: 'bombLevel', auto: 'autoLevel', luck: 'luckLevel', regen: 'regenLevel', radius: 'radiusLevel', cluster: 'clusterLevel', robo: 'roboLevel',
-  crit: 'critLevel', value: 'valueLevel', fuse: 'fuseLevel', factory: 'factoryLevel', double: 'doubleLevel', rare: 'rareLevel', golden: 'goldenLevel', meteor: 'meteorLevel', quest: 'questLevel', offline: 'offlineLevel', reborn: 'rebornLevel', storm: 'stormLevel' };
+  crit: 'critLevel', value: 'valueLevel', fuse: 'fuseLevel', factory: 'factoryLevel', double: 'doubleLevel', rare: 'rareLevel', golden: 'goldenLevel', meteor: 'meteorLevel', quest: 'questLevel', offline: 'offlineLevel', reborn: 'rebornLevel', storm: 'stormLevel', dspeed: 'dspeedLevel', dpower: 'dpowerLevel', cluck: 'cluckLevel', xpboost: 'xpboostLevel', chestup: 'chestupLevel' };
 const upv = (k, d) => G[LVL_KEY[k]] ? SHOPV[k][G[LVL_KEY[k]] - 1] : d;   // current value of an upgrade line
 const BASE_SPEED = 1.5;
 const BOMB_STRENGTH = [0, 0.6, 0.5, 0.4, 0.2, 0.1, 0.08, 0.065, 0.05, 0.04, 0.03];
@@ -232,7 +261,7 @@ const PERKS = [
   [10, 'Start every rebirth with +25% Mining speed'], [11, '+1 more free Auto miner'], [12, 'Gold Rush lasts twice as long'],
 ];
 let HEART_REBIRTHS = 10; const HEART_HP = 400;
-const AUTO_SLOW = 2;
+const AUTO_SLOW = 6;   // 2026-11-17: robots 3x weaker (drones are the strong helpers now)
 const FPS = 30, DT = 1 / FPS;
 
 const ACH = [
@@ -254,7 +283,7 @@ const FIND_ACH = { Sphinxium: 'sphinx', Fireflium: 'firefly', Tempestium: 'tempe
 
 // ---------------- state ----------------
 const LEVEL_DEFAULTS = { cmLevel: 0, spLevel: 0, bombLevel: 0, autoLevel: 0, luckLevel: 0, regenLevel: 0, radiusLevel: 0, clusterLevel: 0, roboLevel: 0,
-  critLevel: 0, valueLevel: 0, fuseLevel: 0, factoryLevel: 0, doubleLevel: 0, rareLevel: 0, goldenLevel: 0, meteorLevel: 0, questLevel: 0, offlineLevel: 0, rebornLevel: 0, stormLevel: 0 };
+  critLevel: 0, valueLevel: 0, fuseLevel: 0, factoryLevel: 0, doubleLevel: 0, rareLevel: 0, goldenLevel: 0, meteorLevel: 0, questLevel: 0, offlineLevel: 0, rebornLevel: 0, stormLevel: 0, dspeedLevel: 0, dpowerLevel: 0, cluckLevel: 0, xpboostLevel: 0, chestupLevel: 0 };
 const G = Object.assign({
   scene: 'loading', creditz: 0, shown: 0, high: 0,
   rebirths: 1, rebirthMult: 1,
@@ -267,6 +296,9 @@ const G = Object.assign({
   shake: 0, time: 0, saveT: 0, tp: 9, tpName: '', flash: 0, flashCol: '#fff', hudPulse: 0, clankT: 0,
   mouse: { x: -1, y: -1, down: false, over: false, onUI: false, swing: 0 },
   keys: {}, confirmNew: 0, bookTab: 0, settings: { vol: 0, music: true },
+  // drones + alien pass (kept through rebirths)
+  drones: [], slots: [null, null, null, null, null, null, null, null, null, null], slotsOpen: 3, skins: {}, hats: {}, crates: {}, pass: { xp: 0, lvl: 0, pt: 0 }, codes: [], nextId: 1,
+  dbombs: [], dproj: [], rings: [], droneSel: null, mergeSel: null, crateFx: null, mergeFx: null,
 }, LEVEL_DEFAULTS);
 // Creditz levels past the list never end: each one is a bit more for a bit more
 const cmValue = lv => { const V = SHOPV.creditz; if (lv <= 0) return 1; if (lv <= V.length) return V[lv - 1]; return Math.round(V[V.length - 1] * Math.pow(TUNE.endMul, lv - V.length)); };
@@ -322,6 +354,7 @@ function save() {
       rebirths: G.rebirths, rmult: G.rebirthMult, biomeName: BIOMES[G.biome].name, hue: G.crystalHue,
       found: G.found, ach: G.ach, reachedNames: BIOMES.filter((b, i) => G.reached & (1 << i)).map(b => b.name), visitedNames: BIOMES.filter((b, i) => G.visited & (1 << i)).map(b => b.name), stats: G.stats,
       heartHP: G.heartHP, won: G.won, settings: G.settings, quests: G.quests, questsDone: G.questsDone, boostT: G.boostT, rate: G.rate || 0, savedAt: Date.now(),
+      drones: G.drones, slots: G.slots, slotsOpen: G.slotsOpen, skins: G.skins, hats: G.hats, crates: G.crates, pass: G.pass, codes: G.codes, nextId: G.nextId,
     }));
   } catch (e) {}
 }
@@ -359,8 +392,10 @@ function loadSave() {
     G.heartHP = s.heartHP > 0 && s.heartHP <= HEART_HP ? s.heartHP : HEART_HP; G.won = !!s.won;
     if (s.settings) G.settings = { vol: clamp(s.settings.vol | 0, 0, 3), music: s.settings.music !== false };
     G.quests = Array.isArray(s.quests) ? s.quests.filter(q => q && QUEST_TYPES[q.type]) : [];
+    for (const q of G.quests) { if (!q.xp) q.xp = Math.round(QUEST_TYPES[q.type].xp(q.n)); if (!q.mult) q.mult = G.rebirthMult; }
     G.questsDone = s.questsDone | 0; G.boostT = clamp(num(+s.boostT, 0), 0, 600);
     G.rate = num(+s.rate, 0);
+    loadDrones(s);
     // offline mining: pay out a share of your Creditz per second for the time you were away
     const away = (Date.now() - num(+s.savedAt, Date.now())) / 1000;
     G.away = null;
@@ -370,6 +405,17 @@ function loadSave() {
     }
     return true;
   } catch (e) { return false; }
+}
+function loadDrones(s) {
+  const okType = t => !!DRONE_TYPES[t];
+  G.drones = Array.isArray(s.drones) ? s.drones.filter(d => d && okType(d.type)).map(d => ({ id: d.id | 0, type: d.type, rank: clamp(d.rank | 0, 1, 5), skin: SKINS[d.skin] ? d.skin : null, hat: HATS[d.hat] ? d.hat : null })) : [];
+  G.nextId = Math.max(s.nextId | 0, 1, ...G.drones.map(d => d.id + 1));
+  G.slotsOpen = clamp(s.slotsOpen | 0 || 3, 3, 10);
+  G.slots = Array.from({ length: 10 }, (_, k) => Array.isArray(s.slots) && G.drones.some(d => d.id === s.slots[k]) ? s.slots[k] : null);
+  const counts = (o, ok) => { const r = {}; if (o && typeof o === 'object') for (const k in o) if (ok(k)) r[k] = clamp(o[k] | 0, 0, 999); return r; };
+  G.skins = counts(s.skins, k => !!SKINS[k]); G.hats = counts(s.hats, k => !!HATS[k]); G.crates = counts(s.crates, k => !!CRATES[k]);
+  G.pass = { xp: num(+(s.pass && s.pass.xp), 0), lvl: clamp((s.pass && s.pass.lvl) | 0, 0, PASS_MAX), pt: 0 };
+  G.codes = Array.isArray(s.codes) ? s.codes.filter(c => CODES[c]) : [];
 }
 function hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } }
 function wipeSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
@@ -453,37 +499,47 @@ function recolor(rock) {
 }
 const aliveRocks = () => { let n = 0; for (const r of G.rocks) if (r.state === 'rock') n++; return n; };
 // chests: about one every 1-2 grids; Golden touch and Luck nudge it up a little
-const chestChance = () => (1 / 60) * (1 + 0.05 * G.goldenLevel + 0.03 * G.luckLevel);
+const chestChance = () => (1 / 60) * (1 + 0.05 * G.goldenLevel + 0.03 * G.luckLevel) * upv('chestup', 1);
 const buffOn = k => (G.buffs[k] || 0) > 0;
 // remove items from a list without making a new array every frame
 function compact(arr, keep) { let j = 0; for (let i = 0; i < arr.length; i++) if (keep(arr[i])) arr[j++] = arr[i]; arr.length = j; return arr; }
 
 // ---------------- quests: 3 goals at a time, each gives a x2 Creditz boost ----------------
+// 2026-11-17: harder, every quest gives Alien Pass XP (very different amounts), and quests that became
+// impossible (after a rebirth / teleport / losing bombs) are swapped for new ones instead of getting stuck.
+const hasRarity = (b, r) => b.minerals.some(m => rank(m[2]) >= rank(r));
 const QUEST_TYPES = {
-  break: { text: n => 'Break ' + n + ' rocks', n: () => rnd(4, 12) * 10 },
-  rare: { text: n => 'Find ' + n + ' Legendary or rarer', n: () => rnd(3, 8) },
-  bomb: { text: n => 'Crack ' + n + ' rocks with bombs', n: () => rnd(2, 6) * 10, ok: () => G.bombLevel > 0 },
-  earn: { text: n => 'Earn ' + fmt(n) + ' Creditz', n: () => Math.max(1000, Math.floor(60 * bestValue(BIOMES[G.biome]) * totalMult() / 1000) * 1000) },
-  hard: { text: n => 'Break ' + n + ' reinforced rocks', n: () => rnd(2, 4), ok: () => G.biome >= 2 },
-  chest: { text: n => 'Open ' + n + ' chest' + (n > 1 ? 's' : ''), n: () => rnd(1, 2) },
-  biome: { text: (n, q) => 'Break ' + n + ' rocks in ' + q.biome, n: () => rnd(3, 6) * 10 },
+  break: { text: n => 'Break ' + n + ' rocks', n: () => rnd(12, 35) * 10, xp: n => n * 1.2 },
+  rare: { text: n => 'Find ' + n + ' Legendary or rarer', n: () => rnd(6, 16), xp: n => n * 35, ok: () => hasRarity(BIOMES[G.biome], 'Legendary') },
+  mythic: { text: n => 'Find ' + n + ' Mythical or rarer', n: () => rnd(2, 6), xp: n => n * 130, ok: () => hasRarity(BIOMES[G.biome], 'Mythical') },
+  bomb: { text: n => 'Crack ' + n + ' rocks with bombs', n: () => rnd(6, 16) * 10, xp: n => n * 2.5, ok: () => G.bombLevel > 0 },
+  earn: { text: n => 'Earn ' + fmt(n) + ' Creditz', n: () => Math.max(5000, Math.floor(240 * bestValue(BIOMES[G.biome]) * totalMult() / (G.boostT > 0 ? boostMult() : 1) / 1000) * 1000), xp: () => 220 },
+  hard: { text: n => 'Break ' + n + ' reinforced rocks', n: () => rnd(5, 12), xp: n => n * 45, ok: () => G.biome >= 1 },
+  chest: { text: n => 'Open ' + n + ' chest' + (n > 1 ? 's' : ''), n: () => rnd(2, 5), xp: n => n * 110 },
+  gold: { text: n => 'Break ' + n + ' golden rock' + (n > 1 ? 's' : ''), n: () => rnd(1, 3), xp: n => n * 260 },
+  drone: { text: n => 'Your drones break ' + n + ' rocks', n: () => rnd(8, 25) * 10, xp: n => n * 1.6, ok: () => droneSlotsUsed() > 0 },
 };
 function newQuest() {
   const types = Object.keys(QUEST_TYPES).filter(t => (!QUEST_TYPES[t].ok || QUEST_TYPES[t].ok()) && !G.quests.some(q => q.type === t));
   const type = types[Math.floor(Math.random() * types.length)] || 'break';
-  return { type, n: QUEST_TYPES[type].n(), p: 0, biome: BIOMES[G.biome].name, done: 0 };
+  const n = QUEST_TYPES[type].n();
+  return { type, n, p: 0, biome: BIOMES[G.biome].name, done: 0, xp: Math.round(QUEST_TYPES[type].xp(n) * (0.8 + Math.random() * 0.5)), mult: G.rebirthMult };
+}
+// throw away quests that can't be finished any more (new ones take their place next frame)
+function fixQuests() {
+  G.quests = G.quests.filter(q => q.done || (QUEST_TYPES[q.type] && (!QUEST_TYPES[q.type].ok || QUEST_TYPES[q.type].ok()) && !(q.type === 'earn' && q.mult !== G.rebirthMult)));
 }
 function questText(q) { return QUEST_TYPES[q.type].text(q.n, q); }
 function quest(type, amount) {
   if (G.scene !== 'play') return;
   for (const q of G.quests) {
     if (q.done || q.type !== type) continue;
-    if (type === 'biome' && q.biome !== BIOMES[G.biome].name) continue;
     q.p = Math.min(q.n, q.p + amount);
     if (q.p >= q.n) {
       q.done = 3;   // seconds until a new quest replaces it
       G.boostT += (perk(9) ? 180 : 120) + 30 * G.questLevel; G.questsDone++;
-      toast('Quest done! x' + boostMult() + ' Creditz boost', '#7dff7a'); AUDIO.sfx('quest');
+      const xp = q.xp || 100; addXP(xp);
+      toast('Quest done! x' + boostMult() + ' boost  +' + Math.round(xp * xpMult()) + ' XP', '#7dff7a'); AUDIO.sfx('quest');
       if (G.questsDone >= 10) ach('quest10');
     }
   }
@@ -518,12 +574,14 @@ function addFound(key, i) {
 // expected Creditz of one normal rock here (before multipliers)
 const rockValue = b => { const c = realChances(b); return Math.max(1, c.p.reduce((s, p, i) => s + p * b.minerals[i][1], 0)); };
 // bonus payouts (chests, offline) pass noRate so they never feed back into the income estimate
-function giveCreditz(n, noRate) { n = num(n, 0); if (!noRate) G.earned = (G.earned || 0) + n; G.creditz += n; if (G.creditz > G.high) G.high = G.creditz; quest('earn', n); }
+function giveCreditz(n, noRate) { n = num(n, 0); if (!noRate) G.earned = (G.earned || 0) + n; G.creditz += n; if (G.creditz > G.high) G.high = G.creditz; if (!noRate) quest('earn', n); }
 function breakRock(rock, special) {
   const b = BIOMES[G.biome];
   G.stats.rocks++;
-  quest('break', 1); quest('biome', 1);
+  quest('break', 1); addXP(1);
   if (special === 'bomb') quest('bomb', 1);
+  if (special === 'drone') quest('drone', 1);
+  if (rock.golden) quest('gold', 1);
   breakFx(rock);
   G.shake = Math.max(G.shake, 2);
   let gemKey = b.name, i, gain, rar, mult = 1;
@@ -538,7 +596,7 @@ function breakRock(rock, special) {
   }
   else if (special === 'meteor' && rnd(1, 4) === 1) { gemKey = 'Event'; i = 0; gain = 3 * bestValue(b) * totalMult(); rar = 'Secret'; ach('star'); }
   else {
-    i = rollMineral(b);
+    i = rock.alienGem >= 0 ? rock.alienGem : rollMineral(b);                    // the Alien ship already scanned this one
     if (i < 0 && Math.random() < luck()) i = rollMineral(b);                      // Luck: second roll
     if (i < 0) {
       rock.state = 'dead'; G.stats.empty++;
@@ -556,6 +614,7 @@ function breakRock(rock, special) {
   rock.state = 'gem'; rock.gemKey = gemKey; rock.gem = i; rock.gemT = 0; rock.value = gain; rock.rarity = rar;
   const rk = rank(rar);
   if (rk >= rank('Legendary')) quest('rare', 1);
+  if (rk >= rank('Mythical')) quest('mythic', 1);
   G.floats.push({ x: rock.x, y: rock.y + 36, text: '+' + fmt(gain), col: '#ffd84a', t: 0, size: 15 + Math.min(8, rk) });
   sparkle(rock.x, rock.y, RCOL[rar], 8 + rk * 3);
   G.lights.push({ x: rock.x, y: rock.y, r: 50 + rk * 12, col: RCOL[rar], life: 0.6, max: 0.6 });
@@ -653,7 +712,7 @@ function mineralName(key, i) { return key === 'Event' ? EVENT_MINERALS[i][0] : A
 function hitRock(rock, by) {
   const b = BIOMES[G.biome];
   const speedK = buffOn('speed') ? 0.5 : 1;
-  const wait0 = by === 'bomb' ? BOMB_STRENGTH[Math.max(1, G.bombLevel)] : miningSpeed() * b.factor * (by === 'auto' ? roboSlow() : 1) * speedK;
+  const wait0 = by === 'bomb' ? BOMB_STRENGTH[Math.max(1, G.bombLevel)] : by === 'drone' ? 0.1 : miningSpeed() * b.factor * (by === 'auto' ? roboSlow() : 1) * speedK;
   if (rock.chest) {   // chests: knock off HP, then they burst open
     rock.hp -= by === 'bomb' ? 2 : 1;
     rock.cool = wait0 * 0.6 + DT; rock.coolMax = rock.cool; rock.shake = 5; rock.flash = 1;
@@ -916,7 +975,7 @@ function tick() {
       if ((m.t -= DT) <= 0) { dust(m.x, m.y, m.col, 20); G.mega = null; toast('The Mega Rock crumbled away...', '#9aa0aa'); }
       else {
         for (const bo of G.bombs) if (bo.t >= 0 && !bo.megaHit && bombRadius(bo) > Math.hypot(bo.x - m.x, bo.y - m.y) - 46) { bo.megaHit = true; hitMega(5); if (!G.mega) break; }
-        if (G.mega) { m.robo += DT * drillCount() / 1.2; while (m.robo >= 1 && G.mega) { m.robo -= 1; hitMega(1); } }
+        if (G.mega) { m.robo += DT * drillCount() / 3.6; while (m.robo >= 1 && G.mega) { m.robo -= 1; hitMega(1); } }
         if (G.mega && (m.cool -= DT) <= 0 && hoverMega() && G.mouse.down) { hitMega(1); m.cool = clamp(miningSpeed() * b.factor * 0.2, 0.15, 1.5); G.mouse.swing = 1; }
       }
     }
@@ -954,6 +1013,8 @@ function tick() {
       if (d.hitT > 0) d.hitT -= DT;
     }
 
+    tickDrones();
+    if ((G.pass.pt = (G.pass.pt || 0) + DT) >= 10) { G.pass.pt -= 10; addXP(1); }   // playing = a little XP
     // who is hitting what?
     const hover = worldHover();
     if (G.clankT > 0) G.clankT -= DT;
@@ -1005,6 +1066,8 @@ function tick() {
   }
   compact(G.parts, p => p.life > 0);
   if (G.parts.length > MAX_PARTS()) G.parts.splice(0, G.parts.length - MAX_PARTS());
+  for (const g of G.rings) g.t += DT; compact(G.rings, g => g.t < 0.45);
+  if (G.crateFx) G.crateFx.t += DT; if (G.mergeFx) G.mergeFx.t += DT;
   for (const l of G.lights) l.life -= DT;
   compact(G.lights, l => l.life > 0);
   if (G.lights.length > 60) G.lights.splice(0, G.lights.length - 60);
@@ -1115,7 +1178,7 @@ function teleport(i) {
   if (!paid && !canVisit(i)) { toast('Visit ' + BIOMES[i - 1].name + ' first'); AUDIO.sfx('deny'); return; }
   if (!paid && G.creditz < BIOMES[i].req) { toast('Unlocking ' + BIOMES[i].name + ' costs ' + fmt(BIOMES[i].req) + ' Creditz'); AUDIO.sfx('deny'); return; }
   if (!paid) { G.creditz -= BIOMES[i].req; G.shown = G.creditz; toast('Unlocked ' + BIOMES[i].name + '!', BIOMES[i].accent); }   // pay once, travel free after
-  loadBiome(i, true);
+  loadBiome(i, true); fixQuests();
   AUDIO.sfx('teleport');
   checkAch(); save();
 }
@@ -1138,7 +1201,7 @@ function tryRebirth() {
   G.rebirths++;
   resetRun();
   const unlocked = PERKS.find(p => p[0] === rebirthsDone());
-  loadBiome(0, true);
+  loadBiome(0, true); fixQuests();
   G.tpName = 'REBIRTH ' + rebirthsDone();
   toast('Every mineral is now worth x' + fmt(G.rebirthMult) + '!', '#ffd84a');
   if (unlocked) toast('New perk: ' + unlocked[1], '#7dff7a');
@@ -1158,7 +1221,9 @@ function startGame(fresh) {
     wipeSave();
     Object.assign(G, LEVEL_DEFAULTS, { creditz: 0, shown: 0, high: 0, rebirths: 1, rebirthMult: 1, biome: 0, found: {}, ach: {}, visited: 1, reached: 1, pick: 0, quests: [], questsDone: 0, boostT: 0,
       stats: { rocks: 0, empty: 0, minerals: 0, time: 0, bombs: 0, hard: 0, chests: 0, rain: 0, mega: 0 }, heartHP: HEART_HP, won: false, crystalHue: 0 });
+    loadDrones({});
   } else loadSave();
+  G.dbombs = []; G.dproj = []; G.rings = []; G.droneSel = null; G.mergeSel = null; G.crateFx = null; G.mergeFx = null; DRT.clear();
   G.scene = 'play'; G.victory = 0; G.menu = null;
   if (fresh) G.away = null;
   G.bombs = []; G.drills = []; G.bombCD = 0; G.shower = 0; G.rush = 0; G.nextEvent = 150 + Math.random() * 90;
@@ -1284,7 +1349,7 @@ const AUDIO = (() => {
     } catch (e) {}
   }
   const lastPlay = {};
-  const MIN_GAP = { hit: 0.04, tick: 0.06, find: 0.05, empty: 0.05, clank: 0.08, impact: 0.05, whistle: 0.1, regen: 0.5, ach: 0.3, deny: 0.15, buy: 0.05, thunder: 1 };
+  const MIN_GAP = { dhit: 0.05, dbomb: 0.06, drop: 0.08, laser: 0.3, slam: 0.08, glitch: 0.12, retro: 0.04, hit: 0.04, tick: 0.06, find: 0.05, empty: 0.05, clank: 0.08, impact: 0.05, whistle: 0.1, regen: 0.5, ach: 0.3, deny: 0.15, buy: 0.05, thunder: 1 };
   function sfx(name, x) {
     if (name === 'click') { pop('pop', 1, 0.8); }
     if (!ac) return;
@@ -1324,6 +1389,22 @@ const AUDIO = (() => {
       case 'snap': noise(t, 0.09, 0.5, o, { type: 'bandpass', f: 1600, q: 2 }); note(220, t, 0.06, 'square', 0.08, o, { lp: 1500 }); noise(t + 0.05, 0.06, 0.3, o, { type: 'highpass', f: 2500 }); break;
       case 'thud': note(110, t, 0.12, 'sine', 0.4, o, { slide: 60 }); noise(t, 0.08, 0.3, o, { f: 700 }); break;
       case 'chest': noise(t, 0.3, 0.4, o, { f: 1500, fTo: 300 }); for (const [k, d] of [[72, 0.05], [76, 0.12], [79, 0.19], [84, 0.26], [88, 0.33]]) note(mtof(k), t + d, 0.4, 'triangle', 0.12, o); for (let k = 0; k < 6; k++) note(mtof(96 + (k % 3) * 4), t + 0.35 + k * 0.04, 0.2, 'sine', 0.05, o); break;
+      case 'dhit': noise(t, 0.05, 0.12, o, { type: 'bandpass', f: 2600, q: 3 }); note(420, t, 0.05, 'square', 0.025, o, { lp: 2000 }); break;
+      case 'drop': note(900, t, 0.12, 'sine', 0.05, o, { slide: 300 }); break;
+      case 'dbomb': noise(t, 0.35, 0.3, o, { f: 2500, fTo: 120 }); note(90, t, 0.25, 'sine', 0.3, o, { slide: 40 }); break;
+      case 'slam': noise(t, 0.4, 0.45, o, { f: 900, fTo: 60 }); note(60, t, 0.35, 'sine', 0.6, o, { slide: 30 }); note(1600, t, 0.1, 'square', 0.03, o, { lp: 3000 }); break;
+      case 'laser': note(1400, t, 1.2, 'sawtooth', 0.05, o, { slide: 900, lp: 3500 }); note(700, t, 1.2, 'square', 0.03, o, { lp: 1800 }); noise(t, 1.2, 0.08, o, { type: 'bandpass', f: 3000, q: 4 }); break;
+      case 'ufo': for (let k = 0; k < 6; k++) note(mtof(76 + (k % 2) * 7 + k), t + k * 0.09, 0.3, 'sine', 0.05, o); note(220, t, 2.4, 'sine', 0.05, o, { slide: 260 }); break;
+      case 'abduct': for (const [k, d] of [[84, 0], [91, 0.07], [96, 0.14]]) note(mtof(k), t + d, 0.3, 'sine', 0.08, o); break;
+      case 'crate': noise(t, 1.1, 0.2, o, { type: 'bandpass', f: 400, fTo: 3000, q: 2 }); for (let k = 0; k < 5; k++) note(mtof(60 + k * 4), t + 1.05 + k * 0.06, 0.6, 'triangle', 0.1, o); noise(t + 1.05, 0.4, 0.4, o, { f: 4000, fTo: 300 }); break;
+      case 'merge': note(220, t, 0.9, 'sawtooth', 0.08, o, { slide: 880, lp: 1500, lpTo: 6000 }); for (const [k, d] of [[72, 0.9], [79, 0.98], [84, 1.06], [91, 1.14]]) note(mtof(k), t + d, 0.5, 'triangle', 0.1, o); break;
+      case 'level': for (const [k, d] of [[67, 0], [74, 0.08], [79, 0.16], [86, 0.24]]) { note(mtof(k), t + d, 0.4, 'square', 0.06, o, { lp: 3500 }); note(mtof(k + 12), t + d, 0.3, 'sine', 0.04, o); } break;
+      case 'glitch': for (let k = 0; k < 5; k++) note(200 + Math.random() * 2000, t + k * 0.03, 0.03, 'square', 0.04, o); noise(t, 0.12, 0.15, o, { type: 'highpass', f: 3000 }); break;
+      case 'retro': {   // 8-bit versions for the Pixel skin
+        const R = { dhit: [[88, 0, 0.04]], drop: [[84, 0, 0.05], [76, 0.05, 0.05]], dbomb: [[48, 0, 0.12], [43, 0.1, 0.15]], slam: [[40, 0, 0.2]], laser: [[96, 0, 0.08], [91, 0.08, 0.08], [96, 0.16, 0.08], [91, 0.24, 0.08]], ufo: [[72, 0, 0.1], [79, 0.1, 0.1], [84, 0.2, 0.1]], abduct: [[84, 0, 0.06], [88, 0.06, 0.06], [91, 0.12, 0.1]] }[x] || [[80, 0, 0.05]];
+        for (const [m, d, l] of R) note(mtof(m), t + d, l, 'square', 0.06, o, { lp: 6000 });
+        break;
+      }
       case 'victory': for (let k = 0; k < 8; k++) note(mtof([60, 64, 67, 72, 76, 79, 84, 88][k]), t + k * 0.12, 1.2, 'triangle', 0.12, o); noise(t, 2, 0.5, o, { f: 4000, fTo: 100 }); break;
     }
   }
@@ -1626,6 +1707,10 @@ function drawLighting(shx, shy) {
   for (const d of G.drills) if (d.target || d.y < 190) L(d.x, d.y, 30, 0.5, null);
   for (const d of G.drops) L(d.x, d.y, 34, 0.7, RCOL[b.minerals[d.i][2]]);
   if (G.heart) L(0, 32, 160 + Math.sin(G.time * 3) * 16, 0.9, '#ff6a3a');
+  for (const d of deployed()) { const s = DRT.get(d.id); if (!s) continue; const ac = dronePal(d).accent; L(s.x, s.y, 34, 0.45, null);
+    if (s.ends) for (const e of s.ends) for (let f = 0; f <= 1; f += 0.25) L(e.ox + Math.cos(s.ang) * e.len * f, e.oy + Math.sin(s.ang) * e.len * f, 50 + d.rank * 6, 0.8, ac);
+    if (d.type === 'alien' && s.state === 'beam' && s.target) L(s.target.x, s.target.y + 20, 70, 0.8, '#7dff3a'); }
+  for (const b of G.dbombs) L(b.x, b.y, 26, 0.6, '#ff5a3a');
   if (b.amb === 'lava') L(0, -150, 300, 0.55, '#ff6a1a');
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1;
   ctx.drawImage(c, 0, 0, cv.width, cv.height);
@@ -2178,9 +2263,9 @@ function drawDrill(d) {
   const x = d.x, y = wy(d.y) + Math.sin(G.time * 4 + d.spin) * 2;
   ctx.save(); ctx.translate(x, y);
   ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(0, 22, 8, 2.5, 0, 0, 6.283); ctx.fill();
-  // rotor
-  ctx.strokeStyle = '#1a1d24'; ctx.lineWidth = 1.4; const rw = 10 * Math.abs(Math.cos(G.time * 30 + d.spin));
-  ctx.beginPath(); ctx.moveTo(-rw, -11); ctx.lineTo(rw, -11); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, -11); ctx.lineTo(0, -7); ctx.stroke();
+  // two side propellers (like a drone, seen from the side)
+  ctx.strokeStyle = '#5a6474'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(-6, -5); ctx.lineTo(-13, -8); ctx.moveTo(6, -5); ctx.lineTo(13, -8); ctx.stroke();
+  for (const [px, ph] of [[-13, 0], [13, 1.3]]) { const rw = 6 * Math.abs(Math.cos(G.time * 34 + d.spin + ph)) + 0.6; ctx.strokeStyle = '#1a1d24'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(px - rw, -11); ctx.lineTo(px + rw, -11); ctx.stroke(); ctx.beginPath(); ctx.moveTo(px, -11); ctx.lineTo(px, -8); ctx.stroke(); }
   // body
   if (!drillGrad || drillGrad.ctx !== ctx) { drillGrad = { ctx, g: ctx.createLinearGradient(-7, -8, 7, 8) }; drillGrad.g.addColorStop(0, '#e9eef5'); drillGrad.g.addColorStop(1, '#7c8696'); }   // one gradient shared by every robot
   const g = drillGrad.g;
@@ -2317,6 +2402,13 @@ function drawIcon(name, x, y, s, col) {
     case 'trophy': P([[-7, -9], [7, -9], [5, 2], [-5, 2]]); ctx.fillStyle = col; ctx.fill(); ctx.stroke(); ctx.fillRect(-2, 2, 4, 5); ctx.strokeRect(-2, 2, 4, 5); rr(-6, 7, 12, 4, 1); ctx.fill(); ctx.stroke();
       ctx.beginPath(); ctx.arc(-8, -4, 3, 1.5, 4.7); ctx.stroke(); ctx.beginPath(); ctx.arc(8, -4, 3, -1.5, 1.6); ctx.stroke(); break;
     case 'x': ctx.lineWidth = 4; ctx.strokeStyle = '#0b0c12'; ctx.beginPath(); ctx.moveTo(-6, -6); ctx.lineTo(6, 6); ctx.moveTo(6, -6); ctx.lineTo(-6, 6); ctx.stroke(); ctx.lineWidth = 2.2; ctx.strokeStyle = col; ctx.stroke(); break;
+    case 'drone': {
+      ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-6, -2); ctx.lineTo(-11, -6); ctx.moveTo(6, -2); ctx.lineTo(11, -6); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-15, -8); ctx.lineTo(-7, -8); ctx.moveTo(7, -8); ctx.lineTo(15, -8); ctx.lineWidth = 2.4; ctx.stroke();
+      rr(-7, -4, 14, 10, 3); ctx.fillStyle = col || '#fff'; ctx.fill(); ctx.lineWidth = 2; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-3, 6); ctx.lineTo(3, 6); ctx.lineTo(0, 11); ctx.closePath(); ctx.fillStyle = '#c9d2d9'; ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#4ad0ff'; ctx.beginPath(); ctx.arc(0, 0, 1.8, 0, 6.283); ctx.fill(); break;
+    }
     case 'check': ctx.lineWidth = 4; ctx.strokeStyle = '#0b0c12'; ctx.beginPath(); ctx.moveTo(-7, 0); ctx.lineTo(-2, 6); ctx.lineTo(8, -6); ctx.stroke(); ctx.lineWidth = 2.2; ctx.strokeStyle = col; ctx.stroke(); break;
     case 'clover': for (const [cx2, cy2] of [[0, -5], [5, 0], [0, 5], [-5, 0]]) { ctx.beginPath(); ctx.arc(cx2, cy2, 5, 0, 6.283); ctx.fillStyle = '#3fd27a'; ctx.fill(); ctx.stroke(); } ctx.beginPath(); ctx.moveTo(2, 4); ctx.quadraticCurveTo(5, 10, 9, 11); ctx.stroke(); break;
     case 'clock': ctx.beginPath(); ctx.arc(0, 0, 10, 0, 6.283); ctx.fillStyle = col; ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -6); ctx.moveTo(0, 0); ctx.lineTo(5, 2); ctx.stroke(); break;
@@ -2354,6 +2446,7 @@ function render() {
   renderHUD();
   renderMenus();
   renderOverlays();
+  renderDroneFx();
   finishUI();
 }
 function finishUI() {
@@ -2417,6 +2510,7 @@ function renderWorld(shx, shy) {
     }
   }
   for (const d of G.drills) if (d.target || d.y < 190) drawDrill(d);
+  drawDroneWorld();
   if (G.mega) drawMega(G.mega, b.name);
   for (const d of G.drops) drawGem(gemArt(b.name, d.i), d.x, wy(d.y), 22, { glow: RCOL[b.minerals[d.i][2]], rank: 3, rot: Math.sin(G.time * 3 + d.ph) * 0.3 });
   // meteors
@@ -2463,6 +2557,8 @@ function renderWorld(shx, shy) {
     else if (p.kind === 'star') { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; star4(x, y, p.s * 1.6, p.col); ctx.globalCompositeOperation = 'source-over'; }
     else if (FALLERS[p.kind]) { drawBit(p, x, y, a); }
     else if (p.kind === 'coin') { ctx.save(); ctx.translate(x, y); ctx.globalAlpha = a; ctx.scale(Math.abs(Math.cos(p.rot)) + 0.15, 1); ctx.beginPath(); ctx.arc(0, 0, p.s, 0, 6.283); ctx.fillStyle = '#ffd84a'; ctx.fill(); ctx.lineWidth = 0.8; ctx.strokeStyle = '#8a5a00'; ctx.stroke(); ctx.fillStyle = '#fff6c0'; ctx.fillRect(-p.s * 0.3, -p.s * 0.5, p.s * 0.3, p.s); ctx.restore(); }
+    else if (p.kind === 'pix') { ctx.globalAlpha = a; ctx.fillStyle = p.col; ctx.fillRect(Math.round(x / 2) * 2 - p.s / 2, Math.round(y / 2) * 2 - p.s / 2, p.s, p.s); }
+    else if (p.kind === 'glitch') { ctx.globalAlpha = a * (Math.random() < 0.3 ? 0.3 : 0.9); ctx.fillStyle = p.col; ctx.fillRect(x - p.s / 2, y, p.s, p.h); }
     else if (p.kind === 'suck') { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; ctx.strokeStyle = p.col; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + (x - p.tx) * 0.25, y - (p.y - p.ty) * -0.25); ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; }
   }
   ctx.globalAlpha = 1;
@@ -2553,8 +2649,9 @@ function renderHUD() {
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; rr(W / 2 - 70, y + 20, 140, 6, 3); ctx.fill(); ctx.fillStyle = ev[2]; rr(W / 2 - 70, y + 20, 140 * clamp(ev[1], 0, 1), 6, 3); ctx.fill();
   }
   // dock
-  const dock = [['biomes', 'Biomes', 'globe', '#2f8f6a'], ['book', 'Book', 'book', '#8a5a2e'], ['rebirth', 'Rebirth', 'rebirth', '#c48a12'], ['shop', 'Shop', 'shop', '#3a5fd0']];
-  const leftPad = G.bombLevel > 0 ? 90 : 20;
+  const dock = [['biomes', 'Biomes', 'globe', '#2f8f6a'], ['book', 'Book', 'book', '#8a5a2e'], ['rebirth', 'Rebirth', 'rebirth', '#c48a12'], ['shop', 'Shop', 'shop', '#3a5fd0'], ['drones', 'Drones', 'drone', '#2a8aa8']];
+  renderPassBar(); setScreen();
+  const leftPad = W < 520 ? (G.bombLevel > 0 ? 76 : 10) : G.bombLevel > 0 ? 90 : 20;
   const bw = Math.min(150, (W - leftPad * 2) / 4 - 10), bh = 52, total = dock.length * bw + (dock.length - 1) * 10;
   let x = W / 2 - total / 2;
   const y = H - bh - 18;
@@ -2698,12 +2795,13 @@ function renderSettings() {
     });
   });
   const by = 66 + perCol * rowH + 12;
-  if (fsOk()) btn('set_fs', w / 2 - 190, by, 180, 36, isFs() ? 'Exit fullscreen' : 'Fullscreen', { col: '#3a5fd0', size: 15, r: 9, fn: () => { AUDIO.sfx('click'); toggleFullscreen(); } });
-  btn('set_reset', fsOk() ? w / 2 + 10 : w / 2 - 90, by, 180, 36, 'Reset graphics', { col: '#5a4a6a', size: 15, r: 9, fn: () => { const d = gfxDefaults(); for (const k in d) GFX[k] = d[k]; setGfx('preset', GFX.preset); AUDIO.sfx('click'); } });
+  btn('set_code', w / 2 - 214, by, 136, 36, 'Codes', { col: '#1a8a4a', size: 15, r: 9, icon: 'gem', fn: () => { AUDIO.sfx('click'); openCodeBox(); } });
+  if (fsOk()) btn('set_fs', w / 2 - 68, by, 136, 36, isFs() ? 'Exit full' : 'Fullscreen', { col: '#3a5fd0', size: 15, r: 9, fn: () => { AUDIO.sfx('click'); toggleFullscreen(); } });
+  btn('set_reset', w / 2 + 78, by, 136, 36, 'Reset gfx', { col: '#5a4a6a', size: 15, r: 9, fn: () => { const d = gfxDefaults(); for (const k in d) GFX[k] = d[k]; setGfx('preset', GFX.preset); AUDIO.sfx('click'); } });
   UI.live = true; setScreen(); ctx.globalAlpha = 1;
 }
 function renderMenus() {
-  renderShop(); renderBiomes(); renderRebirth(); renderBook(); renderSettings();
+  renderShop(); renderBiomes(); renderRebirth(); renderBook(); renderDrones(); renderPass(); renderSettings();
   UI.live = true;
   setScreen(); ctx.globalAlpha = 1;
 }
@@ -2999,12 +3097,848 @@ function renderTitle() {
   if (save) btn('new', W / 2 - bw / 2 + 30, by + 74, bw - 60, 40, G.confirmNew > 0 ? (TOUCH ? 'Sure? Tap again' : 'Sure? Click again') : 'New game', { col: G.confirmNew > 0 ? '#b03a3a' : '#4a5470', size: 17,
     fn: () => { AUDIO.init(); AUDIO.sfx('click'); if (G.confirmNew > 0) { G.confirmNew = 0; startGame(true); } else G.confirmNew = 3; } });
   setScreen();
-  const keys = TOUCH ? 'Bomb: tap the bomb button, then tap a rock    -    Settings: the gear button' : 'SPACE or right-click = Bomb    B Biomes  -  S Shop  -  R Rebirth  -  K Book  -  M mute  -  F3 FPS';
+  const keys = TOUCH ? 'Bomb: tap the bomb button, then tap a rock    -    Settings: the gear button' : 'SPACE or right-click = Bomb    B Biomes  -  S Shop  -  R Rebirth  -  K Book  -  D Drones  -  P Pass  -  M mute';
   btn('gear', W - 56, 14, 44, 40, '', { icon: 'gear', col: '#3a4a6a', r: 10, fn: () => { AUDIO.init(); AUDIO.sfx('click'); openSettings(); } });
   setScreen();
   txt(keys, W / 2, H - 52, fitSize(keys, 13, W - 30, FB), '#9aa3b5', { font: FB, weight: 800 });
   if (G.high > 0) txt('BEST  ' + fmt(G.high) + ' Creditz', W / 2, H - 76, 15, '#ffd84a', { font: FB, weight: 900 });
   txt('a game by Sixten', W - 16, H - 20, 13, '#8a90a0', { align: 'right', font: FB, weight: 800 });
+}
+
+// ====================================================================
+//  DRONES: buy crates -> get drones -> merge them -> put them in slots -> they mine for you
+//  Each drone in your collection is a tiny object: { id, type, rank, skin, hat }.
+//  While a drone sits in a slot it also gets a "runtime" object (position, target, cooldown...)
+//  in DRT, which is NOT saved - it's rebuilt when the game starts.
+// ====================================================================
+const DRONE_TYPES = {
+  normal: { name: 'Drone', col: '#4ad0ff', ai: 'drill', cd: 1.2, desc: 'Flies to a rock and drills it' },
+  bomber: { name: 'Bomblayer', col: '#ff8a3a', ai: 'bomb', cd: 2.6, desc: 'Wanders around laying small bombs. Hunts down the last rock' },
+  heavy: { name: 'Heavy', col: '#ffc21a', ai: 'heavy', cd: 3.5, desc: 'Smashes itself down: hits a 3x3 area' },
+  laser: { name: 'Laser', col: '#ff3a5a', ai: 'laser', cd: 6.5, noMix: true, desc: 'Fires a laser that burns through rocks one at a time' },
+  drillbomber: { name: 'Drillbomber', col: '#ff5ab0', ai: 'bomb', cd: 3.4, desc: 'Its bombs shoot small drills in 4 directions' },
+  bigdrill: { name: 'Big Drill', col: '#5affb0', ai: 'drill', cd: 2, desc: 'Drills in a + shape (5 rocks at once)' },
+  heavybomber: { name: 'Heavy Bomber', col: '#ff5a2a', ai: 'bomb', cd: 4.5, desc: 'Drops one really big bomb' },
+  alien: { name: 'Alien Ship', col: '#7dff3a', ai: 'alien', cd: 0, noMix: true, desc: 'Scans a rock and beams its mineral out. The rock stays, and still has it inside' },
+};
+const MIXES = { 'bomber+normal': 'drillbomber', 'heavy+normal': 'bigdrill', 'bomber+heavy': 'heavybomber' };
+const RANK_NAMES = ['', 'I', 'II', 'III', 'IV', 'V'];
+const RANK_COL = ['', '#c8d0dc', '#4dff4d', '#2eb0ff', '#ff4be6', '#ffd84a'];
+// what a rank gives: cooldown multiplier, cracks per hit, flying speed
+const RK = { cd: [1, 1, 0.8, 0.64, 0.5, 0.38], dmg: [1, 1, 1, 2, 2, 3], spd: [1, 1, 1.2, 1.4, 1.65, 1.9] };
+const ALIEN_CD = [0, 48, 36, 26, 17, 10];
+const SLOT_PRICES = [0, 0, 0, 5e6, 5e8, 5e10, 5e12, 5e14, 5e16, 5e18];   // slots 4..10 (pretty expensive!)
+const mixKey = (a, b) => [a, b].sort().join('+');
+function mergeResult(a, b) {
+  if (!a || !b || a === b || a.rank !== b.rank) return null;
+  if (a.type === b.type) return a.rank < 5 ? { type: a.type, rank: a.rank + 1 } : null;
+  if (DRONE_TYPES[a.type].noMix || DRONE_TYPES[b.type].noMix) return null;
+  const t = MIXES[mixKey(a.type, b.type)];
+  return t ? { type: t, rank: a.rank } : null;
+}
+function mergeWhy(a, b) {
+  if (a.type !== b.type && (DRONE_TYPES[a.type].noMix || DRONE_TYPES[b.type].noMix)) return DRONE_TYPES[DRONE_TYPES[a.type].noMix ? a.type : b.type].name + ' drones only merge with their own kind';
+  if (a.rank !== b.rank) return 'Only drones of the same rank can merge';
+  if (a.type === b.type) return 'Already the highest rank (V)';
+  return 'These two can\'t be mixed';
+}
+const droneName = d => DRONE_TYPES[d.type].name + ' ' + RANK_NAMES[d.rank];
+const droneById = id => G.drones.find(d => d.id === id);
+function deployed() { const out = []; for (let k = 0; k < G.slotsOpen; k++) { const d = G.slots[k] && droneById(G.slots[k]); if (d) out.push(d); } return out; }
+const droneSlotsUsed = () => (G.drones ? deployed().length : 0);
+const slotOf = d => G.slots.indexOf(d.id);
+function addDrone(type, rank) {
+  const d = { id: G.nextId++, type, rank: clamp(rank, 1, 5), skin: null, hat: null };
+  G.drones.push(d);
+  for (let k = 0; k < G.slotsOpen; k++) if (!G.slots[k] || !droneById(G.slots[k])) { G.slots[k] = d.id; break; }   // fill an empty slot right away
+  return d;
+}
+function droneCd(d) { return (d.type === 'alien' ? ALIEN_CD[d.rank] : DRONE_TYPES[d.type].cd * RK.cd[d.rank]) * upv('dspeed', 1); }
+
+// ---------------- skins + hats ----------------
+// pal: body / dark / light colours, accent = glowing parts, fx = the special effect of the skin
+const SKINS = {
+  rusty: { name: 'Rusty', rar: 'Common', body: '#9a6040', dark: '#4a2614', light: '#d08a5a', accent: '#ffb060', fx: 'rust' },
+  neon: { name: 'Neon', rar: 'Rare', body: '#16161f', dark: '#06060a', light: '#2c2c3c', accent: '#00f0ff', accent2: '#ff3ad0', fx: 'neon' },
+  pixel: { name: 'Pixel', rar: 'Epic', body: '#4a8aff', dark: '#1a3a9a', light: '#a0d4ff', accent: '#ffd84a', fx: 'pixel' },
+  hightech: { name: 'High Tech', rar: 'Legendary', body: '#1c2c52', dark: '#0a1122', light: '#8f9aaa', accent: '#ff2a3a', fx: 'jets' },
+  golden: { name: 'Golden', rar: 'Mythical', body: '#ffc21a', dark: '#9a5e00', light: '#fff2a0', accent: '#ffffff', fx: 'gold' },
+  glitch: { name: 'GL1TCH', rar: 'Admin', body: '#0c0c0c', dark: '#000000', light: '#2a2a2a', accent: '#00ff66', accent2: '#ff00ff', fx: 'glitch', code: true },
+  alien: { name: 'Little Green', rar: 'Epic', body: '#5ad04a', dark: '#1e5a14', light: '#b0ff8a', accent: '#e0ff3a', fx: null, pass: true },
+  chrome: { name: 'UFO Chrome', rar: 'Legendary', body: '#c8d2de', dark: '#5a6474', light: '#ffffff', accent: '#7dff3a', fx: 'chrome', pass: true },
+  nebula: { name: 'Nebula', rar: 'Mythical', body: '#2a1052', dark: '#0e0420', light: '#6a3aa8', accent: '#d07aff', fx: 'stars', pass: true },
+  abductor: { name: 'Abductor', rar: 'Celestial', body: '#0f1a10', dark: '#030803', light: '#2a4a2a', accent: '#7dff3a', fx: 'beam', pass: true },
+};
+const HATS = { helmet: { name: 'Space Helmet', rar: 'Rare' }, antenna: { name: 'Alien Antennae', rar: 'Epic' }, rings: { name: 'Saturn Rings', rar: 'Legendary' }, crown: { name: 'Star Crown', rar: 'Mythical' } };
+const skinFree = id => (G.skins[id] || 0) - G.drones.filter(d => d.skin === id).length;
+const hatFree = id => (G.hats[id] || 0) - G.drones.filter(d => d.hat === id).length;
+function dronePal(d) {
+  const S = d.skin && SKINS[d.skin]; if (S) return S;
+  if (d.type === 'alien') return { body: '#9aa8b8', dark: '#3a4452', light: '#eef4ff', accent: '#7dff3a', fx: null };
+  return { body: '#aab4c4', dark: '#4a5466', light: '#eef2f8', accent: DRONE_TYPES[d.type].col, fx: null };
+}
+
+// ---------------- crates ----------------
+const CRATES = {
+  common: { name: 'Common Crate', col: '#a4a4a4', price: 5e4, odds: { normal: 70, bomber: 20, heavy: 10 }, ranks: [100] },
+  uncommon: { name: 'Uncommon Crate', col: '#4dff4d', price: 1e6, odds: { normal: 45, bomber: 30, heavy: 25 }, ranks: [88, 12] },
+  rare: { name: 'Rare Crate', col: '#2eb0ff', price: 5e7, odds: { normal: 30, bomber: 35, heavy: 35 }, ranks: [65, 30, 5] },
+  epic: { name: 'Epic Crate', col: '#ff4be6', price: 5e9, odds: { normal: 18, bomber: 37, heavy: 41, laser: 4 }, ranks: [30, 50, 20] },
+  legendary: { name: 'Legendary Crate', col: '#e8ff3a', price: 5e11, odds: { normal: 8, bomber: 30, heavy: 35, laser: 27 }, ranks: [0, 45, 40, 15] },
+  skin: { name: 'Skin Crate', col: '#ff8a3a', price: 1e7, skins: { rusty: 50, neon: 30, pixel: 14, hightech: 5, golden: 1 } },
+};
+const CRATE_ORDER = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'skin'];
+function pickW(obj) { let t = 0; for (const k in obj) t += obj[k]; let x = Math.random() * t; for (const k in obj) { x -= obj[k]; if (x < 0) return k; } return Object.keys(obj)[0]; }
+function openCrate(kind) {
+  const C = CRATES[kind]; let item;
+  if (kind === 'skin') { const sk = pickW(C.skins); G.skins[sk] = (G.skins[sk] || 0) + 1; item = { skin: sk }; }
+  else {
+    const type = pickW(C.odds), w = {}; C.ranks.forEach((v, i) => { if (v > 0) w[i + 1] = v; });
+    let rank = +pickW(w); if (Math.random() < upv('cluck', 0)) rank++;
+    item = { drone: addDrone(type, Math.min(5, rank)) };
+  }
+  G.crateFx = { kind, item, t: 0 }; G.menu = null; AUDIO.sfx('crate'); save();
+}
+function buyCrate(kind) {
+  if (G.crateFx) return;
+  const C = CRATES[kind];
+  if ((G.crates[kind] || 0) > 0) { G.crates[kind]--; openCrate(kind); return; }
+  if (G.creditz < C.price) { toast('You need ' + fmt(C.price) + ' Creditz', '#ff8a8a'); AUDIO.sfx('deny'); return; }
+  G.creditz -= C.price; G.shown = G.creditz; openCrate(kind);
+}
+function buySlot() {
+  const k = G.slotsOpen; if (k >= 10) return;
+  if (G.creditz < SLOT_PRICES[k]) { toast('A new drone slot costs ' + fmt(SLOT_PRICES[k]) + ' Creditz', '#ff8a8a'); AUDIO.sfx('deny'); return; }
+  G.creditz -= SLOT_PRICES[k]; G.shown = G.creditz; G.slotsOpen++; AUDIO.sfx('buy'); toast('Drone slot ' + G.slotsOpen + ' unlocked!', '#7dff7a'); save();
+}
+function doMerge(a, b) {
+  const res = mergeResult(a, b); if (!res) return;
+  const k = slotOf(a) >= 0 ? slotOf(a) : slotOf(b);
+  G.slots = G.slots.map(id => id === a.id || id === b.id ? null : id);
+  G.drones = G.drones.filter(d => d !== a && d !== b); DRT.delete(a.id); DRT.delete(b.id);
+  const n = { id: G.nextId++, type: res.type, rank: res.rank, skin: a.skin || b.skin, hat: a.hat || b.hat };
+  G.drones.push(n);
+  if (k >= 0 && k < G.slotsOpen) G.slots[k] = n.id;
+  G.droneSel = n.id; G.mergeSel = null;
+  G.mergeFx = { a, b, d: n, t: 0 }; G.menu = null; AUDIO.sfx('merge'); save();
+}
+
+// ---------------- codes (typed in Settings) ----------------
+const CODES = { gus1stplaytester: { skin: 'glitch', text: 'Code redeemed: GL1TCH skin!' } };
+function redeemCode(raw) {
+  const c = String(raw || '').trim().toLowerCase().replace(/\s+/g, '');
+  const C = CODES[c]; if (!C) return 'That code does not exist';
+  if (G.codes.includes(c)) return 'You already used this code';
+  G.codes.push(c);
+  if (C.skin) G.skins[C.skin] = (G.skins[C.skin] || 0) + 1;
+  AUDIO.sfx('glitch'); toast(C.text, '#00ff66'); save();
+  return 'ok';
+}
+function openCodeBox() {
+  let box = document.getElementById('codebox');
+  if (!box) {
+    box = document.createElement('div'); box.id = 'codebox';
+    box.innerHTML = '<div class="cb"><b>ENTER A CODE</b><input id="codein" maxlength="40" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="type your code"><div class="row"><button id="codego">Redeem</button><button id="codex">Close</button></div><p id="codemsg"></p></div>';
+    document.body.appendChild(box);
+    const inp = document.getElementById('codein'), msg = document.getElementById('codemsg');
+    const go = () => { const r = redeemCode(inp.value); if (r === 'ok') { box.style.display = 'none'; } else { msg.textContent = r; AUDIO.sfx('deny'); } };
+    document.getElementById('codego').onclick = go;
+    document.getElementById('codex').onclick = () => { box.style.display = 'none'; };
+    inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') go(); if (e.key === 'Escape') box.style.display = 'none'; });
+    box.addEventListener('pointerdown', e => { if (e.target === box) box.style.display = 'none'; });
+  }
+  document.getElementById('codemsg').textContent = '';
+  const inp = document.getElementById('codein'); inp.value = '';
+  box.style.display = 'flex'; setTimeout(() => inp.focus(), 50);
+}
+
+// ---------------- ALIEN PASS: 50 levels of rewards, earned with XP ----------------
+const PASS_MAX = 50;
+const xpNeed = l => Math.round(100 * Math.pow(1.1, l - 1) / 10) * 10;   // XP to reach level l (level 1 = 100)
+const xpMult = () => 1 + upv('xpboost', 0);
+const PASS = (() => {
+  const L = { 2: ['hat', 'helmet'], 5: ['crate', 'common'], 9: ['skin', 'alien'], 11: ['crate', 'uncommon'], 15: ['hat', 'antenna'], 17: ['crate', 'rare'], 20: ['skin', 'chrome'],
+    23: ['crate', 'epic'], 25: ['drone', 'alien', 1], 27: ['hat', 'rings'], 30: ['crate', 'skin'], 33: ['crate', 'epic'], 35: ['skin', 'nebula'], 38: ['hat', 'crown'],
+    40: ['crate', 'legendary'], 44: ['skin', 'abductor'], 47: ['crate', 'legendary'], 50: ['drone', 'alien', 5] };
+  const empty = new Set([3, 7, 13, 19, 24, 29, 34, 39, 43]), out = [null]; let k = 0;
+  for (let l = 1; l <= PASS_MAX; l++) out.push(L[l] || (empty.has(l) ? null : ['cred', Number((5e4 * Math.pow(2.9, k++)).toPrecision(2))]));
+  return out;
+})();
+function passRewardText(r) {
+  if (!r) return '';
+  switch (r[0]) {
+    case 'cred': return fmt(r[1]) + ' Creditz';
+    case 'hat': return HATS[r[1]].name;
+    case 'skin': return SKINS[r[1]].name + ' skin';
+    case 'crate': return CRATES[r[1]].name;
+    case 'drone': return 'Alien Ship ' + RANK_NAMES[r[2]];
+  }
+  return '';
+}
+function passReward(l) {
+  const r = PASS[l];
+  if (r) switch (r[0]) {
+    case 'cred': giveCreditz(r[1], true); G.hudPulse = 1; break;
+    case 'hat': G.hats[r[1]] = (G.hats[r[1]] || 0) + 1; break;
+    case 'skin': G.skins[r[1]] = (G.skins[r[1]] || 0) + 1; break;
+    case 'crate': G.crates[r[1]] = (G.crates[r[1]] || 0) + 1; break;
+    case 'drone': addDrone('alien', r[2]); break;
+  }
+  toast('ALIEN PASS level ' + l + '!' + (r ? '  ' + passRewardText(r) : ''), '#7dff3a'); AUDIO.sfx('level');
+}
+function addXP(n) {
+  const P = G.pass; if (!P || P.lvl >= PASS_MAX || G.scene !== 'play') return;
+  P.xp += n * xpMult();
+  while (P.lvl < PASS_MAX && P.xp >= xpNeed(P.lvl + 1)) { P.xp -= xpNeed(P.lvl + 1); P.lvl++; passReward(P.lvl); }
+  if (P.lvl >= PASS_MAX) P.xp = 0;
+}
+
+// ---------------- drone brains ----------------
+const DRT = new Map();
+function rt(d) {
+  let s = DRT.get(d.id);
+  if (!s) { s = { x: (Math.random() - 0.5) * 300, y: 220, target: null, cd: 0.5 + Math.random(), state: 'idle', t: Math.random() * 9, spin: Math.random() * 6, hitT: 0, wx: 0, wy: 60, wT: 0, tilt: 0, act: 0 }; DRT.set(d.id, s); }
+  return s;
+}
+const freeRocks = () => G.rocks.filter(r => r.state === 'rock' && r.spawnT <= 0);
+const rockAlive = r => r && r.state === 'rock' && G.rocks.indexOf(r) >= 0;
+function flyTo(s, tx, ty, v) {
+  const dx = tx - s.x, dy = ty - s.y, L = Math.hypot(dx, dy);
+  s.tilt += (clamp(dx / 60, -0.35, 0.35) - s.tilt) * 0.2;
+  if (L <= v) { s.x = tx; s.y = ty; return true; }
+  s.x += dx / L * v; s.y += dy / L * v; return L < 2;
+}
+function idle(s, v) { if (!s.home) s.home = { x: (Math.random() - 0.5) * 380, y: 140 + Math.random() * 20 }; flyTo(s, s.home.x + Math.sin(s.t * 0.7) * 14, s.home.y, v * 0.5); }
+// rock shapes around a point: 'sq' = 3x3, 'plus' = +, a number = a circle of that radius
+function inShape(r, x, y, shape) {
+  const dx = Math.abs(r.x - x), dy = Math.abs(r.y - y);
+  if (shape === 'sq') return dx < 60 && dy < 60;
+  if (shape === 'plus') return (dx < 12 && dy < 60) || (dy < 12 && dx < 60);
+  return Math.hypot(r.x - x, r.y - y) < shape + 16;
+}
+function areaCount(x, y, shape) { let n = 0; for (const r of G.rocks) if (r.state === 'rock' && r.spawnT <= 0 && inShape(r, x, y, shape)) n++; return n; }
+function droneCrack(r, n, d) {
+  if (!r || r.state !== 'rock' || r.spawnT > 0) return false;
+  if (Math.random() < upv('dpower', 0)) n++;
+  for (let k = 0; k < n && r.state === 'rock'; k++) { r.cool = 0; hitRock(r, 'drone'); }
+  if (d && d.skin === 'pixel') pixelBurst(r.x, r.y);
+  if (d && d.skin === 'glitch') glitchBurst(r.x, r.y);
+  return true;
+}
+function crackArea(x, y, shape, n, d) {
+  let hit = 0;
+  for (const r of G.rocks.slice()) if (r.state === 'rock' && r.spawnT <= 0 && inShape(r, x, y, shape)) { droneCrack(r, n, d); hit++; }
+  if (G.mega && Math.hypot(G.mega.x - x, G.mega.y - y) < (typeof shape === 'number' ? shape : 60) + 40) hitMega(n);
+  if (G.heart && Math.hypot(x, y - 32) < 90) hitHeart(n);
+  return hit;
+}
+// smarter drones (higher rank) pick better rocks
+function pickRock(d, s, o) {
+  o = o || {};
+  let list = freeRocks();
+  if (o.filter) { list = list.filter(o.filter); if (!list.length) return null; }
+  if (!list.length) return null;
+  if (d.rank >= 2) {   // rank 2+: don't fly to a rock another drone is already on
+    const taken = new Set(); for (const e of deployed()) if (e !== d) { const es = DRT.get(e.id); if (es && es.target) taken.add(es.target); }
+    const l2 = list.filter(r => !taken.has(r)); if (l2.length) list = l2;
+  }
+  if (d.rank >= 3) {   // rank 3+: finish cracked rocks first, love golden rocks + chests; rank 4+: also stay close and aim for crowds
+    let best = list[0], bs = -1e9;
+    for (const r of list) {
+      const v = r.costume * 2 + (r.golden ? 6 : 0) + (r.chest ? 4 : 0) - (r.armor || 0) * 1.5 - Math.hypot(r.x - s.x, r.y - s.y) / (d.rank >= 4 ? 50 : 200)
+        + (o.area && d.rank >= 4 ? areaCount(r.x, r.y, o.area) * 1.6 : 0) + Math.random() * 0.6;
+      if (v > bs) { bs = v; best = r; }
+    }
+    return best;
+  }
+  return list[Math.floor(Math.random() * list.length)];
+}
+function droneSfx(d, name) { if (d.skin === 'pixel') AUDIO.sfx('retro', name); else if (d.skin === 'glitch' && Math.random() < 0.5) AUDIO.sfx('glitch'); else AUDIO.sfx(name); }
+function tickDrones() {
+  const list = deployed(), ids = new Set(list.map(d => d.id));
+  for (const id of DRT.keys()) if (!ids.has(id)) DRT.delete(id);
+  for (const d of list) tickDrone(d, rt(d));
+  // drone bombs
+  for (const b of G.dbombs) {
+    b.t += DT; if (b.y > b.gy) b.y = Math.max(b.gy, b.y - 4);
+    if (b.t >= b.fuse) { b.done = true; explodeDroneBomb(b); }
+  }
+  compact(G.dbombs, b => !b.done);
+  // small drills shot out by Drillbomber bombs
+  for (const p of G.dproj) {
+    p.x += p.dx * 6; p.y += p.dy * 6; p.life -= DT; p.spin += 0.7;
+    for (const r of G.rocks) if (r.state === 'rock' && r.spawnT <= 0 && !p.hit.includes(r) && Math.abs(r.x - p.x) < 21 && Math.abs(r.y - p.y) < 21) {
+      p.hit.push(r); droneCrack(r, p.dmg, p.d); chunks(p.x, p.y, '#c9d2d9', 3, true); if (--p.pierce <= 0) { p.life = 0; break; }
+    }
+    if (Math.abs(p.x) > 240 || p.y < -110 || p.y > 175) p.life = 0;
+  }
+  compact(G.dproj, p => p.life > 0);
+}
+function tickDrone(d, s) {
+  const T = DRONE_TYPES[d.type], R = d.rank, v = d.type === 'alien' ? 1.3 + R * 0.45 : 3.2 * RK.spd[R];
+  s.cd -= DT; s.t += DT; if (s.hitT > 0) s.hitT -= DT; s.act *= 0.9;
+  switch (T.ai) {
+    case 'drill': {   // Drone + Big Drill: park on a rock and drill it
+      if (s.target && (s.target === G.heart ? !G.heart : !rockAlive(s.target))) s.target = null;
+      if (!s.target) s.target = pickRock(d, s, d.type === 'bigdrill' ? { area: 'plus' } : null) || G.heart || null;
+      if (!s.target) { idle(s, v); break; }
+      const isH = s.target === G.heart, tx = isH ? Math.sin(s.spin) * 50 : s.target.x, ty = (isH ? 32 : s.target.y) + 24;
+      if (flyTo(s, tx, ty, v) && s.cd <= 0) {
+        s.cd = droneCd(d); s.hitT = 0.18; s.act = 1;
+        if (isH) hitHeart(RK.dmg[R]);
+        else if (d.type === 'bigdrill') crackArea(s.target.x, s.target.y, 'plus', RK.dmg[R], d);
+        else droneCrack(s.target, RK.dmg[R], d);
+        droneSfx(d, 'dhit');
+      }
+      break;
+    }
+    case 'bomb': {   // Bomblayer family: wander, lay bombs; if only a rock or two is left, go straight to it
+      const free = freeRocks();
+      if (free.length && free.length <= 2) { const r = free[0]; s.wx = r.x; s.wy = r.y + 22; }
+      else if ((s.wT -= DT) <= 0) {
+        s.wT = 1.4 + Math.random() * 2;
+        const r = R >= 3 && free.length ? pickRock(d, s, { area: d.type === 'heavybomber' ? 70 : 40 }) : null;
+        if (r) { s.wx = r.x; s.wy = r.y + 22; } else { s.wx = (Math.random() - 0.5) * 400; s.wy = -60 + Math.random() * 200; }
+      }
+      flyTo(s, s.wx, s.wy, v * 0.7);
+      if (s.cd <= 0 && (free.length || G.heart || G.mega)) { s.cd = droneCd(d); layBomb(d, s.x, s.y - 12); }
+      break;
+    }
+    case 'heavy': {   // Heavy: hover high over a rock, then smash down on it
+      if (s.state === 'slam') {
+        s.vy = (s.vy || 0) + 1.5; s.y -= s.vy;
+        if (s.y <= s.ty) {
+          s.y = s.ty; s.state = 'idle'; s.vy = 0; s.hitT = 0.3; s.act = 1; s.cd = droneCd(d);
+          crackArea(s.x, s.ty - 18, 'sq', RK.dmg[R] + 1, d);
+          G.shake = Math.max(G.shake, 4 + R); dust(s.x, s.ty - 14, '#a0a0a0', 10); chunks(s.x, s.ty - 18, '#8a8a8a', 6);
+          G.lights.push({ x: s.x, y: s.ty - 18, r: 80 + R * 10, col: dronePal(d).accent, life: 0.4, max: 0.4 });
+          G.rings.push({ x: s.x, y: s.ty - 18, t: 0, r: 75, col: dronePal(d).accent });
+          droneSfx(d, 'slam'); s.target = null;
+        }
+        break;
+      }
+      if (s.target && !rockAlive(s.target)) s.target = null;
+      if (!s.target) s.target = pickRock(d, s, { area: 'sq' });
+      if (!s.target) { idle(s, v); break; }
+      if (flyTo(s, s.target.x, s.target.y + 70, v) && s.cd <= 0) { s.state = 'slam'; s.vy = 0; s.ty = s.target.y + 18; }
+      break;
+    }
+    case 'laser': {   // Laser: go somewhere, charge, then fire a beam that burns the first rock in its way
+      if (s.state === 'fire') {
+        s.fireT -= DT; s.zapT -= DT; s.act = 1;
+        if (s.zapT <= 0) { s.zapT = 0.15 / RK.spd[R]; s.ends = laserZap(d, s); }
+        if (s.fireT <= 0) { s.state = 'idle'; s.cd = droneCd(d); s.ends = null; }
+        break;
+      }
+      if (s.state === 'charge') { s.chargeT -= DT; s.act = 1 - s.chargeT / 0.6; if (s.chargeT <= 0) { s.state = 'fire'; s.fireT = 1.3 + R * 0.25; s.zapT = 0; droneSfx(d, 'laser'); } break; }
+      if (!s.spot) s.spot = laserSpot(d);
+      if (flyTo(s, s.spot.x, s.spot.y, v) && s.cd <= 0) { s.ang = laserAim(d, s.x, s.y); s.state = 'charge'; s.chargeT = 0.6; s.spot = null; }
+      break;
+    }
+    case 'alien': {   // Alien Ship: scan a rock, beam its mineral up. The rock keeps it (you get it AGAIN when you break it)
+      if (s.state === 'beam') {
+        s.beamT += DT; s.act = 1;
+        const r = s.target;
+        if (!rockAlive(r)) { s.state = 'idle'; s.target = null; s.cd = 2; s.gem = undefined; break; }
+        if (s.beamT >= 0.9 && s.gem === undefined) s.gem = alienScan(d);
+        if (s.beamT >= 2.6) { alienTake(d, r, s.gem); s.state = 'idle'; s.cd = droneCd(d); s.target = null; s.gem = undefined; }
+        break;
+      }
+      if (s.target && !rockAlive(s.target)) s.target = null;
+      if (!s.target && s.cd <= 0) s.target = pickRock(d, s, { filter: r => !r.golden && !r.chest && !(r.alienGem >= 0) });
+      if (!s.target) { idle(s, v); break; }
+      if (flyTo(s, s.target.x, s.target.y + 48, v)) { s.state = 'beam'; s.beamT = 0; droneSfx(d, 'ufo'); }
+      break;
+    }
+  }
+}
+function layBomb(d, x, y) {
+  const big = d.type === 'heavybomber', R = d.rank;
+  G.dbombs.push({ x, y, gy: y - 14, t: 0, fuse: big ? 1.6 : 1.2, r: (big ? 62 : 32) + R * (big ? 8 : 5), dmg: RK.dmg[R] + 1 + (big ? 1 : 0), drills: d.type === 'drillbomber', big, d, col: dronePal(d).accent });
+  droneSfx(d, 'drop');
+}
+function explodeDroneBomb(b) {
+  const R = b.d.rank;
+  crackArea(b.x, b.y, b.r, b.dmg, b.d);
+  if (b.drills) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) G.dproj.push({ x: b.x, y: b.y, dx, dy, life: 1.3, pierce: R >= 3 ? 2 : 1, dmg: RK.dmg[R], d: b.d, hit: [], spin: 0 });
+  dust(b.x, b.y, '#9a9aa0', b.big ? 12 : 6); sparkle(b.x, b.y, b.col, b.big ? 14 : 7);
+  G.lights.push({ x: b.x, y: b.y, r: b.r * 1.6, col: b.col, life: 0.45, max: 0.45 });
+  G.rings.push({ x: b.x, y: b.y, t: 0, r: b.r, col: b.col });
+  G.shake = Math.max(G.shake, b.big ? 6 : 2.5);
+  droneSfx(b.d, 'dbomb');
+}
+// laser maths: a ray from the drone; "along" = how far down the ray a rock is, "perp" = how far to the side
+const laserLanes = R => { const n = 1 + Math.floor((R - 1) / 2), out = []; for (let k = 0; k < n; k++) out.push((k - (n - 1) / 2) * 44); return out; };
+function rayFirst(ox, oy, a, lane) {
+  const dx = Math.cos(a), dy = Math.sin(a); let best = null, bd = 900;
+  for (const r of G.rocks) {
+    if (r.state !== 'rock' || r.spawnT > 0) continue;
+    const rx = r.x - ox, ry = r.y - oy, along = rx * dx + ry * dy;
+    if (along < -10) continue;
+    const perp = -rx * dy + ry * dx;
+    if (Math.abs(perp - lane) < 22 && along < bd) { bd = along; best = r; }
+  }
+  return [best, bd];
+}
+function laserCount(d, x, y, a) { let n = 0; for (const lane of laserLanes(d.rank)) for (const r of G.rocks) { if (r.state !== 'rock') continue; const rx = r.x - x, ry = r.y - y, al = rx * Math.cos(a) + ry * Math.sin(a), pp = -rx * Math.sin(a) + ry * Math.cos(a); if (al > -10 && Math.abs(pp - lane) < 22) n++; } return n; }
+const LASER_DIRS = [0, 1, 2, 3, 4, 5, 6, 7].map(k => k * Math.PI / 4);
+function laserAim(d, x, y) {
+  if (d.rank < 3) { const f = freeRocks(); if (!f.length) return LASER_DIRS[rnd(0, 7)]; const r = f[rnd(0, f.length - 1)]; return Math.atan2(r.y - (y - 12), r.x - x); }   // aim at one random rock
+  let best = 0, bn = -1; for (const a of LASER_DIRS) { const n = laserCount(d, x, y, a) + Math.random() * 0.5; if (n > bn) { bn = n; best = a; } }
+  return best;
+}
+function laserSpot(d) {
+  const rand = () => ({ x: (Math.random() - 0.5) * 420, y: -90 + Math.random() * 250 });
+  if (d.rank < 5) return rand();
+  let best = rand(), bn = -1; for (let k = 0; k < 5; k++) { const p = rand(), n = Math.max(...LASER_DIRS.map(a => laserCount(d, p.x, p.y, a))); if (n > bn) { bn = n; best = p; } }
+  return best;
+}
+function laserZap(d, s) {
+  const ends = [];
+  for (const lane of laserLanes(d.rank)) {
+    const ox = s.x - Math.sin(s.ang) * lane, oy = s.y - 12 + Math.cos(s.ang) * lane;
+    const [r, dist] = rayFirst(ox, oy, s.ang, 0);
+    if (r) { droneCrack(r, 1, d); emit('spark', r.x, r.y, 2, { col: [dronePal(d).accent, '#ffffff'], sp: 3, s: 1.5, life: 8 }); }
+    ends.push({ ox, oy, len: r ? Math.max(0, dist) : 520 });
+  }
+  return ends;
+}
+// Alien: what's inside? Rank I may only take the cheap minerals of the biome, rank V takes anything
+const alienLimit = (d, b) => d.rank >= 5 ? b.minerals.length - 1 : Math.min(b.minerals.length - 1, d.rank);
+function alienScan(d) {
+  const b = BIOMES[G.biome], lim = alienLimit(d, b);
+  for (let k = 0; k < 14; k++) { let i = rollMineral(b); if (i < 0 && Math.random() < luck()) i = rollMineral(b); if (i >= 0 && i <= lim) return i; }
+  return rnd(0, lim);
+}
+function alienTake(d, r, i) {
+  const b = BIOMES[G.biome]; if (!(i >= 0)) return;
+  const m = b.minerals[i], gain = m[1] * totalMult();
+  giveCreditz(gain); addFound(b.name, i); G.stats.minerals++;
+  r.alienGem = i; r.alienT = G.time;
+  G.floats.push({ x: r.x, y: r.y + 56, text: 'ABDUCTED! +' + fmt(gain), col: '#7dff3a', t: 0, size: 12 });
+  sparkle(r.x, r.y + 40, '#7dff3a', 12); G.lights.push({ x: r.x, y: r.y + 30, r: 90, col: '#7dff3a', life: 0.6, max: 0.6 });
+  if (rank(m[2]) >= rank('Legendary')) quest('rare', 1);
+  if (rank(m[2]) >= rank('Mythical')) quest('mythic', 1);
+  droneSfx(d, 'abduct');
+}
+function pixelBurst(x, y) { for (let i = 0; i < pn(5); i++) { const a = Math.random() * 6.283, v = 1.5 + Math.random() * 3; G.parts.push({ kind: 'pix', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v + 2, life: 18, max: 18, col: ['#ffd84a', '#4a8aff', '#ffffff', '#ff5a5a'][i % 4], s: 3 }); } }
+function glitchBurst(x, y) { for (let i = 0; i < pn(4); i++) G.parts.push({ kind: 'glitch', x: x + rnd(-20, 20), y: y + rnd(-20, 20), vx: rnd(-2, 2), vy: 0, life: 10 + rnd(0, 10), max: 20, col: Math.random() < 0.5 ? '#00ff66' : '#ff00ff', s: rnd(3, 9), h: rnd(1, 4) }); }
+
+// ====================================================================
+//  DRAWING DRONES (side view). Every type has its own body; a skin only changes colours + adds its effect,
+//  so the same skin looks a bit different on every type but always in the same style.
+// ====================================================================
+const BODY_BOX = { normal: [-10, -9, 20, 15], bigdrill: [-13, -10, 26, 17], bomber: [-11, -11, 22, 17], drillbomber: [-11, -11, 22, 17], heavybomber: [-14, -10, 28, 18], heavy: [-14, -10, 28, 18], laser: [-13, -10, 26, 13], alien: [-20, -9, 40, 16] };
+function rotor(x, y, t, P, phase) {
+  const OL = P.fx === 'neon' ? P.accent : '#0b0c12';
+  if (P.fx === 'jets') {   // High Tech: jet turbines instead of propellers, red exhaust
+    rr(x - 5, y - 3, 10, 7, 3); ctx.fillStyle = P.light; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = '#0b0c12'; ctx.stroke();
+    ctx.fillStyle = P.dark; rr(x - 3.5, y - 2, 7, 2.2, 1); ctx.fill();
+    ctx.fillStyle = P.accent; ctx.fillRect(x - 5, y + 1.5, 10, 1.2);
+    const fl = 5 + Math.sin(t * 40 + phase) * 1.5 + Math.random() * 2;
+    ctx.globalCompositeOperation = 'lighter';
+    const g = ctx.createLinearGradient(0, y + 4, 0, y + 4 + fl); g.addColorStop(0, 'rgba(255,240,200,0.95)'); g.addColorStop(0.4, rgba(P.accent, 0.8)); g.addColorStop(1, rgba(P.accent, 0));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 3.5, y + 4); ctx.lineTo(x + 3.5, y + 4); ctx.lineTo(x, y + 4 + fl); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha *= 0.35; ctx.drawImage(soft(P.accent), x - 7, y + 1, 14, 14); ctx.globalAlpha /= 0.35;
+    ctx.globalCompositeOperation = 'source-over';
+    return;
+  }
+  // a propeller seen from the side: a line that grows and shrinks as it spins (+ a faint blur disc)
+  ctx.fillStyle = P.dark; ctx.fillRect(x - 1, y - 3, 2, 4);
+  ctx.globalAlpha *= 0.22; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(x, y - 3.5, 9, 1.4, 0, 0, 6.283); ctx.fill(); ctx.globalAlpha /= 0.22;
+  const w = 9 * Math.abs(Math.cos(t * 38 + phase)) + 0.8;
+  ctx.strokeStyle = P.fx === 'neon' ? P.accent2 || P.accent : '#1a1d24'; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x - w, y - 3.5); ctx.lineTo(x + w, y - 3.5); ctx.stroke();
+  ctx.fillStyle = OL; ctx.beginPath(); ctx.arc(x, y - 3.5, 1.3, 0, 6.283); ctx.fill();
+}
+function bodyFill(x, y, w, h, P) { const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, P.light); g.addColorStop(0.45, P.body); g.addColorStop(1, P.dark); return g; }
+function drill(x, y, len, w, t, P, ang) {
+  ctx.save(); ctx.translate(x, y); if (ang) ctx.rotate(ang);
+  ctx.beginPath(); ctx.moveTo(-w, 0); ctx.lineTo(w, 0); ctx.lineTo(0, len); ctx.closePath();
+  const g = ctx.createLinearGradient(-w, 0, w, 0); g.addColorStop(0, '#e9eef5'); g.addColorStop(1, '#6a7484'); ctx.fillStyle = g; ctx.fill();
+  ctx.lineWidth = 0.9; ctx.strokeStyle = '#0b0c12'; ctx.stroke();
+  ctx.save(); ctx.clip(); ctx.strokeStyle = 'rgba(20,24,32,0.7)'; ctx.lineWidth = 0.8;
+  const o = (t * 30) % 4; for (let k = -1; k < len / 3 + 1; k++) { const yy = k * 4 + o; ctx.beginPath(); ctx.moveTo(-w, yy - 2); ctx.lineTo(w, yy + 2); ctx.stroke(); }
+  ctx.restore(); ctx.restore();
+}
+function hangBomb(x, y, r, P, t, spikes) {
+  ctx.strokeStyle = P.dark; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x, y - r - 3); ctx.lineTo(x, y - r); ctx.stroke();
+  const g = ctx.createRadialGradient(x - r * 0.4, y - r * 0.4, 0, x, y, r); g.addColorStop(0, '#5a5a66'); g.addColorStop(1, '#14141a');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = '#000'; ctx.stroke();
+  ctx.fillStyle = P.accent; ctx.fillRect(x - r, y - 0.8, r * 2, 1.6);
+  if (spikes) for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + Math.PI / 4; ctx.save(); ctx.translate(x + Math.cos(a) * r, y + Math.sin(a) * r); ctx.rotate(a - Math.PI / 2); ctx.fillStyle = '#c9d2d9'; ctx.beginPath(); ctx.moveTo(-1.6, 0); ctx.lineTo(1.6, 0); ctx.lineTo(0, 4); ctx.closePath(); ctx.fill(); ctx.restore(); }
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= 0.6 + 0.4 * Math.sin(t * 20); ctx.drawImage(soft('#ffd27a'), x - 3, y - r - 7, 6, 6); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+}
+// the drone itself in local units (0,0 = middle, y down). act = 0..1 how "busy" it looks right now.
+function droneShape(d, P, t, act) {
+  const OL = P.fx === 'neon' ? P.accent : '#0b0c12', type = d.type;
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  if (type === 'alien') {   // a flying saucer, no propellers
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35 + act * 0.4; ctx.drawImage(soft(P.accent), -16, -2, 32, 18); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    ctx.beginPath(); ctx.ellipse(0, -4, 9, 8, 0, Math.PI, 0); ctx.closePath(); ctx.fillStyle = 'rgba(160,255,190,0.45)'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = OL; ctx.stroke();
+    ctx.fillStyle = '#5ad04a'; ctx.beginPath(); ctx.arc(0, -6, 3.6, 0, 6.283); ctx.fill();
+    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(-1.4, -6.3, 1, 1.5, -0.4, 0, 6.283); ctx.ellipse(1.4, -6.3, 1, 1.5, 0.4, 0, 6.283); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.ellipse(-4, -8, 1.5, 2.5, -0.5, 0, 6.283); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0, 0, 20, 6, 0, 0, 6.283); ctx.fillStyle = bodyFill(-20, -6, 40, 12, P); ctx.fill(); ctx.lineWidth = 1.3; ctx.strokeStyle = OL; ctx.stroke();
+    ctx.fillStyle = P.dark; ctx.beginPath(); ctx.ellipse(0, 3.5, 10, 2.5, 0, 0, 6.283); ctx.fill();
+    for (let k = 0; k < 7; k++) { const a = k / 7 * 6.283 + t * 2, lx = Math.cos(a) * 16, on = Math.sin(a) > -0.2; if (!on) continue; const c = ['#ff4a4a', '#ffd84a', '#7dff3a', '#4ad0ff'][(k + Math.floor(t * 6)) % 4]; ctx.fillStyle = c; ctx.beginPath(); ctx.arc(lx, 1 + Math.sin(a) * 2, 1.4, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5; ctx.drawImage(soft(c), lx - 4, Math.sin(a) * 2 - 3, 8, 8); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+    return;
+  }
+  const B = BODY_BOX[type], ax = B[0] - 6;   // rotor arms reach past the body
+  // arms + the 2 side propellers
+  ctx.strokeStyle = P.dark; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(B[0] + 2, B[1] + 4); ctx.lineTo(ax, B[1] + 1); ctx.moveTo(B[0] + B[2] - 2, B[1] + 4); ctx.lineTo(-ax, B[1] + 1); ctx.stroke();
+  rotor(ax, B[1] + 1, t, P, 0); rotor(-ax, B[1] + 1, t, P, 1.3);
+  // under-parts (drawn first so the body covers their tops)
+  if (type === 'normal') drill(0, B[1] + B[3] - 1, 9 + act * 2, 4, t * (1 + act * 3), P);
+  if (type === 'bigdrill') { drill(0, B[1] + B[3] - 1, 12 + act * 2, 5.5, t * (1 + act * 3), P); drill(-9, B[1] + B[3] - 3, 7, 3, t * 2, P, 0.5); drill(9, B[1] + B[3] - 3, 7, 3, t * 2, P, -0.5); }
+  if (type === 'bomber') hangBomb(0, B[1] + B[3] + 3, 4.5, P, t, false);
+  if (type === 'drillbomber') hangBomb(0, B[1] + B[3] + 3, 4.5, P, t, true);
+  if (type === 'heavybomber') hangBomb(0, B[1] + B[3] + 5, 7, P, t, false);
+  if (type === 'heavy') { rr(-12, B[1] + B[3] - 2, 24, 6, 2); ctx.fillStyle = P.dark; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = OL; ctx.stroke(); ctx.fillStyle = P.light; for (const bx of [-8, 0, 8]) { ctx.beginPath(); ctx.arc(bx, B[1] + B[3] + 1, 1.1, 0, 6.283); ctx.fill(); } }
+  if (type === 'laser') { rr(-3, B[1] + B[3] - 2, 6, 7, 1.5); ctx.fillStyle = P.dark; ctx.fill(); ctx.lineWidth = 0.9; ctx.strokeStyle = OL; ctx.stroke();
+    ctx.fillStyle = P.accent; ctx.beginPath(); ctx.arc(0, B[1] + B[3] + 5.5, 2.4, 0, 6.283); ctx.fill();
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.4 + act * 0.6; ctx.drawImage(soft(P.accent), -7, B[1] + B[3] - 1, 14, 14); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+  // body
+  if (type === 'bomber' || type === 'drillbomber') { ctx.beginPath(); ctx.ellipse(0, -3, 11, 8.5, 0, 0, 6.283); }
+  else if (type === 'laser') { ctx.beginPath(); ctx.moveTo(-13, -3); ctx.quadraticCurveTo(-10, -10, 0, -10); ctx.quadraticCurveTo(10, -10, 13, -3); ctx.quadraticCurveTo(8, 3, 0, 3); ctx.quadraticCurveTo(-8, 3, -13, -3); ctx.closePath(); }
+  else rr(B[0], B[1], B[2], B[3], type === 'heavy' || type === 'heavybomber' ? 3 : 5);
+  ctx.fillStyle = bodyFill(B[0], B[1], B[2], B[3], P); ctx.fill();
+  ctx.lineWidth = 1.3; ctx.strokeStyle = OL; ctx.stroke();
+  ctx.save(); ctx.clip();
+  // details per type
+  if (type === 'heavy' || type === 'heavybomber') { ctx.fillStyle = rgba(P.accent, 0.85); for (let k = -3; k < 5; k++) { ctx.beginPath(); ctx.moveTo(k * 7, B[1] + B[3] - 5); ctx.lineTo(k * 7 + 4, B[1] + B[3] - 5); ctx.lineTo(k * 7 + 7, B[1] + B[3]); ctx.lineTo(k * 7 + 3, B[1] + B[3]); ctx.fill(); } }
+  if (P.fx === 'rust') { const R = seeded(d.id * 31 + 7); for (let k = 0; k < 5; k++) { ctx.fillStyle = rgba(k % 2 ? '#5a2a10' : '#c06a2a', 0.55); ctx.beginPath(); ctx.arc(B[0] + R() * B[2], B[1] + R() * B[3], 1 + R() * 2.2, 0, 6.283); ctx.fill(); } }
+  if (P.fx === 'chrome' || P.fx === 'gold') { const sx = ((t * 30) % 70) - 35; const g = ctx.createLinearGradient(sx - 6, 0, sx + 6, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, 'rgba(255,255,255,0.7)'); g.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = g; ctx.fillRect(B[0], B[1], B[2], B[3]); }
+  if (P.fx === 'stars') { const R = seeded(d.id * 17 + 3); for (let k = 0; k < 8; k++) { const tw = 0.4 + 0.6 * Math.abs(Math.sin(t * 2 + k)); ctx.fillStyle = rgba(k % 3 ? '#ffffff' : P.accent, tw); ctx.fillRect(B[0] + R() * B[2], B[1] + R() * B[3], 1, 1); } }
+  ctx.restore();
+  // face / sensor: a dark visor with a glowing eye
+  const ey = type === 'laser' ? -5 : B[1] + 5;
+  rr(-6, ey - 2.5, 12, 5, 2); ctx.fillStyle = 'rgba(8,10,16,0.9)'; ctx.fill();
+  const eyeX = Math.sin(t * 1.3 + d.id) * 3;
+  ctx.fillStyle = P.accent; ctx.beginPath(); ctx.arc(eyeX, ey, 1.5 + act * 0.6, 0, 6.283); ctx.fill();
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.6; ctx.drawImage(soft(P.accent), eyeX - 5, ey - 5, 10, 10); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  if (P.fx === 'neon' || P.fx === 'beam') { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.3 + 0.15 * Math.sin(t * 4); ctx.drawImage(soft(P.accent), B[0] - 8, B[1] - 8, B[2] + 16, B[3] + 16); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+  if (P.fx === 'gold' && Math.sin(t * 3 + d.id) > 0.6) { ctx.globalCompositeOperation = 'lighter'; star4(B[0] + B[2] * 0.75, B[1] + 3, 2.5, '#ffffff'); ctx.globalCompositeOperation = 'source-over'; }
+}
+// rank: little chevrons on the body, rank V also glows
+function rankMarks(d, t) {
+  if (d.rank <= 1 || d.type === 'alien') return;
+  const B = BODY_BOX[d.type], c = RANK_COL[d.rank];
+  ctx.strokeStyle = c; ctx.lineWidth = 1.1;
+  for (let k = 0; k < d.rank - 1; k++) { const x = B[0] + 3 + k * 3.2, y = B[1] + B[3] - 4; ctx.beginPath(); ctx.moveTo(x, y - 1.5); ctx.lineTo(x + 1.4, y); ctx.lineTo(x, y + 1.5); ctx.stroke(); }
+}
+function drawHat(d, t) {
+  if (!d.hat) return;
+  const B = BODY_BOX[d.type], top = B[1], cx = 0;
+  if (d.hat === 'helmet') {
+    ctx.beginPath(); ctx.arc(cx, top + 6, B[2] * 0.5 + 1, Math.PI, 0); ctx.closePath();
+    ctx.fillStyle = 'rgba(170,215,255,0.28)'; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(230,245,255,0.9)'; ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(cx, top + 6, B[2] * 0.5 - 2, Math.PI * 1.15, Math.PI * 1.45); ctx.stroke();
+    ctx.fillStyle = '#c8d0dc'; ctx.fillRect(-B[2] * 0.5 - 1, top + 5, B[2] + 2, 2);
+  } else if (d.hat === 'antenna') {
+    for (const sd of [-1, 1]) { const bx = sd * 4 + Math.sin(t * 3 + sd) * 1.2, by = top - 9; ctx.strokeStyle = '#3a8a2a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(sd * 3, top + 1); ctx.quadraticCurveTo(sd * 5, top - 4, bx, by); ctx.stroke(); ctx.fillStyle = '#7dff3a'; ctx.beginPath(); ctx.arc(bx, by, 1.8, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5; ctx.drawImage(soft('#7dff3a'), bx - 5, by - 5, 10, 10); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+  } else if (d.hat === 'rings') {
+    ctx.save(); ctx.rotate(-0.25); ctx.strokeStyle = '#e8c27a'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.ellipse(0, B[1] + B[3] / 2, B[2] * 0.75, 3, 0, 0, Math.PI); ctx.stroke(); ctx.strokeStyle = '#a8763a'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.ellipse(0, B[1] + B[3] / 2, B[2] * 0.68, 2.4, 0, 0, Math.PI); ctx.stroke(); ctx.restore();
+  } else if (d.hat === 'crown') {
+    ctx.beginPath(); ctx.moveTo(-6, top + 1); ctx.lineTo(-6, top - 4); ctx.lineTo(-3, top - 1.5); ctx.lineTo(0, top - 6); ctx.lineTo(3, top - 1.5); ctx.lineTo(6, top - 4); ctx.lineTo(6, top + 1); ctx.closePath();
+    ctx.fillStyle = '#ffc21a'; ctx.fill(); ctx.lineWidth = 0.9; ctx.strokeStyle = '#7a4a00'; ctx.stroke();
+    ctx.globalCompositeOperation = 'lighter'; star4(0, top - 6, 2 + Math.sin(t * 4), '#fff6c0'); ctx.globalCompositeOperation = 'source-over';
+  }
+}
+// one reusable little canvas per effect (pixel / glitch skins draw the drone into it first)
+const DSPR = {};
+function dspr(k, w, h) { let c = DSPR[k]; if (!c) c = DSPR[k] = document.createElement('canvas'); if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } return c; }
+function drawDrone(d, x, y, o) {
+  o = o || {};
+  const P = dronePal(d), t = o.t !== undefined ? o.t : G.time, act = o.act || 0, sc = o.scale || 1;
+  ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc); if (o.tilt) ctx.rotate(o.tilt);
+  if (d.rank >= 5 || d.type === 'alien') { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25 + 0.12 * Math.sin(t * 3); ctx.drawImage(soft(d.type === 'alien' ? '#7dff3a' : RANK_COL[5]), -30, -26, 60, 52); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+  const paint = () => { droneShape(d, P, t, act); rankMarks(d, t); drawHat(d, t); };
+  if (P.fx === 'pixel' || P.fx === 'glitch') {
+    // draw into a small canvas first. Pixel: a TINY canvas blown up without smoothing = chunky pixels.
+    const pix = P.fx === 'pixel', res = pix ? 0.55 : Math.min(4, Math.max(1, K * DPR * sc)), Wd = Math.ceil(64 * res), Hd = Math.ceil(56 * res);
+    const c = dspr(pix ? 'pix' : 'gl', Wd, Hd), cx2 = c.getContext('2d');
+    cx2.setTransform(1, 0, 0, 1, 0, 0); cx2.clearRect(0, 0, Wd, Hd); cx2.setTransform(res, 0, 0, res, Wd / 2, Hd / 2);
+    const keep = ctx; ctx = cx2; paint(); ctx = keep;
+    if (pix) { ctx.imageSmoothingEnabled = false; ctx.drawImage(c, -32, -28, 64, 56); ctx.imageSmoothingEnabled = true; }
+    else {   // GL1TCH: colour channels split apart, slices jump sideways, the whole thing flickers
+      const burst = Math.sin(t * 7.3 + d.id) > 0.55 || Math.random() < 0.06, sp = burst ? 2.5 : 0.9;
+      ctx.globalCompositeOperation = 'lighter';
+      for (const [dx, col] of [[-sp, '#ff00ff'], [sp, '#00ff66']]) { const tc = dspr('glt' + col, Wd, Hd), tx = tc.getContext('2d'); tx.globalCompositeOperation = 'copy'; tx.drawImage(c, 0, 0); tx.globalCompositeOperation = 'source-in'; tx.fillStyle = col; tx.fillRect(0, 0, Wd, Hd); ctx.globalAlpha = 0.55; ctx.drawImage(tc, -32 + dx, -28, 64, 56); }
+      ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+      if (burst) { for (let k = 0; k < 4; k++) { const sy = k * Hd / 4, off = (Math.random() - 0.5) * 8; ctx.drawImage(c, 0, sy, Wd, Hd / 4, -32 + off, -28 + k * 14, 64, 14); } }
+      else ctx.drawImage(c, -32, -28, 64, 56);
+      if (Math.random() < 0.3) { ctx.fillStyle = Math.random() < 0.5 ? '#00ff66' : '#ff00ff'; ctx.fillRect(rnd(-20, 16), rnd(-14, 12), rnd(3, 10), rnd(1, 2)); }
+      ctx.font = '900 5px monospace'; ctx.fillStyle = 'rgba(0,255,102,0.8)'; ctx.textAlign = 'center'; ctx.fillText(Math.random() < 0.5 ? '01' : '10', Math.sin(t * 3) * 14, -16 - (t * 10) % 8);
+    }
+  } else paint();
+  ctx.restore();
+}
+// world drawing: drones + their bombs, drills, lasers, alien beams, shock rings
+function drawDroneWorld() {
+  const b = BIOMES[G.biome];
+  // tagged rocks: the alien ship already knows what's inside
+  for (const r of G.rocks) if (r.alienGem >= 0 && r.state === 'rock') { const p = 0.5 + 0.5 * Math.sin(G.time * 4 + r.seed); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25 + 0.2 * p; ctx.drawImage(soft('#7dff3a'), r.x - 30, wy(r.y) - 30, 60, 60); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; drawGem(gemArt(b.name, r.alienGem), r.x + 15, wy(r.y) - 15, 11, { glow: '#7dff3a', alpha: 0.85 }); }
+  for (const g of G.rings) { const k = g.t / 0.45; ctx.globalAlpha = Math.max(0, 1 - k); ctx.strokeStyle = g.col; ctx.lineWidth = 3 * (1 - k) + 0.5; ctx.beginPath(); ctx.arc(g.x, wy(g.y), Math.max(1, g.r * ease(k)), 0, 6.283); ctx.stroke(); }
+  ctx.globalAlpha = 1;
+  for (const bo of G.dbombs) { const blink = Math.sin(bo.t * (8 + bo.t * 14)) > 0; hangBomb(bo.x, wy(bo.y), bo.big ? 6.5 : 4, { dark: '#222', accent: blink ? '#ff3030' : bo.col }, G.time, bo.drills); }
+  for (const p of G.dproj) drill(p.x, wy(p.y), 9, 3, p.spin, null, Math.atan2(-p.dy, p.dx) - Math.PI / 2);
+  for (const d of deployed()) {
+    const s = DRT.get(d.id); if (!s) continue;
+    const x = s.x, y = wy(s.y) + Math.sin(s.t * 3 + s.spin) * 1.5, P = dronePal(d);
+    if (d.type === 'laser' && (s.state === 'charge' || s.state === 'fire')) {
+      const a = s.ang, R = d.rank;
+      if (s.state === 'charge') { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = s.act; ctx.drawImage(soft(P.accent), x - 14, y - 2, 28, 28); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+      else if (s.ends) {
+        ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+        for (const e of s.ends) {
+          const sx = e.ox, sy = wy(e.oy), ex = sx + Math.cos(a) * e.len, ey = sy - Math.sin(a) * e.len, fl = 0.8 + Math.random() * 0.4;
+          for (const [w, al, c] of [[(10 + R * 5) * fl, 0.25, P.accent], [(4 + R * 2) * fl, 0.6, P.accent], [1.5 + R * 0.6, 1, '#ffffff']]) { ctx.globalAlpha = al; ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke(); }
+          ctx.globalAlpha = 0.9; ctx.drawImage(soft(P.accent), ex - 14, ey - 14, 28, 28); ctx.drawImage(soft('#ffffff'), ex - 6, ey - 6, 12, 12);
+        }
+        ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+      }
+    }
+    if (d.type === 'alien' && s.state === 'beam' && s.target) {
+      const r = s.target, top = y + 6, bot = wy(r.y) + 18, pulse = 0.5 + 0.5 * Math.sin(G.time * 8);
+      ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createLinearGradient(0, top, 0, bot); g.addColorStop(0, 'rgba(125,255,58,0.55)'); g.addColorStop(1, 'rgba(125,255,58,0.12)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 7, top); ctx.lineTo(x + 7, top); ctx.lineTo(r.x + 26, bot); ctx.lineTo(r.x - 26, bot); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(200,255,160,0.6)'; ctx.lineWidth = 1;
+      for (let k = 0; k < 4; k++) { const f = ((G.time * 0.8 + k / 4) % 1), yy = bot + (top - bot) * f, hw = 26 + (7 - 26) * f; ctx.globalAlpha = 1 - f; ctx.beginPath(); ctx.ellipse(r.x + (x - r.x) * f, yy, hw, 2.5, 0, 0, 6.283); ctx.stroke(); }
+      ctx.globalAlpha = 1;
+      if (s.beamT < 0.9) { const sy = wy(r.y) - 24 + (s.beamT / 0.9) * 48; ctx.fillStyle = 'rgba(125,255,58,' + (0.5 + pulse * 0.4) + ')'; ctx.fillRect(r.x - 26, sy - 1, 52, 2); ctx.drawImage(soft('#7dff3a'), r.x - 30, sy - 6, 60, 12); }
+      ctx.globalCompositeOperation = 'source-over';
+      if (s.gem !== undefined) { const f = clamp((s.beamT - 0.9) / 1.7, 0, 1), gx2 = r.x + (x - r.x) * ease(f), gy2 = wy(r.y) + (top - wy(r.y)) * ease(f); drawGem(gemArt(b.name, s.gem), gx2 + Math.sin(G.time * 6) * 2, gy2, 16 * (1 - f * 0.5), { glow: RCOL[b.minerals[s.gem][2]], rot: G.time * 3 }); if (f < 0.3) txt(b.minerals[s.gem] ? gemArt(b.name, s.gem).name : '', r.x, wy(r.y) + 30, 7, '#c8ff9a', { stroke: 2 }); }
+    }
+    if (gx('shadows')) { ctx.globalAlpha = 0.25; ctx.drawImage(soft('#000000'), x - 12, y + 22, 24, 6); ctx.globalAlpha = 1; }
+    drawDrone(d, x, y, { tilt: s.tilt, act: Math.max(s.act, s.hitT > 0 ? 1 : 0), t: s.t });
+  }
+}
+
+// ====================================================================
+//  DRONE MENU: slots + your drones + merging, and the Drone Shop
+// ====================================================================
+function cardDrone(d, x, y, w, h, id, opts) {
+  opts = opts || {};
+  const sel = G.droneSel === d.id, merging = G.mergeSel !== null && G.mergeSel !== undefined, A = merging && droneById(G.mergeSel);
+  const canM = A && A !== d && !!mergeResult(A, d);
+  region(id, x, y, w, h, () => clickDrone(d));
+  ctx.fillStyle = canM ? 'rgba(125,255,122,0.18)' : sel ? 'rgba(120,170,255,0.22)' : UI.hot === id ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)';
+  rr(x, y, w, h, 10); ctx.fill();
+  ctx.lineWidth = sel || canM ? 2 : 1; ctx.strokeStyle = canM ? '#7dff7a' : sel ? '#8fb0ff' : rgba(RANK_COL[d.rank], 0.5); ctx.stroke();
+  ctx.save(); if (merging && !canM && A !== d) ctx.globalAlpha *= 0.35;
+  drawDrone(d, x + w / 2, y + h * 0.42, { scale: Math.min(w, h) / 38, t: G.time + d.id });
+  txt(DRONE_TYPES[d.type].name, x + w / 2, y + h - 18, fitSize(DRONE_TYPES[d.type].name, 11, w - 8, FB), '#ffffff', { font: FB, weight: 900, shadow: false });
+  txt(d.type === 'alien' ? 'Rank ' + RANK_NAMES[d.rank] : 'Rank ' + RANK_NAMES[d.rank], x + w / 2, y + h - 7, 9, RANK_COL[d.rank], { font: FB, weight: 900, shadow: false });
+  ctx.restore();
+}
+function clickDrone(d) {
+  AUDIO.sfx('click');
+  if (G.mergeSel !== null && G.mergeSel !== undefined) {
+    const A = droneById(G.mergeSel);
+    if (A && A !== d) { if (mergeResult(A, d)) doMerge(A, d); else { toast(mergeWhy(A, d), '#ff8a8a'); AUDIO.sfx('deny'); } return; }
+    G.mergeSel = null; return;
+  }
+  G.droneSel = G.droneSel === d.id ? null : d.id;
+}
+function renderDrones() {
+  const w = 860, h = 640;
+  const f = modalFrame('drones', w, h); if (!f) return;
+  panel(0, 0, w, h, 'DRONES', '#2a8aa8');
+  closeBtn(w - 46, 12);
+  if (G.droneTab === undefined) G.droneTab = 0;
+  ['My Drones', 'Drone Shop'].forEach((n, i) => btn('dtab' + i, 30 + i * 200, 28, 190, 34, n, { col: G.droneTab === i ? '#2a8aa8' : '#343c50', size: 16, r: 9, icon: i ? 'shop' : 'drone', fn: () => { G.droneTab = i; G.mergeSel = null; AUDIO.sfx('click'); } }));
+  if (G.droneTab === 1) { renderDroneShop(w, h); return; }
+  // --- the 10 slots ---
+  txt('SLOTS  (' + droneSlotsUsed() + ' / ' + G.slotsOpen + ' in use)', 30, 80, 13, '#9ad8ff', { align: 'left', font: FB, weight: 900 });
+  for (let k = 0; k < 10; k++) {
+    const x = 26 + k * 82, y = 92, sw = 76, sh = 92;
+    if (k >= G.slotsOpen) {   // locked: dark, with a darker X
+      ctx.fillStyle = 'rgba(0,0,0,0.55)'; rr(x, y, sw, sh, 10); ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.stroke();
+      ctx.strokeStyle = '#08080c'; ctx.lineWidth = 7; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x + 20, y + 20); ctx.lineTo(x + sw - 20, y + sh - 34); ctx.moveTo(x + sw - 20, y + 20); ctx.lineTo(x + 20, y + sh - 34); ctx.stroke();
+      ctx.strokeStyle = '#1a1a22'; ctx.lineWidth = 3; ctx.stroke(); ctx.lineCap = 'butt';
+      if (k === G.slotsOpen) btn('slotbuy', x + 3, y + sh - 28, sw - 6, 24, fmt(SLOT_PRICES[k]), { col: G.creditz >= SLOT_PRICES[k] ? '#3aa04a' : '#5a3a3a', size: 12, r: 7, fn: buySlot });
+      continue;
+    }
+    const d = G.slots[k] && droneById(G.slots[k]);
+    if (d) { cardDrone(d, x, y, sw, sh, 'slot' + k); continue; }
+    const sel = G.droneSel && droneById(G.droneSel);
+    region('slot' + k, x, y, sw, sh, () => { if (sel && slotOf(sel) < 0) { G.slots[k] = sel.id; AUDIO.sfx('buy'); save(); } else AUDIO.sfx('click'); });
+    ctx.fillStyle = UI.hot === 'slot' + k ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.04)'; rr(x, y, sw, sh, 10); ctx.fill();
+    ctx.setLineDash([5, 4]); ctx.lineWidth = 1.5; ctx.strokeStyle = sel && slotOf(sel) < 0 ? '#7dff7a' : 'rgba(255,255,255,0.2)'; ctx.stroke(); ctx.setLineDash([]);
+    txt('+', x + sw / 2, y + sh / 2 - 6, 26, 'rgba(255,255,255,0.3)');
+    txt(sel && slotOf(sel) < 0 ? 'Put here' : 'Empty', x + sw / 2, y + sh - 14, 10, '#8a90a0', { font: FB, weight: 900, shadow: false });
+  }
+  // --- your drones (not in a slot) ---
+  const inv = G.drones.filter(d => slotOf(d) < 0 || slotOf(d) >= G.slotsOpen).sort((a, c) => c.rank - a.rank || a.type.localeCompare(c.type));
+  const per = 16, pages = Math.max(1, Math.ceil(inv.length / per)); G.dronePage = clamp(G.dronePage || 0, 0, pages - 1);
+  txt('YOUR DRONES  (' + inv.length + ')', 30, 204, 13, '#9ad8ff', { align: 'left', font: FB, weight: 900 });
+  if (pages > 1) {
+    btn('dpgL', w - 150, 192, 40, 24, '<', { col: '#343c50', size: 14, r: 7, fn: () => { G.dronePage = Math.max(0, G.dronePage - 1); AUDIO.sfx('click'); } });
+    txt((G.dronePage + 1) + '/' + pages, w - 85, 204, 12, '#c9cfdc', { font: FB, weight: 900 });
+    btn('dpgR', w - 64, 192, 40, 24, '>', { col: '#343c50', size: 14, r: 7, fn: () => { G.dronePage = Math.min(pages - 1, G.dronePage + 1); AUDIO.sfx('click'); } });
+  }
+  if (!inv.length) txt(G.drones.length ? 'All your drones are working in slots!' : 'No drones yet. Buy a crate in the Drone Shop!', w / 2, 290, 15, '#8a90a0', { font: FB, weight: 800 });
+  inv.slice(G.dronePage * per, G.dronePage * per + per).forEach((d, i) => cardDrone(d, 26 + (i % 8) * 102, 218 + Math.floor(i / 8) * 94, 96, 88, 'inv' + d.id));
+  // --- selected drone ---
+  const y0 = 412;
+  ctx.fillStyle = 'rgba(255,255,255,0.04)'; rr(20, y0, w - 40, h - y0 - 18, 12); ctx.fill();
+  const d = G.droneSel && droneById(G.droneSel);
+  if (G.mergeSel !== null && G.mergeSel !== undefined) {
+    const A = droneById(G.mergeSel);
+    txt('MERGE: pick another drone for your ' + (A ? droneName(A) : ''), w / 2, y0 + 30, 16, '#7dff7a');
+    txt('Same type + same rank = next rank.   Drone + Bomblayer = Drillbomber,  Drone + Heavy = Big Drill,  Heavy + Bomblayer = Heavy Bomber', w / 2, y0 + 58, fitSize('Same type + same rank = next rank.   Drone + Bomblayer = Drillbomber,  Drone + Heavy = Big Drill,  Heavy + Bomblayer = Heavy Bomber', 12, w - 80, FB), '#c9cfdc', { font: FB, weight: 800 });
+    txt('Glowing green = can merge.  Laser + Laser and Alien + Alien only.', w / 2, y0 + 80, 12, '#9aa0aa', { font: FB, weight: 800 });
+    btn('mcancel', w / 2 - 70, y0 + 110, 140, 34, 'Cancel', { col: '#7a4040', size: 16, fn: () => { G.mergeSel = null; AUDIO.sfx('click'); } });
+    return;
+  }
+  if (!d) { txt('Tap a drone to see it, merge it or give it a skin', w / 2, y0 + 100, 15, '#8a90a0', { font: FB, weight: 800 }); return; }
+  ctx.fillStyle = rgba(RANK_COL[d.rank], 0.12); rr(32, y0 + 12, 170, 186, 12); ctx.fill();
+  drawDrone(d, 117, y0 + 96, { scale: 3.6, t: G.time });
+  txt(droneName(d), 222, y0 + 26, fitSize(droneName(d), 22, 300), RANK_COL[d.rank], { align: 'left', stroke: 3 });
+  txt(DRONE_TYPES[d.type].desc, 222, y0 + 52, fitSize(DRONE_TYPES[d.type].desc, 12, 330, FB), '#c9cfdc', { align: 'left', font: FB, weight: 800 });
+  const stats = d.type === 'alien' ? 'Every ' + Math.round(droneCd(d)) + 's   Takes up to: ' + (d.rank >= 5 ? 'any mineral' : 'the ' + (d.rank + 1) + ' cheapest of a biome')
+    : 'Every ' + droneCd(d).toFixed(1) + 's   ' + RK.dmg[d.rank] + ' crack' + (RK.dmg[d.rank] > 1 ? 's' : '') + ' per hit   Speed x' + RK.spd[d.rank] + (d.type === 'laser' ? '   ' + laserLanes(d.rank).length + ' beam' + (laserLanes(d.rank).length > 1 ? 's' : '') : '');
+  txt(stats, 222, y0 + 74, fitSize(stats, 12, 330, FB), '#ffd84a', { align: 'left', font: FB, weight: 900 });
+  txt(['', 'Brain: picks random rocks', 'Brain: never goes to the same rock as another drone', 'Brain: finishes cracked rocks first, loves golden rocks + chests', 'Brain: picks the best nearby spot', 'Brain: picks the best spot on the whole wall'][d.rank], 222, y0 + 94, 11, '#9ad8ff', { align: 'left', font: FB, weight: 800 });
+  const k = slotOf(d), inSlot = k >= 0 && k < G.slotsOpen;
+  btn('dslot', 222, y0 + 112, 150, 34, inSlot ? 'Take out' : 'Put in slot', { col: inSlot ? '#6a5a3a' : '#3a7a9a', size: 15, fn: () => {
+    AUDIO.sfx('click');
+    if (inSlot) { G.slots[k] = null; DRT.delete(d.id); }
+    else { let e = -1; for (let q = 0; q < G.slotsOpen; q++) if (!G.slots[q] || !droneById(G.slots[q])) { e = q; break; } if (e < 0) { toast('All your slots are full', '#ff8a8a'); AUDIO.sfx('deny'); return; } G.slots[e] = d.id; }
+    save(); } });
+  btn('dmerge', 382, y0 + 112, 150, 34, 'Merge...', { col: '#3a8a4a', size: 15, fn: () => { G.mergeSel = d.id; AUDIO.sfx('click'); } });
+  // skins + hats you own: tap one to put it on (one owned copy = one drone at a time)
+  const ownS = Object.keys(SKINS).filter(id => G.skins[id] > 0), ownH = Object.keys(HATS).filter(id => G.hats[id] > 0);
+  txt('SKIN', 560, y0 + 26, 12, '#c9cfdc', { align: 'left', font: FB, weight: 900 });
+  const chip = (id, label, x, y, on, ok, col, fn) => { btn(id, x, y, 92, 24, label, { col: on ? '#3aa04a' : ok ? col : '#2a2e38', size: 11, r: 7, fn: () => { if (!on && !ok) { toast('That one is on another drone already', '#ff8a8a'); AUDIO.sfx('deny'); return; } fn(); AUDIO.sfx('click'); save(); } }); };
+  chip('skn_none', 'None', 560, y0 + 36, !d.skin, true, '#4a5470', () => { d.skin = null; });
+  ownS.forEach((id, i) => { const n = i + 1; chip('skn_' + id, SKINS[id].name, 560 + (n % 3) * 96, y0 + 36 + Math.floor(n / 3) * 28, d.skin === id, skinFree(id) > 0, '#4a5470', () => { d.skin = id; }); });
+  const hy = y0 + 36 + Math.ceil((ownS.length + 1) / 3) * 28 + 10;
+  if (ownH.length) {
+    txt('HAT', 560, hy, 12, '#c9cfdc', { align: 'left', font: FB, weight: 900 });
+    chip('hat_none', 'None', 560, hy + 10, !d.hat, true, '#5a4a70', () => { d.hat = null; });
+    ownH.forEach((id, i) => { const n = i + 1; chip('hat_' + id, HATS[id].name, 560 + (n % 3) * 96, hy + 10 + Math.floor(n / 3) * 28, d.hat === id, hatFree(id) > 0, '#5a4a70', () => { d.hat = id; }); });
+  } else if (!ownS.length) txt('Get skins from the Skin Crate or the Alien Pass', 560, y0 + 76, 11, '#8a90a0', { align: 'left', font: FB, weight: 800 });
+}
+function drawCrate(x, y, s, col, t, shake) {
+  ctx.save(); ctx.translate(x + (shake ? (Math.random() - 0.5) * shake : 0), y); ctx.scale(s, s);
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35 + 0.15 * Math.sin(t * 3); ctx.drawImage(soft(col), -30, -30, 60, 60); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  rr(-16, -13, 32, 28, 3); const g = ctx.createLinearGradient(0, -13, 0, 15); g.addColorStop(0, lighten(col, 0.25)); g.addColorStop(1, darken(col, 0.45)); ctx.fillStyle = g; ctx.fill();
+  ctx.lineWidth = 1.6; ctx.strokeStyle = '#0b0c12'; ctx.stroke();
+  ctx.fillStyle = darken(col, 0.55); ctx.fillRect(-16, -5, 32, 3); ctx.fillRect(-16, 5, 32, 3);
+  rr(-4, -15, 8, 30, 1.5); ctx.fillStyle = '#c8d0dc'; ctx.fill(); ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = '#ffd84a'; rr(-3, -3, 6, 6, 1); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+function renderDroneShop(w, h) {
+  CRATE_ORDER.forEach((k, i) => {
+    const C = CRATES[k], x = 26 + (i % 3) * 272, y = 78 + Math.floor(i / 3) * 272, cw = 262, ch = 262, have = G.crates[k] || 0;
+    ctx.fillStyle = rgba(C.col, 0.08); rr(x, y, cw, ch, 14); ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = rgba(C.col, 0.5); ctx.stroke();
+    drawCrate(x + cw / 2, y + 62, 2, C.col, G.time + i);
+    txt(C.name, x + cw / 2, y + 116, fitSize(C.name, 19, cw - 20), C.col, { stroke: 3 });
+    let lines;
+    if (k === 'skin') lines = Object.entries(C.skins).map(([s, v]) => SKINS[s].name + ' ' + v + '%');
+    else { const tot = Object.values(C.odds).reduce((a, b) => a + b, 0); lines = Object.entries(C.odds).map(([tp, v]) => DRONE_TYPES[tp].name + ' ' + Math.round(v / tot * 100) + '%'); lines.push('Rank: ' + C.ranks.map((v, r) => v ? RANK_NAMES[r + 1] + ' ' + v + '%' : '').filter(Boolean).join('  ')); }
+    lines.forEach((l, j) => txt(l, x + cw / 2, y + 140 + j * 16, fitSize(l, 12, cw - 24, FB), l.startsWith('Laser') ? '#ff6a7a' : l.startsWith('Golden') ? '#ffd84a' : '#c9cfdc', { font: FB, weight: 800, shadow: false }));
+    btn('crate_' + k, x + 36, y + ch - 44, cw - 72, 34, have ? 'Open free (' + have + ')' : fmt(C.price), { col: have ? '#7a3aa8' : G.creditz >= C.price ? '#3aa04a' : '#6a3a3a', size: 17, fn: () => buyCrate(k) });
+  });
+}
+// big pop-ups: opening a crate, and merging two drones
+function renderDroneFx() {
+  const F = G.crateFx || G.mergeFx; if (!F) return;
+  setScreen();
+  const t = F.t, cx = W / 2, cy = H / 2 - 10, s = Math.min(1.4, W / 520, H / 520);
+  ctx.fillStyle = 'rgba(3,4,8,' + Math.min(0.8, t * 2) + ')'; ctx.fillRect(0, 0, W, H);
+  region('dfx', 0, 0, W, H, () => { if (F.t > 1.5) { G.crateFx = null; G.mergeFx = null; AUDIO.sfx('click'); } });
+  const T0 = G.crateFx ? 1.1 : 0.9;
+  if (t < T0) {
+    if (G.crateFx) drawCrate(cx, cy, 3 * s * (1 + t * 0.2), CRATES[F.kind].col, G.time, t * 14);
+    else { const k = ease(t / T0), off = (1 - k) * 120 * s; drawDrone(F.a, cx - off, cy, { scale: 3 * s }); drawDrone(F.b, cx + off, cy, { scale: 3 * s }); }
+    return;
+  }
+  const k = t - T0;
+  const item = G.crateFx ? F.item : { drone: F.d };
+  const col = item.drone ? RANK_COL[item.drone.rank] : RCOL[SKINS[item.skin].rar] || '#ffffff';
+  // light rays turning behind the prize
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(G.time * 0.5); ctx.globalCompositeOperation = 'lighter';
+  for (let r = 0; r < 12; r++) { ctx.rotate(Math.PI / 6); ctx.globalAlpha = 0.12; ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-30 * s, -260 * s); ctx.lineTo(30 * s, -260 * s); ctx.closePath(); ctx.fill(); }
+  ctx.globalAlpha = 1; ctx.drawImage(soft(col), -120 * s, -120 * s, 240 * s, 240 * s); ctx.restore();
+  if (k < 0.15) { ctx.fillStyle = 'rgba(255,255,255,' + (1 - k / 0.15) + ')'; ctx.fillRect(0, 0, W, H); }
+  const pop = easeBack(Math.min(1, k / 0.35));
+  const show = item.drone || { id: 1, type: 'normal', rank: 1, skin: item.skin, hat: null };
+  drawDrone(show, cx, cy, { scale: 4 * s * pop });
+  const title = item.drone ? droneName(item.drone) : SKINS[item.skin].name + ' skin', sub = item.drone ? (G.mergeFx ? 'MERGED!' : 'NEW DRONE!') : SKINS[item.skin].rar.toUpperCase() + ' SKIN';
+  txt(sub, cx, cy - 110 * s, 22 * s, '#ffffff', { stroke: 4 });
+  txt(title, cx, cy + 100 * s, fitSize(title, 34 * s, W - 40), col, { stroke: 5 });
+  if (item.drone) txt(DRONE_TYPES[item.drone.type].desc, cx, cy + 132 * s, fitSize(DRONE_TYPES[item.drone.type].desc, 14, W - 40, FB), '#c9cfdc', { font: FB, weight: 800 });
+  if (t > 1.5) txt(G.touch ? 'Tap to continue' : 'Click to continue', cx, H - 40, 14, 'rgba(255,255,255,' + (0.5 + 0.4 * Math.sin(G.time * 4)) + ')', { font: FB, weight: 900 });
+}
+
+// ====================================================================
+//  ALIEN PASS menu + the XP bar above the dock
+// ====================================================================
+function renderPassBar() {
+  const P = G.pass; if (!P) return;
+  const pw = Math.min(320, Math.max(150, W - 250)), px = W / 2 - pw / 2, py = H - 90;
+  region('passbar', px, py - 3, pw, 18, () => { AUDIO.sfx('click'); G.passPage = Math.min(4, Math.floor(P.lvl / 10)); openMenu('pass'); });
+  ctx.fillStyle = UI.hot === 'passbar' ? 'rgba(20,40,20,0.9)' : 'rgba(8,14,10,0.8)'; rr(px, py, pw, 12, 6); ctx.fill();
+  const need = xpNeed(P.lvl + 1), f = P.lvl >= PASS_MAX ? 1 : clamp(P.xp / need, 0, 1);
+  const g = ctx.createLinearGradient(px, 0, px + pw, 0); g.addColorStop(0, '#3a9a1a'); g.addColorStop(1, '#9aff4a'); ctx.fillStyle = g; rr(px, py, Math.max(12, pw * f), 12, 6); ctx.fill();
+  ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(125,255,58,0.6)'; rr(px, py, pw, 12, 6); ctx.stroke();
+  const lab = 'ALIEN PASS  Lv ' + P.lvl + (P.lvl >= PASS_MAX ? '  MAX' : '   ' + Math.floor(P.xp) + ' / ' + need + ' XP');
+  txt(lab, W / 2, py + 6.5, fitSize(lab, 9, pw - 10, FB), '#ffffff', { font: FB, weight: 900, stroke: 2.5, shadow: false });
+}
+function rewardIcon(r, x, y, s) {
+  if (!r) return;
+  switch (r[0]) {
+    case 'cred': drawIcon('gem', x, y - 4, 26 * s, '#ffffff'); txt(fmt(r[1]), x, y + 18 * s, 11 * s, '#ffe27a', { stroke: 2.5 }); break;
+    case 'crate': drawCrate(x, y, 0.9 * s, CRATES[r[1]].col, G.time); break;
+    case 'skin': drawDrone({ id: 3, type: 'normal', rank: 1, skin: r[1], hat: null }, x, y, { scale: 1.3 * s }); break;
+    case 'hat': drawDrone({ id: 4, type: 'normal', rank: 1, skin: null, hat: r[1] }, x, y + 3, { scale: 1.3 * s }); break;
+    case 'drone': drawDrone({ id: 5, type: 'alien', rank: r[2], skin: null, hat: null }, x, y, { scale: 1.1 * s }); break;
+  }
+}
+function renderPass() {
+  const w = 880, h = 470;
+  const f = modalFrame('pass', w, h); if (!f) return;
+  panel(0, 0, w, h, 'ALIEN PASS', '#5ad02a');
+  closeBtn(w - 46, 12);
+  const P = G.pass, need = xpNeed(P.lvl + 1);
+  // a few alien stars + a UFO in the corner, for the theme
+  for (let k = 0; k < 18; k++) { ctx.fillStyle = 'rgba(180,255,150,' + (0.2 + 0.2 * Math.sin(G.time * 2 + k)) + ')'; ctx.fillRect((k * 137) % (w - 40) + 20, (k * 71) % 60 + 40, 2, 2); }
+  drawDrone({ id: 9, type: 'alien', rank: 5, skin: null, hat: null }, 70, 58 + Math.sin(G.time * 2) * 4, { scale: 1.4 });
+  txt('Level ' + P.lvl + ' / ' + PASS_MAX, w / 2, 48, 22, '#9aff4a', { stroke: 3 });
+  const bw = 420, bx = w / 2 - bw / 2;
+  ctx.fillStyle = 'rgba(0,0,0,0.5)'; rr(bx, 66, bw, 16, 8); ctx.fill();
+  ctx.fillStyle = '#7dff3a'; rr(bx, 66, Math.max(16, bw * (P.lvl >= PASS_MAX ? 1 : clamp(P.xp / need, 0, 1))), 16, 8); ctx.fill();
+  txt(P.lvl >= PASS_MAX ? 'COMPLETE!' : Math.floor(P.xp) + ' / ' + need + ' XP', w / 2, 74.5, 11, '#0b1a08', { font: FB, weight: 900, shadow: false });
+  // 10 levels per page
+  G.passPage = clamp(G.passPage || 0, 0, 4);
+  const p0 = G.passPage * 10;
+  btn('ppL', 16, 216, 34, 60, '<', { col: G.passPage ? '#3a6a2a' : '#2a2e38', size: 20, r: 9, fn: () => { G.passPage = Math.max(0, G.passPage - 1); AUDIO.sfx('click'); } });
+  btn('ppR', w - 50, 216, 34, 60, '>', { col: G.passPage < 4 ? '#3a6a2a' : '#2a2e38', size: 20, r: 9, fn: () => { G.passPage = Math.min(4, G.passPage + 1); AUDIO.sfx('click'); } });
+  const nx = k => 96 + k * 76;
+  ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.beginPath(); ctx.moveTo(nx(0), 300); ctx.lineTo(nx(9), 300); ctx.stroke();
+  const doneTo = clamp(P.lvl - p0, 0, 10); if (doneTo > 0) { ctx.strokeStyle = '#7dff3a'; ctx.beginPath(); ctx.moveTo(nx(0), 300); ctx.lineTo(nx(Math.min(9, doneTo - 1)), 300); ctx.stroke(); }
+  for (let k = 0; k < 10; k++) {
+    const l = p0 + k + 1, r = PASS[l], got = P.lvl >= l, next = P.lvl + 1 === l, x = nx(k);
+    if (r) {
+      ctx.fillStyle = got ? 'rgba(125,255,58,0.12)' : 'rgba(255,255,255,0.05)'; rr(x - 34, 120, 68, 150, 10); ctx.fill();
+      ctx.lineWidth = 1; ctx.strokeStyle = r[0] === 'drone' ? '#7dff3a' : got ? 'rgba(125,255,58,0.5)' : 'rgba(255,255,255,0.12)'; ctx.stroke();
+      ctx.save(); if (!got) ctx.globalAlpha = 0.75; rewardIcon(r, x, 178, 1); ctx.restore();
+      const lab = passRewardText(r); txt(lab, x, 246, fitSize(lab, 10, 64, FB), got ? '#c8ff9a' : '#c9cfdc', { font: FB, weight: 900, shadow: false });
+      if (got) drawIcon('check', x + 24, 130, 16, '#7dff7a');
+    }
+    const R0 = next ? 13 + Math.sin(G.time * 5) * 1.5 : 11;
+    ctx.fillStyle = got ? '#7dff3a' : next ? '#ffd84a' : '#2a2e38'; ctx.beginPath(); ctx.arc(x, 300, R0, 0, 6.283); ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = '#0b0c12'; ctx.stroke();
+    txt(String(l), x, 300.5, 11, got ? '#0b1a08' : '#ffffff', { font: FB, weight: 900, shadow: false });
+  }
+  txt('Earn XP:  break rocks +1  -  quests give a LOT (each one different)  -  playing +1 every 10s', w / 2, 352, fitSize('Earn XP:  break rocks +1  -  quests give a LOT (each one different)  -  playing +1 every 10s', 13, w - 60, FB), '#c9cfdc', { font: FB, weight: 800 });
+  txt('Level 25: Alien Ship I   -   Level 50: Alien Ship V', w / 2, 378, 14, '#9aff4a', { font: FB, weight: 900 });
+  for (let k = 0; k < 5; k++) btn('ppg' + k, w / 2 - 125 + k * 52, 400, 46, 30, (k * 10 + 1) + '-' + (k * 10 + 10), { col: G.passPage === k ? '#5ad02a' : '#343c50', size: 11, r: 8, fn: () => { G.passPage = k; AUDIO.sfx('click'); } });
 }
 
 // ====================================================================
@@ -3055,13 +3989,13 @@ window.addEventListener('orientationchange', () => setTimeout(resize, 200));
 if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
 cv.addEventListener('contextmenu', e => e.preventDefault());
 window.addEventListener('keydown', e => {
+  if (e.target && e.target.tagName === 'INPUT') return;
   AUDIO.init();
   if (e.code === 'Space') { G.keys.Space = true; e.preventDefault(); }
-  if (e.code === 'Escape') { G.menu = null; G.bombArm = false; if (G.victory) G.victory = 0; }
+  if (e.code === 'Escape') { G.menu = null; G.bombArm = false; G.mergeSel = null; if (G.crateFx && G.crateFx.t > 1.5) G.crateFx = null; if (G.mergeFx && G.mergeFx.t > 1.5) G.mergeFx = null; if (G.victory) G.victory = 0; }
   if (e.code === 'KeyM') { G.settings.vol = G.settings.vol === 3 ? 0 : 3; AUDIO.applyVolume(); save(); }
-  if (e.code === 'KeyH' && G.scene === 'play' && !e.repeat) { giveCreditz(1e29); toast('+100 Oc Creditz (test key H)', '#ffd84a'); }   // TEMP test key
   if (G.scene === 'play' && !e.repeat) {
-    const m = { KeyB: 'biomes', KeyS: 'shop', KeyR: 'rebirth', KeyK: 'book' }[e.code];
+    const m = { KeyB: 'biomes', KeyS: 'shop', KeyR: 'rebirth', KeyK: 'book', KeyD: 'drones', KeyP: 'pass' }[e.code];
     if (m) { AUDIO.sfx('click'); openMenu(m); }
   }
 });
