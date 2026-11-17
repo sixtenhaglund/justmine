@@ -1774,10 +1774,48 @@ function drawFog(bi, alpha, speed, y, scale) {
   ctx.globalAlpha = 1;
 }
 // light shafts + dust in the light + fog along the floor (behind the rocks)
+const CLOCK_GEARS = [   // x, y (0..1 of the screen), radius (of screen height), teeth, speed, depth
+  [0.06, 0.25, 0.30, 16, 0.10, 0.5], [0.24, 0.02, 0.16, 10, -0.16, 0.5], [0.95, 0.72, 0.34, 18, -0.09, 0.5], [0.80, 0.98, 0.18, 10, 0.17, 0.5],
+  [0.88, 0.12, 0.20, 12, 0.13, 0.8], [0.12, 0.90, 0.22, 12, -0.12, 0.8], [0.50, -0.05, 0.12, 8, 0.2, 0.8],
+];
+function gearPath(x, y, r, teeth, ang) {
+  ctx.beginPath();
+  for (let k = 0; k < teeth; k++) {
+    const a = ang + k / teeth * 6.283, w = Math.PI / teeth * 0.55;
+    ctx.lineTo(x + Math.cos(a - w * 1.3) * r * 0.84, y + Math.sin(a - w * 1.3) * r * 0.84);
+    ctx.lineTo(x + Math.cos(a - w) * r, y + Math.sin(a - w) * r);
+    ctx.lineTo(x + Math.cos(a + w) * r, y + Math.sin(a + w) * r);
+    ctx.lineTo(x + Math.cos(a + w * 1.3) * r * 0.84, y + Math.sin(a + w * 1.3) * r * 0.84);
+  }
+  ctx.closePath();
+}
+function drawClockworkBack(shx) {
+  for (const [gx0, gy0, gr0, teeth, spd, depth] of CLOCK_GEARS) {
+    const x = gx0 * W + shx * 0.2 * depth + PAR.x * depth * 0.6, y = gy0 * H + PAR.y * depth * 0.6, r = gr0 * H, a = G.time * spd;
+    const g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
+    g.addColorStop(0, depth > 0.6 ? 'rgba(150,110,50,0.5)' : 'rgba(110,80,36,0.35)'); g.addColorStop(1, depth > 0.6 ? 'rgba(70,46,18,0.5)' : 'rgba(50,32,12,0.35)');
+    gearPath(x, y, r, teeth, a); ctx.fillStyle = g; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(232,192,112,' + (depth > 0.6 ? 0.28 : 0.16) + ')'; ctx.stroke();
+    // spokes cut out of the gear (holes show the dark behind)
+    ctx.save(); ctx.globalCompositeOperation = 'destination-out'; ctx.globalAlpha = 0.85;
+    for (let k = 0; k < 5; k++) { const sa = a + k / 5 * 6.283 + 0.6; ctx.beginPath(); ctx.moveTo(x + Math.cos(sa - 0.42) * r * 0.3, y + Math.sin(sa - 0.42) * r * 0.3); ctx.arc(x, y, r * 0.66, sa - 0.42, sa + 0.42); ctx.lineTo(x + Math.cos(sa + 0.42) * r * 0.3, y + Math.sin(sa + 0.42) * r * 0.3); ctx.closePath(); ctx.fill(); }
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(x, y, r * 0.16, 0, 6.283); ctx.fillStyle = 'rgba(232,192,112,' + (depth > 0.6 ? 0.35 : 0.22) + ')'; ctx.fill();
+  }
+  // puffs of steam rising from the bottom
+  ctx.globalCompositeOperation = 'lighter';
+  for (let k = 0; k < 7; k++) {
+    const f = (G.time * 0.12 + k / 7) % 1, x = W * (0.08 + k * 0.14) + Math.sin(G.time * 0.7 + k) * 20, y = H * (1.05 - f * 0.9), r = 40 + f * 110;
+    ctx.globalAlpha = Math.sin(f * Math.PI) * 0.1; ctx.drawImage(soft('#fff0d8'), x - r, y - r, r * 2, r * 2);
+  }
+  ctx.globalAlpha = 0.14 + 0.04 * Math.sin(G.time * 0.8); ctx.drawImage(soft('#ffb347'), W * 0.5 - W * 0.45, H * 0.45 - H * 0.45, W * 0.9, H * 0.9);   // a warm furnace glow
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+}
 function drawBackFx(shx) {
   const lv = gx('bg'); if (!lv) return;
   const bi = G.scene === 'title' ? 0 : G.biome, acc = mix(BIOMES[bi].accent, '#ffffff', 0.45);
   setScreen();
+  if (BIOMES[bi].name === 'Clockwork Canyon' && G.scene === 'play') drawClockworkBack(shx);
   ctx.globalCompositeOperation = 'lighter';
   const beam = beamSprite(acc);
   for (let k = 0; k < 4; k++) {
@@ -2088,6 +2126,24 @@ function rockBody(r, bname) {
     for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.moveTo(0, 0); const a = k * 2.09 + r.seed; ctx.lineTo(Math.cos(a) * s * 1.2, Math.sin(a) * s * 1.2); ctx.stroke(); } ctx.shadowBlur = 0; }
   if (style === 'shard') { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = born * (0.3 + 0.15 * Math.sin(G.time * 2 + r.seed)); ctx.drawImage(soft('#9a4aff'), -s, -s, s * 2, s * 2); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = born; }
   if (style === 'hex') { ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1; for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * s * 1.12, Math.sin(a) * s * 1.12); ctx.stroke(); } }
+  if (bname === 'Clockwork Canyon') {
+    ctx.strokeStyle = rgba(lighten(col, 0.5), 0.12); ctx.lineWidth = 0.8;   // brushed metal
+    for (let k = -s; k < s; k += 3.2) { ctx.beginPath(); ctx.moveTo(-s, k + R() * 1.5); ctx.lineTo(s, k + R() * 1.5); ctx.stroke(); }
+    const gr = s * (0.5 + R() * 0.15), ga = R() * 6.283;   // the engraved gear
+    ctx.save(); ctx.rotate(ga); ctx.beginPath();
+    for (let k = 0; k < 20; k++) { const a = k * Math.PI / 10, r2 = k % 2 ? gr * 0.8 : gr; ctx.lineTo(Math.cos(a - 0.12) * r2, Math.sin(a - 0.12) * r2); ctx.lineTo(Math.cos(a + 0.12) * r2, Math.sin(a + 0.12) * r2); }
+    ctx.closePath(); ctx.lineWidth = 2.2; ctx.strokeStyle = rgba(darken(col, 0.5), 0.55); ctx.stroke();
+    ctx.translate(0.8, 0.8); ctx.lineWidth = 1; ctx.strokeStyle = rgba(lighten(col, 0.5), 0.35); ctx.stroke(); ctx.translate(-0.8, -0.8);
+    ctx.beginPath(); ctx.arc(0, 0, gr * 0.32, 0, 6.283); ctx.lineWidth = 2; ctx.strokeStyle = rgba(darken(col, 0.5), 0.55); ctx.stroke();
+    for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2; ctx.beginPath(); ctx.moveTo(Math.cos(a) * gr * 0.32, Math.sin(a) * gr * 0.32); ctx.lineTo(Math.cos(a) * gr * 0.72, Math.sin(a) * gr * 0.72); ctx.stroke(); }
+    ctx.restore();
+    for (const [rx, ry] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {   // rivets
+      const x = rx * (s - 6), y = ry * (s - 6);
+      ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.arc(x + 0.6, y + 0.9, 2.6, 0, 6.283); ctx.fill();
+      const rg = ctx.createRadialGradient(x - 0.8, y - 0.8, 0.2, x, y, 2.6); rg.addColorStop(0, '#fff6d0'); rg.addColorStop(0.5, lighten(col, 0.2)); rg.addColorStop(1, darken(col, 0.45));
+      ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(x, y, 2.4, 0, 6.283); ctx.fill();
+    }
+  }
   // Soft shadows: light from the top, a little darkness collecting at the bottom (his colours stay the same in the middle)
   if (sh === 2) { const ao = ctx.createLinearGradient(0, -s, 0, s); ao.addColorStop(0, 'rgba(255,255,255,0.12)'); ao.addColorStop(0.3, 'rgba(255,255,255,0)'); ao.addColorStop(0.7, 'rgba(0,0,0,0)'); ao.addColorStop(1, 'rgba(0,0,0,0.3)'); ctx.fillStyle = ao; ctx.fillRect(-s, -s, s * 2, s * 2); }
   // speckles
