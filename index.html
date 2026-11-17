@@ -63,29 +63,29 @@ const rank = r => RARITIES.indexOf(r);
 const BIOMES = [
   { name: 'Common Caverns', factor: 1, req: 0, bonus: 1, bright: [-25, 0], amb: 'dust', style: 'block', accent: '#d8d2c4',
     minerals: [[3, 1, 'Common'], [4, 5, 'Uncommon'], [6, 10, 'Uncommon'], [8, 25, 'Rare'], [10, 50, 'Epic'], [20, 100, 'Legendary']] },
-  { name: 'Magnetic Mountain', factor: 8, req: 500, bonus: 4, bright: [-50, 0], magnet: true, amb: 'sparks', style: 'magnet', accent: '#6f8bff',
+  { name: 'Magnetic Mountain', factor: 8, req: 6000, bonus: 4, bright: [-50, 0], magnet: true, amb: 'sparks', style: 'magnet', accent: '#6f8bff',
     minerals: [[2, 5, 'Uncommon'], [5, 15, 'Uncommon'], [10, 30, 'Rare'], [15, 65, 'Epic'], [20, 120, 'Legendary'], [25, 200, 'Mythical']] },
-  { name: 'Heavy Hights', factor: 20, req: 3000, bonus: 2, bright: [-3, 0], amb: 'heavy', style: 'heavy', accent: '#ff2a2a',
+  { name: 'Heavy Hights', factor: 20, req: 40000, bonus: 2, bright: [-3, 0], amb: 'heavy', style: 'heavy', accent: '#ff2a2a',
     minerals: [[4, 45, 'Rare'], [8, 80, 'Epic'], [12, 150, 'Epic'], [18, 250, 'Legendary'], [25, 500, 'Mythical'], [31, 1050, 'Angelic']] },
-  { name: 'Crystal Cave', factor: 50, req: 20000, bonus: 3, rainbow: true, amb: 'shimmer', style: 'hex', accent: '#ff8af2',
+  { name: 'Crystal Cave', factor: 50, req: 300000, bonus: 3, rainbow: true, amb: 'shimmer', style: 'hex', accent: '#ff8af2',
     minerals: [[5, 55, 'Rare'], [7, 120, 'Epic'], [10, 270, 'Legendary'], [14, 520, 'Mythical'], [25, 1080, 'Angelic'], [36, 2100, 'Celestial']] },
-  { name: 'Red Ravines', factor: 100, req: 120000, bonus: 7, bright: [-50, 0], hitDarken: true, amb: 'embers', style: 'strata', accent: '#ff5a2a',
+  { name: 'Red Ravines', factor: 100, req: 2000000, bonus: 7, bright: [-50, 0], hitDarken: true, amb: 'embers', style: 'strata', accent: '#ff5a2a',
     minerals: [[4, 130, 'Epic'], [8, 300, 'Legendary'], [17, 550, 'Mythical'], [25, 1200, 'Angelic'], [40, 2250, 'Celestial']] },
-  { name: 'Cryo Cliffs', factor: 150, req: 800000, bonus: 15, bright: [0, 20], amb: 'snow', style: 'ice', accent: '#8fdcff',
+  { name: 'Cryo Cliffs', factor: 150, req: 12000000, bonus: 15, bright: [0, 20], amb: 'snow', style: 'ice', accent: '#8fdcff',
     minerals: [[4, 140, 'Epic'], [7, 320, 'Legendary'], [13, 580, 'Mythical'], [20, 1500, 'Angelic']] },
-  { name: 'Sandy Spires', factor: 200, req: 5000000, bonus: 17, bright: [-15, 10], amb: 'sand', style: 'sand', accent: '#ffcf6a', isNew: true,
+  { name: 'Sandy Spires', factor: 200, req: 60000000, bonus: 17, bright: [-15, 10], amb: 'sand', style: 'sand', accent: '#ffcf6a', isNew: true,
     minerals: [[4, 180, 'Rare'], [7, 400, 'Epic'], [12, 800, 'Legendary'], [20, 1700, 'Mythical'], [30, 3600, 'Angelic']] },
-  { name: 'Jungle Depths', factor: 250, req: 30000000, bonus: 23.6, bright: [-25, 5], amb: 'jungle', style: 'boulder', accent: '#7fe05a', isNew: true,
+  { name: 'Jungle Depths', factor: 250, req: 300000000, bonus: 23.6, bright: [-25, 5], amb: 'jungle', style: 'boulder', accent: '#7fe05a', isNew: true,
     minerals: [[4, 240, 'Epic'], [7, 550, 'Legendary'], [12, 1100, 'Mythical'], [20, 2400, 'Angelic'], [33, 5000, 'Transcendant']] },
-  { name: 'Toxic Tunnels', factor: 330, req: 200000000, bonus: 35, bright: [-30, 0], amb: 'bubbles', style: 'blob', accent: '#8dff3a', isNew: true,
+  { name: 'Toxic Tunnels', factor: 330, req: 1500000000, bonus: 35, bright: [-30, 0], amb: 'bubbles', style: 'blob', accent: '#8dff3a', isNew: true,
     minerals: [[4, 300, 'Epic'], [7, 700, 'Legendary'], [12, 1400, 'Mythical'], [20, 3000, 'Angelic'], [35, 6500, 'Transcendant']] },
-  { name: 'Storm Peaks', factor: 430, req: 1200000000, bonus: 31.6, bright: [-20, 10], amb: 'storm', style: 'slate', accent: '#a8c4ff', isNew: true,
+  { name: 'Storm Peaks', factor: 430, req: 8000000000, bonus: 31.6, bright: [-20, 10], amb: 'storm', style: 'slate', accent: '#a8c4ff', isNew: true,
     minerals: [[4, 450, 'Epic'], [8, 1000, 'Legendary'], [13, 2100, 'Mythical'], [20, 4500, 'Angelic'], [32, 9500, 'Transcendant'], [50, 20000, 'Celestial']] },
-  { name: 'Lava Lake', factor: 560, req: 8000000000, bonus: 64.9, bright: [-10, 10], amb: 'lava', style: 'basalt', accent: '#ff8a2a', isNew: true,
+  { name: 'Lava Lake', factor: 560, req: 40000000000, bonus: 64.9, bright: [-10, 10], amb: 'lava', style: 'basalt', accent: '#ff8a2a', isNew: true,
     minerals: [[4, 550, 'Legendary'], [8, 1300, 'Mythical'], [14, 2800, 'Angelic'], [24, 6000, 'Transcendant'], [40, 13000, 'Acendant']] },
-  { name: 'Void Valley', factor: 730, req: 50000000000, bonus: 62.7, bright: [-20, 10], amb: 'void', style: 'shard', accent: '#b678ff', isNew: true,
+  { name: 'Void Valley', factor: 730, req: 200000000000, bonus: 62.7, bright: [-20, 10], amb: 'void', style: 'shard', accent: '#b678ff', isNew: true,
     minerals: [[4, 700, 'Legendary'], [8, 1600, 'Mythical'], [14, 3500, 'Angelic'], [22, 8000, 'Transcendant'], [40, 18000, 'Acendant'], [60, 40000, 'Celestial']] },
-  { name: 'Mushroom Marsh', factor: 950, req: 600000000000, bonus: 70.8, bright: [-15, 10], amb: 'spores', style: 'block', accent: '#ff9ad8', isNew: true,
+  { name: 'Mushroom Marsh', factor: 950, req: 1500000000000, bonus: 70.8, bright: [-15, 10], amb: 'spores', style: 'block', accent: '#ff9ad8', isNew: true,
     minerals: [[4, 1100, 'Legendary'], [8, 2500, 'Mythical'], [14, 5400, 'Angelic'], [22, 12000, 'Transcendant'], [40, 28000, 'Acendant'], [60, 62000, 'Celestial']] },
   { name: 'Bone Basin', factor: 1250, req: 7200000000000, bonus: 80.1, bright: [-15, 10], amb: 'bonedust', style: 'block', accent: '#e8e0c8', isNew: true,
     minerals: [[4, 1700, 'Legendary'], [8, 3800, 'Mythical'], [14, 8400, 'Angelic'], [22, 19000, 'Transcendant'], [40, 43000, 'Acendant'], [60, 96000, 'Celestial']] },
@@ -225,7 +225,7 @@ const SHOP = {
     desc: l => pct(SHOPV.dpower[l]) + ' chance a drone hit cracks one extra time' },
   cluck: { title: 'Crate luck', name: l => 'Crate luck ' + (l + 1), icon: 'clover', col: '#c48aff', isNew: true,
     costs: [1e6, 1e7, 1e8, 1e9, 1e10],
-    desc: l => pct(SHOPV.cluck[l]) + ' chance a crate drone comes out one rank higher' },
+    desc: l => 'Rarer drone types ' + pct(SHOPV.cluck[l] * 3) + ' more likely in crates' },
   xpboost: { title: 'Pass XP boost', name: l => 'Pass XP +' + pct(SHOPV.xpboost[l]), icon: 'trophy', col: '#7dff3a', isNew: true,
     costs: [5e4, 5e5, 5e6, 5e7, 5e8, 5e9],
     desc: l => 'Get ' + pct(SHOPV.xpboost[l]) + ' more Alien Pass XP' },
@@ -435,7 +435,7 @@ function loadDrones(s) {
   const counts = (o, ok) => { const r = {}; if (o && typeof o === 'object') for (const k in o) if (ok(k)) r[k] = clamp(o[k] | 0, 0, 999); return r; };
   G.skins = counts(s.skins, k => !!SKINS[k]); G.hats = counts(s.hats, k => !!HATS[k]); G.crates = counts(s.crates, k => !!CRATES[k]);
   G.pass = { xp: num(+(s.pass && s.pass.xp), 0), lvl: clamp((s.pass && s.pass.lvl) | 0, 0, PASS_MAX), pt: 0 };
-  G.codes = Array.isArray(s.codes) ? s.codes.filter(c => CODES[c]) : [];
+  G.codes = Array.isArray(s.codes) ? s.codes.filter(c => typeof c === 'string').slice(0, 20) : [];
 }
 function hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } }
 function wipeSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
@@ -1099,6 +1099,7 @@ function tick() {
   if (G.parts.length > MAX_PARTS()) G.parts.splice(0, G.parts.length - MAX_PARTS());
   for (const g of G.rings) g.t += DT; compact(G.rings, g => g.t < 0.45);
   if (G.crateFx) G.crateFx.t += DT; if (G.mergeFx) G.mergeFx.t += DT;
+  if (G.biomeFx && (G.biomeFx.t += DT) > 7) G.biomeFx = null;
   for (const l of G.lights) l.life -= DT;
   compact(G.lights, l => l.life > 0);
   if (G.lights.length > 40) G.lights.splice(0, G.lights.length - 40);
@@ -1209,7 +1210,7 @@ function teleport(i) {
   const paid = isUnlocked(i);
   if (!paid && !canVisit(i)) { toast('Visit ' + BIOMES[i - 1].name + ' first'); AUDIO.sfx('deny'); return; }
   if (!paid && G.creditz < BIOMES[i].req) { toast('Unlocking ' + BIOMES[i].name + ' costs ' + fmt(BIOMES[i].req) + ' Creditz'); AUDIO.sfx('deny'); return; }
-  if (!paid) { G.creditz -= BIOMES[i].req; G.shown = G.creditz; toast('Unlocked ' + BIOMES[i].name + '!  +' + Math.round((60 + 40 * i) * xpMult()) + ' XP', BIOMES[i].accent); addXP(60 + 40 * i); }   // pay once, travel free after
+  if (!paid) { G.biomeFx = { i, t: 0 }; G.creditz -= BIOMES[i].req; G.shown = G.creditz; toast('Unlocked ' + BIOMES[i].name + '!  +' + Math.round((60 + 40 * i) * xpMult()) + ' XP', BIOMES[i].accent); addXP(60 + 40 * i); }   // pay once, travel free after
   loadBiome(i, true); fixQuests();
   AUDIO.sfx('teleport');
   checkAch(); save();
@@ -2371,23 +2372,31 @@ function drawMega(m, bname) {
   ctx.fillStyle = '#0b0c12'; rr(x - 1, y - 1, w + 2, 7, 3); ctx.fill();
   ctx.fillStyle = '#ffb36a'; rr(x, y, Math.max(0, w * m.hp / MEGA_HP), 5, 2.5); ctx.fill();
 }
-function drawDrill(d) {
-  const x = d.x, y = wy(d.y) + Math.sin(G.time * 4 + d.spin) * 2;
+function drawDrill(d) {   // the Shop's auto miner: a little round robot with two side propellers and a pickaxe arm
+  const x = d.x, y = wy(d.y) + Math.sin(G.time * 4 + d.spin) * 2, hit = d.hitT > 0;
   ctx.save(); ctx.translate(x, y);
-  ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(0, 22, 8, 2.5, 0, 0, 6.283); ctx.fill();
-  // two side propellers (like a drone, seen from the side)
-  ctx.strokeStyle = '#5a6474'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(-6, -5); ctx.lineTo(-13, -8); ctx.moveTo(6, -5); ctx.lineTo(13, -8); ctx.stroke();
-  for (const [px, ph] of [[-13, 0], [13, 1.3]]) { const rw = 6 * Math.abs(Math.cos(G.time * 34 + d.spin + ph)) + 0.6; ctx.strokeStyle = '#1a1d24'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(px - rw, -11); ctx.lineTo(px + rw, -11); ctx.stroke(); ctx.beginPath(); ctx.moveTo(px, -11); ctx.lineTo(px, -8); ctx.stroke(); }
-  // body
-  if (!drillGrad || drillGrad.ctx !== ctx) { drillGrad = { ctx, g: ctx.createLinearGradient(-7, -8, 7, 8) }; drillGrad.g.addColorStop(0, '#e9eef5'); drillGrad.g.addColorStop(1, '#7c8696'); }   // one gradient shared by every robot
-  const g = drillGrad.g;
-  rr(-8, -7, 16, 13, 4); ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = '#11141a'; ctx.lineWidth = 1.2; ctx.stroke();
-  ctx.fillStyle = '#1a1f28'; rr(-5, -4, 10, 5, 2); ctx.fill();
-  ctx.fillStyle = d.hitT > 0 ? '#ffffff' : '#7be05a'; ctx.beginPath(); ctx.arc(-2, -1.5, 1.4, 0, 6.283); ctx.arc(2, -1.5, 1.4, 0, 6.283); ctx.fill();
-  // pick arm
-  ctx.save(); ctx.translate(-6, 5); ctx.rotate(-0.6 + (d.hitT > 0 ? 0.9 : Math.sin(G.time * 10 + d.spin) * 0.15));
+  ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.ellipse(0, 22, 9, 2.6, 0, 0, 6.283); ctx.fill();
+  // arms + propellers with blur discs
+  ctx.strokeStyle = '#4a5466'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-6, -4); ctx.lineTo(-13, -8); ctx.moveTo(6, -4); ctx.lineTo(13, -8); ctx.stroke();
+  for (const [px, ph] of [[-13, 0], [13, 1.3]]) { ctx.globalAlpha = 0.22; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(px, -11, 7, 1.3, 0, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1; const rw = 6.5 * Math.abs(Math.cos(G.time * 34 + d.spin + ph)) + 0.6; ctx.strokeStyle = '#1a1d24'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(px - rw, -11); ctx.lineTo(px + rw, -11); ctx.stroke(); ctx.fillStyle = '#2a2f3a'; ctx.fillRect(px - 1, -11, 2, 3.5); }
+  // antenna with a blinking light
+  ctx.strokeStyle = '#4a5466'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(3, -8); ctx.lineTo(5, -14); ctx.stroke();
+  ctx.fillStyle = Math.sin(G.time * 5 + d.spin) > 0 ? '#ff5a5a' : '#6a2a2a'; ctx.beginPath(); ctx.arc(5, -14.5, 1.3, 0, 6.283); ctx.fill();
+  // round body: metal with a shine and a green band
+  if (!drillGrad || drillGrad.ctx !== ctx) { drillGrad = { ctx, g: ctx.createLinearGradient(0, -9, 0, 8) }; drillGrad.g.addColorStop(0, '#f4f7fb'); drillGrad.g.addColorStop(0.5, '#b4bdca'); drillGrad.g.addColorStop(1, '#5a6474'); }
+  ctx.beginPath(); ctx.ellipse(0, -1, 9, 8.5, 0, 0, 6.283); ctx.fillStyle = drillGrad.g; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = '#11141a'; ctx.stroke();
+  ctx.fillStyle = '#5ac83a'; ctx.fillRect(-8.6, 3, 17.2, 1.6);
+  ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.ellipse(-3.5, -5.5, 3.5, 1.5, -0.4, 0, 6.283); ctx.fill();
+  // visor + eyes (blink white when hitting)
+  rr(-6, -4, 12, 5.5, 2.5); ctx.fillStyle = '#10141c'; ctx.fill();
+  ctx.fillStyle = hit ? '#ffffff' : '#7be05a'; ctx.beginPath(); ctx.arc(-2.4, -1.3, 1.3, 0, 6.283); ctx.arc(2.4, -1.3, 1.3, 0, 6.283); ctx.fill();
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5; ctx.drawImage(soft('#7be05a'), -7, -6, 14, 9); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  // thruster glow underneath
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35 + 0.15 * Math.sin(G.time * 12 + d.spin); ctx.drawImage(soft('#6ad0ff'), -5, 5, 10, 10); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  // pickaxe arm
+  ctx.save(); ctx.translate(-6, 5); ctx.rotate(-0.6 + (hit ? 0.9 : Math.sin(G.time * 10 + d.spin) * 0.15));
   ctx.fillStyle = '#8b5a2b'; ctx.fillRect(-1, 0, 2, 9); ctx.strokeStyle = '#11141a'; ctx.lineWidth = 0.8; ctx.strokeRect(-1, 0, 2, 9);
-  ctx.beginPath(); ctx.moveTo(-6, 9); ctx.quadraticCurveTo(0, 5, 6, 9); ctx.lineTo(0, 10.5); ctx.closePath(); ctx.fillStyle = '#c9d2d9'; ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-6, 9); ctx.quadraticCurveTo(0, 5, 6, 9); ctx.lineTo(0, 10.5); ctx.closePath(); ctx.fillStyle = '#d6dde4'; ctx.fill(); ctx.stroke();
   ctx.restore();
   ctx.restore();
 }
@@ -2560,6 +2569,7 @@ function render() {
   renderMenus();
   renderOverlays();
   renderDroneFx();
+  renderBiomeFx();
   finishUI();
 }
 function finishUI() {
@@ -2769,7 +2779,7 @@ function renderHUD() {
   }
   // dock
   const dock = [['biomes', 'Biomes', 'globe', '#2f8f6a'], ['book', 'Book', 'book', '#8a5a2e'], ['rebirth', 'Rebirth', 'rebirth', '#c48a12'], ['shop', 'Shop', 'shop', '#3a5fd0'], ['drones', 'Drones', 'drone', '#2a8aa8']];
-  renderPassBar(); setScreen();
+  renderPassBar(); renderPassButton(); setScreen();
   const narrow = W < 560, gap = narrow ? 6 : 10;   // narrow screens: the bomb button sits above the dock instead of beside it
   const leftPad = narrow ? 8 : G.bombLevel > 0 ? 90 : 20;
   const bw = Math.min(150, (W - leftPad * 2 - (dock.length - 1) * gap) / dock.length), bh = 52, total = dock.length * bw + (dock.length - 1) * gap;
@@ -3237,21 +3247,21 @@ function renderTitle() {
 //  in DRT, which is NOT saved - it's rebuilt when the game starts.
 // ====================================================================
 const DRONE_TYPES = {
-  normal: { name: 'Drone', col: '#4ad0ff', ai: 'drill', cd: 1.2, desc: 'Flies to a rock and drills it' },
-  bomber: { name: 'Bomblayer', col: '#ff8a3a', ai: 'bomb', cd: 2.6, desc: 'Wanders around laying small bombs. Hunts down the last rock' },
-  heavy: { name: 'Heavy', col: '#ffc21a', ai: 'heavy', cd: 3.5, desc: 'Smashes itself down: hits a 3x3 area' },
-  laser: { name: 'Laser', col: '#ff3a5a', ai: 'laser', cd: 6.5, noMix: true, desc: 'Fires a laser that burns through rocks one at a time' },
-  drillbomber: { name: 'Drillbomber', col: '#ff5ab0', ai: 'bomb', cd: 3.4, desc: 'Its bombs shoot small drills in 4 directions' },
-  bigdrill: { name: 'Big Drill', col: '#5affb0', ai: 'drill', cd: 2, desc: 'Drills in a + shape (5 rocks at once)' },
-  heavybomber: { name: 'Heavy Bomber', col: '#ff5a2a', ai: 'bomb', cd: 4.5, desc: 'Drops one really big bomb' },
-  alien: { name: 'Alien Ship', col: '#7dff3a', ai: 'alien', cd: 0, noMix: true, desc: 'Scans a rock and beams its mineral out. The rock stays, and still has it inside' },
+  normal: { name: 'Drone', rar: 'Common', col: '#4ad0ff', ai: 'drill', cd: 2.6, desc: 'Flies to a rock and drills it' },
+  bomber: { name: 'Bomblayer', rar: 'Uncommon', col: '#ff8a3a', ai: 'bomb', cd: 5.5, desc: 'Wanders around laying small bombs. Hunts down the last rock' },
+  heavy: { name: 'Heavy', rar: 'Rare', col: '#ffc21a', ai: 'heavy', cd: 10, desc: 'Smashes itself down: hits a 3x3 area' },
+  laser: { name: 'Laser', rar: 'Mythical', col: '#ff3a5a', ai: 'laser', cd: 12, noMix: true, desc: 'Fires a laser that burns through rocks one at a time' },
+  drillbomber: { name: 'Drillbomber', rar: 'Epic', col: '#ff5ab0', ai: 'bomb', cd: 7, desc: 'Its bombs shoot small drills in 4 directions' },
+  bigdrill: { name: 'Big Drill', rar: 'Epic', col: '#5affb0', ai: 'drill', cd: 4.5, desc: 'Drills in a + shape (5 rocks at once)' },
+  heavybomber: { name: 'Heavy Bomber', rar: 'Legendary', col: '#ff5a2a', ai: 'bomb', cd: 9, desc: 'Drops one really big bomb' },
+  alien: { name: 'Alien Ship', rar: 'Celestial', col: '#7dff3a', ai: 'alien', cd: 0, noMix: true, desc: 'Scans a rock and beams its mineral out. The rock stays, and still has it inside' },
 };
 const MIXES = { 'bomber+normal': 'drillbomber', 'heavy+normal': 'bigdrill', 'bomber+heavy': 'heavybomber' };
 const RANK_NAMES = ['', 'I', 'II', 'III', 'IV', 'V'];
 const RANK_COL = ['', '#c8d0dc', '#4dff4d', '#2eb0ff', '#ff4be6', '#ffd84a'];
 // what a rank gives: cooldown multiplier, cracks per hit, flying speed
-const RK = { cd: [1, 1, 0.8, 0.64, 0.5, 0.38], dmg: [1, 1, 1, 2, 2, 3], spd: [1, 1, 1.2, 1.4, 1.65, 1.9] };
-const ALIEN_CD = [0, 48, 36, 26, 17, 10];
+const RK = { cd: [1, 1, 0.85, 0.72, 0.6, 0.5], dmg: [1, 1, 1, 1, 2, 2], spd: [1, 1, 1.15, 1.3, 1.45, 1.6] };   // 2026-11-17: much weaker (they were way too strong)
+const ALIEN_CD = [0, 60, 45, 34, 24, 15];
 const SLOT_PRICES = [0, 0, 0, 5e6, 5e8, 5e10, 5e12, 5e14, 5e16, 5e18];   // slots 4..10 (pretty expensive!)
 const mixKey = (a, b) => [a, b].sort().join('+');
 function mergeResult(a, b) {
@@ -3305,25 +3315,26 @@ function dronePal(d) {
 
 // ---------------- crates ----------------
 const CRATES = {
-  common: { name: 'Common Crate', col: '#a4a4a4', price: 5e4, odds: { normal: 70, bomber: 20, heavy: 10 }, ranks: [100] },
-  uncommon: { name: 'Uncommon Crate', col: '#4dff4d', price: 1e6, odds: { normal: 45, bomber: 30, heavy: 25 }, ranks: [88, 12] },
-  rare: { name: 'Rare Crate', col: '#2eb0ff', price: 5e7, odds: { normal: 30, bomber: 35, heavy: 35 }, ranks: [65, 30, 5] },
-  epic: { name: 'Epic Crate', col: '#ff4be6', price: 5e9, odds: { normal: 18, bomber: 37, heavy: 41, laser: 4 }, ranks: [30, 50, 20] },
-  legendary: { name: 'Legendary Crate', col: '#e8ff3a', price: 5e11, odds: { normal: 8, bomber: 30, heavy: 35, laser: 27 }, ranks: [0, 45, 40, 15] },
-  skin: { name: 'Skin Crate', col: '#ff8a3a', price: 1e7, skins: { rusty: 50, neon: 30, pixel: 14, hightech: 5, golden: 1 } },
+  common: { name: 'Common Crate', col: '#a4a4a4', price: 2e6, odds: { normal: 70, bomber: 20, heavy: 10 }, ranks: [100] },
+  uncommon: { name: 'Uncommon Crate', col: '#4dff4d', price: 1e8, odds: { normal: 45, bomber: 30, heavy: 25 }, ranks: [100] },
+  rare: { name: 'Rare Crate', col: '#2eb0ff', price: 1e10, odds: { normal: 30, bomber: 35, heavy: 35 }, ranks: [100] },
+  epic: { name: 'Epic Crate', col: '#ff4be6', price: 1e12, odds: { normal: 18, bomber: 37, heavy: 41, laser: 4 }, ranks: [100] },
+  legendary: { name: 'Legendary Crate', col: '#e8ff3a', price: 1e14, odds: { normal: 8, bomber: 30, heavy: 35, laser: 27 }, ranks: [100] },
+  skin: { name: 'Skin Crate', col: '#ff8a3a', price: 1e9, skins: { rusty: 50, neon: 30, pixel: 14, hightech: 5, golden: 1 } },
 };
 const CRATE_ORDER = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'skin'];
 function pickW(obj) { let t = 0; for (const k in obj) t += obj[k]; let x = Math.random() * t; for (const k in obj) { x -= obj[k]; if (x < 0) return k; } return Object.keys(obj)[0]; }
 function openCrate(kind) {
   const C = CRATES[kind]; let item;
-  if (kind === 'skin') { const sk = pickW(C.skins); G.skins[sk] = (G.skins[sk] || 0) + 1; item = { skin: sk }; }
-  else {
-    const type = pickW(C.odds), w = {}; C.ranks.forEach((v, i) => { if (v > 0) w[i + 1] = v; });
-    let rank = +pickW(w); if (Math.random() < upv('cluck', 0)) rank++;
-    item = { drone: addDrone(type, Math.min(5, rank)) };
+  if (kind === 'skin') { const sk = pickW(C.skins), tot = Object.values(C.skins).reduce((a, b) => a + b, 0); G.skins[sk] = (G.skins[sk] || 0) + 1; item = { skin: sk, pct: C.skins[sk] / tot * 100 }; }
+  else {   // crates always give rank I: higher ranks only come from merging. Crate luck makes the rarer types more likely.
+    const w = crateOdds(C), tot = Object.values(w).reduce((a, b) => a + b, 0), type = pickW(w);
+    item = { drone: addDrone(type, 1), pct: w[type] / tot * 100 };
   }
   G.crateFx = { kind, item, t: 0 }; G.menu = null; AUDIO.sfx('crate'); addXP(15); save();
 }
+// Crate luck: every type except the plain Drone gets more weight
+function crateOdds(C) { const w = {}, L = upv('cluck', 0); for (const k in C.odds) w[k] = C.odds[k] * (k === 'normal' ? 1 : 1 + L * 3); return w; }
 function buyCrate(kind) {
   if (G.crateFx) return;
   const C = CRATES[kind];
@@ -3349,9 +3360,16 @@ function doMerge(a, b) {
 }
 
 // ---------------- codes (typed in Settings) ----------------
-const CODES = { gus1stplaytester: { skin: 'glitch', text: 'Code redeemed: GL1TCH skin!' } };
-function redeemCode(raw) {
-  const c = String(raw || '').trim().toLowerCase().replace(/\s+/g, '');
+// Only the SHA-256 "fingerprint" of each code is in the game, so nobody can read the codes in the page source.
+// (Real limits per account need the server; until then a code works once per save.)
+const CODES = {
+  '47921a91ef0923f38e4e7726e095ebb5e6ed849deba4a6b9eb56379ecb055a9a': { skin: 'glitch', text: 'Code redeemed: GL1TCH skin!' },
+  '882b5a1a0a9e3cf51efc61a5e7e29805e635722356db614a1b707533edc1780e': { skin: 'glitch', text: 'Code redeemed: GL1TCH skin!' },
+};
+async function codeHash(c) { const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(c)); return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join(''); }
+async function redeemCode(raw) {
+  if (!(window.crypto && crypto.subtle)) return 'Codes only work on the real website (https)';
+  const c = await codeHash(String(raw || '').trim().toLowerCase().replace(/\s+/g, ''));
   const C = CODES[c]; if (!C) return 'That code does not exist';
   if (G.codes.includes(c)) return 'You already used this code';
   G.codes.push(c);
@@ -3366,7 +3384,7 @@ function openCodeBox() {
     box.innerHTML = '<div class="cb"><b>ENTER A CODE</b><input id="codein" maxlength="40" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="type your code"><div class="row"><button id="codego">Redeem</button><button id="codex">Close</button></div><p id="codemsg"></p></div>';
     document.body.appendChild(box);
     const inp = document.getElementById('codein'), msg = document.getElementById('codemsg');
-    const go = () => { const r = redeemCode(inp.value); if (r === 'ok') { box.style.display = 'none'; } else { msg.textContent = r; AUDIO.sfx('deny'); } };
+    const go = async () => { const r = await redeemCode(inp.value); if (r === 'ok') { box.style.display = 'none'; } else { msg.textContent = r; AUDIO.sfx('deny'); } };
     document.getElementById('codego').onclick = go;
     document.getElementById('codex').onclick = () => { box.style.display = 'none'; };
     inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') go(); if (e.key === 'Escape') box.style.display = 'none'; });
@@ -3379,6 +3397,9 @@ function openCodeBox() {
 
 // ---------------- ALIEN PASS: 50 levels of rewards, earned with XP ----------------
 const PASS_MAX = 50;
+const SEASON_END = Date.UTC(2026, 11, 1, 0, 0, 0);   // Season 1 (Alien) ends 1 December 2026
+const seasonLeft = () => SEASON_END - Date.now();
+function seasonText() { const ms = seasonLeft(); if (ms <= 0) return 'Season over'; const d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5); return d > 0 ? d + 'd ' + h + 'h left' : h + 'h ' + Math.floor(ms % 36e5 / 6e4) + 'm left'; }
 const xpNeed = l => Math.round(100 * Math.pow(1.1, l - 1) / 10) * 10;   // XP to reach level l (level 1 = 100)
 const xpMult = () => 1 + upv('xpboost', 0);
 const PASS = (() => {
@@ -3412,7 +3433,7 @@ function passReward(l) {
   toast('ALIEN PASS level ' + l + '!' + (r ? '  ' + passRewardText(r) : ''), '#7dff3a'); AUDIO.sfx('level');
 }
 function addXP(n) {
-  const P = G.pass; if (!P || P.lvl >= PASS_MAX || G.scene !== 'play') return;
+  const P = G.pass; if (!P || P.lvl >= PASS_MAX || G.scene !== 'play' || seasonLeft() <= 0) return;
   P.xp += n * xpMult();
   while (P.lvl < PASS_MAX && P.xp >= xpNeed(P.lvl + 1)) { P.xp -= xpNeed(P.lvl + 1); P.lvl++; passReward(P.lvl); }
   if (P.lvl >= PASS_MAX) P.xp = 0;
@@ -3536,7 +3557,7 @@ function tickDrone(d, s) {
         s.vy = (s.vy || 0) + 1.5; s.y -= s.vy;
         if (s.y <= s.ty) {
           s.y = s.ty; s.state = 'idle'; s.vy = 0; s.hitT = 0.3; s.act = 1; s.cd = droneCd(d);
-          crackArea(s.x, s.ty - 18, 'sq', RK.dmg[R] + 1, d);
+          crackArea(s.x, s.ty - 18, 'sq', RK.dmg[R], d);
           G.shake = Math.max(G.shake, 4 + R); dust(s.x, s.ty - 14, '#a0a0a0', 10); chunks(s.x, s.ty - 18, '#8a8a8a', 6);
           G.lights.push({ x: s.x, y: s.ty - 18, r: 80 + R * 10, col: dronePal(d).accent, life: 0.4, max: 0.4 });
           G.rings.push({ x: s.x, y: s.ty - 18, t: 0, r: 75, col: dronePal(d).accent });
@@ -3553,11 +3574,11 @@ function tickDrone(d, s) {
     case 'laser': {   // Laser: go somewhere, charge, then fire a beam that burns the first rock in its way
       if (s.state === 'fire') {
         s.fireT -= DT; s.zapT -= DT; s.act = 1;
-        if (s.zapT <= 0) { s.zapT = 0.15 / RK.spd[R]; s.ends = laserZap(d, s); }
+        if (s.zapT <= 0) { s.zapT = 0.32 / RK.spd[R]; s.ends = laserZap(d, s); }
         if (s.fireT <= 0) { s.state = 'idle'; s.cd = droneCd(d); s.ends = null; }
         break;
       }
-      if (s.state === 'charge') { s.chargeT -= DT; s.act = 1 - s.chargeT / 0.6; if (s.chargeT <= 0) { s.state = 'fire'; s.fireT = 1.3 + R * 0.25; s.zapT = 0; droneSfx(d, 'laser'); } break; }
+      if (s.state === 'charge') { s.chargeT -= DT; s.act = 1 - s.chargeT / 0.6; if (s.chargeT <= 0) { s.state = 'fire'; s.fireT = 1 + R * 0.2; s.zapT = 0; droneSfx(d, 'laser'); } break; }
       if (!s.spot) s.spot = laserSpot(d);
       if (flyTo(s, s.spot.x, s.spot.y, v) && s.cd <= 0) { s.ang = laserAim(d, s.x, s.y); s.state = 'charge'; s.chargeT = 0.6; s.spot = null; }
       break;
@@ -3581,7 +3602,7 @@ function tickDrone(d, s) {
 }
 function layBomb(d, x, y) {
   const big = d.type === 'heavybomber', R = d.rank;
-  G.dbombs.push({ x, y, gy: y - 14, t: 0, fuse: big ? 1.6 : 1.2, r: (big ? 62 : 32) + R * (big ? 8 : 5), dmg: RK.dmg[R] + 1 + (big ? 1 : 0), drills: d.type === 'drillbomber', big, d, col: dronePal(d).accent });
+  G.dbombs.push({ x, y, gy: y - 14, t: 0, fuse: big ? 1.6 : 1.2, r: (big ? 62 : 32) + R * (big ? 8 : 5), dmg: RK.dmg[R] + (big ? 1 : 0), drills: d.type === 'drillbomber', big, d, col: dronePal(d).accent });
   droneSfx(d, 'drop');
 }
 function explodeDroneBomb(b) {
@@ -3654,126 +3675,175 @@ function glitchBurst(x, y) { for (let i = 0; i < pn(4); i++) G.parts.push({ kind
 // ====================================================================
 //  DRAWING DRONES (side view). Every type has its own body; a skin only changes colours + adds its effect,
 //  so the same skin looks a bit different on every type but always in the same style.
+//  SPEED: the body (everything that doesn't move) is drawn ONCE into a cached picture; every frame we only
+//  stamp it and draw the moving bits on top (propellers, eye, lights, flames).
 // ====================================================================
 const BODY_BOX = { normal: [-10, -9, 20, 15], bigdrill: [-13, -10, 26, 17], bomber: [-11, -11, 22, 17], drillbomber: [-11, -11, 22, 17], heavybomber: [-14, -10, 28, 18], heavy: [-14, -10, 28, 18], laser: [-13, -10, 26, 13], alien: [-20, -9, 40, 16] };
-function rotor(x, y, t, P, phase) {
-  const OL = P.fx === 'neon' ? P.accent : '#0b0c12';
-  if (P.fx === 'jets') {   // High Tech: jet turbines instead of propellers, red exhaust
-    rr(x - 5, y - 3, 10, 7, 3); ctx.fillStyle = P.light; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = '#0b0c12'; ctx.stroke();
-    ctx.fillStyle = P.dark; rr(x - 3.5, y - 2, 7, 2.2, 1); ctx.fill();
-    ctx.fillStyle = P.accent; ctx.fillRect(x - 5, y + 1.5, 10, 1.2);
-    const fl = 5 + Math.sin(t * 40 + phase) * 1.5 + Math.random() * 2;
-    ctx.globalCompositeOperation = 'lighter';
-    const g = ctx.createLinearGradient(0, y + 4, 0, y + 4 + fl); g.addColorStop(0, 'rgba(255,240,200,0.95)'); g.addColorStop(0.4, rgba(P.accent, 0.8)); g.addColorStop(1, rgba(P.accent, 0));
-    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 3.5, y + 4); ctx.lineTo(x + 3.5, y + 4); ctx.lineTo(x, y + 4 + fl); ctx.closePath(); ctx.fill();
-    ctx.globalAlpha *= 0.35; ctx.drawImage(soft(P.accent), x - 7, y + 1, 14, 14); ctx.globalAlpha /= 0.35;
-    ctx.globalCompositeOperation = 'source-over';
-    return;
-  }
-  // a propeller seen from the side: a line that grows and shrinks as it spins (+ a faint blur disc)
-  ctx.fillStyle = P.dark; ctx.fillRect(x - 1, y - 3, 2, 4);
-  ctx.globalAlpha *= 0.22; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(x, y - 3.5, 9, 1.4, 0, 0, 6.283); ctx.fill(); ctx.globalAlpha /= 0.22;
-  const w = 9 * Math.abs(Math.cos(t * 38 + phase)) + 0.8;
-  ctx.strokeStyle = P.fx === 'neon' ? P.accent2 || P.accent : '#1a1d24'; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(x - w, y - 3.5); ctx.lineTo(x + w, y - 3.5); ctx.stroke();
-  ctx.fillStyle = OL; ctx.beginPath(); ctx.arc(x, y - 3.5, 1.3, 0, 6.283); ctx.fill();
-}
+// where a hat sits on each body: [top of the body in the middle, half its width there, middle height]
+const HAT_FIT = { normal: [-9, 10, -1.5], bigdrill: [-10, 13, -1.5], bomber: [-11.5, 10, -3], drillbomber: [-11.5, 10, -3], heavy: [-10, 14, -1], heavybomber: [-10, 14, -1], laser: [-10, 9, -4], alien: [-12, 9, -2] };
 const BFILL = new Map();
 function bodyFill(x, y, w, h, P) { const k = y + '|' + h + '|' + P.light + P.body + P.dark; let g = BFILL.get(k); if (!g) { if (BFILL.size > 200) BFILL.clear(); g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, P.light); g.addColorStop(0.45, P.body); g.addColorStop(1, P.dark); BFILL.set(k, g); } return g; }
 function drill(x, y, len, w, t, P, ang) {
   ctx.save(); ctx.translate(x, y); if (ang) ctx.rotate(ang);
   ctx.beginPath(); ctx.moveTo(-w, 0); ctx.lineTo(w, 0); ctx.lineTo(0, len); ctx.closePath();
-  const g = ctx.createLinearGradient(-w, 0, w, 0); g.addColorStop(0, '#e9eef5'); g.addColorStop(1, '#6a7484'); ctx.fillStyle = g; ctx.fill();
+  const g = ctx.createLinearGradient(-w, 0, w, 0); g.addColorStop(0, '#f4f8fb'); g.addColorStop(0.5, '#b8c2cc'); g.addColorStop(1, '#5a6474'); ctx.fillStyle = g; ctx.fill();
   ctx.lineWidth = 0.9; ctx.strokeStyle = '#0b0c12'; ctx.stroke();
   ctx.save(); ctx.clip(); ctx.strokeStyle = 'rgba(20,24,32,0.7)'; ctx.lineWidth = 0.8;
   const o = (t * 30) % 4; for (let k = -1; k < len / 3 + 1; k++) { const yy = k * 4 + o; ctx.beginPath(); ctx.moveTo(-w, yy - 2); ctx.lineTo(w, yy + 2); ctx.stroke(); }
   ctx.restore(); ctx.restore();
 }
-function hangBomb(x, y, r, P, t, spikes) {
+function hangBomb(x, y, r, P, t, spikes, noGlow) {
   ctx.strokeStyle = P.dark; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x, y - r - 3); ctx.lineTo(x, y - r); ctx.stroke();
-  const g = ctx.createRadialGradient(x - r * 0.4, y - r * 0.4, 0, x, y, r); g.addColorStop(0, '#5a5a66'); g.addColorStop(1, '#14141a');
+  const g = ctx.createRadialGradient(x - r * 0.4, y - r * 0.4, 0, x, y, r); g.addColorStop(0, '#6a6a76'); g.addColorStop(1, '#14141a');
   ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = '#000'; ctx.stroke();
   ctx.fillStyle = P.accent; ctx.fillRect(x - r, y - 0.8, r * 2, 1.6);
+  ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.ellipse(x - r * 0.35, y - r * 0.4, r * 0.25, r * 0.15, -0.6, 0, 6.283); ctx.fill();
   if (spikes) for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + Math.PI / 4; ctx.save(); ctx.translate(x + Math.cos(a) * r, y + Math.sin(a) * r); ctx.rotate(a - Math.PI / 2); ctx.fillStyle = '#c9d2d9'; ctx.beginPath(); ctx.moveTo(-1.6, 0); ctx.lineTo(1.6, 0); ctx.lineTo(0, 4); ctx.closePath(); ctx.fill(); ctx.restore(); }
-  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= 0.6 + 0.4 * Math.sin(t * 20); ctx.drawImage(soft('#ffd27a'), x - 3, y - r - 7, 6, 6); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  if (!noGlow) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= 0.6 + 0.4 * Math.sin(t * 20); ctx.drawImage(soft('#ffd27a'), x - 3, y - r - 7, 6, 6); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
 }
-// the drone itself in local units (0,0 = middle, y down). act = 0..1 how "busy" it looks right now.
-function droneShape(d, P, t, act) {
-  const OL = P.fx === 'neon' ? P.accent : '#0b0c12', type = d.type;
+const OUTLINE = P => P.fx === 'neon' ? P.accent : '#0b0c12';
+const typeSeed = d => [...d.type].reduce((a, c) => a * 31 + c.charCodeAt(0), 7) % 1000;
+// ---- the part that never moves (cached) ----
+function droneStatic(d, P) {
+  const OL = OUTLINE(P), type = d.type;
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-  if (type === 'alien') {   // a flying saucer, no propellers
-    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35 + act * 0.4; ctx.drawImage(soft(P.accent), -16, -2, 32, 18); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  if (type === 'alien') {
     ctx.beginPath(); ctx.ellipse(0, -4, 9, 8, 0, Math.PI, 0); ctx.closePath(); ctx.fillStyle = 'rgba(160,255,190,0.45)'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = OL; ctx.stroke();
     ctx.fillStyle = '#5ad04a'; ctx.beginPath(); ctx.arc(0, -6, 3.6, 0, 6.283); ctx.fill();
     ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(-1.4, -6.3, 1, 1.5, -0.4, 0, 6.283); ctx.ellipse(1.4, -6.3, 1, 1.5, 0.4, 0, 6.283); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.ellipse(-4, -8, 1.5, 2.5, -0.5, 0, 6.283); ctx.fill();
     ctx.beginPath(); ctx.ellipse(0, 0, 20, 6, 0, 0, 6.283); ctx.fillStyle = bodyFill(-20, -6, 40, 12, P); ctx.fill(); ctx.lineWidth = 1.3; ctx.strokeStyle = OL; ctx.stroke();
+    ctx.strokeStyle = rgba(P.dark, 0.6); ctx.lineWidth = 0.7; ctx.beginPath(); ctx.ellipse(0, 0.5, 15, 3.5, 0, 0, Math.PI); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.beginPath(); ctx.ellipse(-7, -2.5, 8, 1.4, -0.08, 0, 6.283); ctx.fill();
     ctx.fillStyle = P.dark; ctx.beginPath(); ctx.ellipse(0, 3.5, 10, 2.5, 0, 0, 6.283); ctx.fill();
-    for (let k = 0; k < 7; k++) { const a = k / 7 * 6.283 + t * 2, lx = Math.cos(a) * 16, on = Math.sin(a) > -0.2; if (!on) continue; const c = ['#ff4a4a', '#ffd84a', '#7dff3a', '#4ad0ff'][(k + Math.floor(t * 6)) % 4]; ctx.fillStyle = c; ctx.beginPath(); ctx.arc(lx, 1 + Math.sin(a) * 2, 1.4, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5; ctx.drawImage(soft(c), lx - 4, Math.sin(a) * 2 - 3, 8, 8); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
-    return;
+    drawHat(d); return;
   }
-  const B = BODY_BOX[type], ax = B[0] - 6;   // rotor arms reach past the body
-  // arms + the 2 side propellers
-  ctx.strokeStyle = P.dark; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(B[0] + 2, B[1] + 4); ctx.lineTo(ax, B[1] + 1); ctx.moveTo(B[0] + B[2] - 2, B[1] + 4); ctx.lineTo(-ax, B[1] + 1); ctx.stroke();
-  rotor(ax, B[1] + 1, t, P, 0); rotor(-ax, B[1] + 1, t, P, 1.3);
-  // under-parts (drawn first so the body covers their tops)
-  if (type === 'normal') drill(0, B[1] + B[3] - 1, 9 + act * 2, 4, t * (1 + act * 3), P);
-  if (type === 'bigdrill') { drill(0, B[1] + B[3] - 1, 12 + act * 2, 5.5, t * (1 + act * 3), P); drill(-9, B[1] + B[3] - 3, 7, 3, t * 2, P, 0.5); drill(9, B[1] + B[3] - 3, 7, 3, t * 2, P, -0.5); }
-  if (type === 'bomber') hangBomb(0, B[1] + B[3] + 3, 4.5, P, t, false);
-  if (type === 'drillbomber') hangBomb(0, B[1] + B[3] + 3, 4.5, P, t, true);
-  if (type === 'heavybomber') hangBomb(0, B[1] + B[3] + 5, 7, P, t, false);
+  const B = BODY_BOX[type], ax = B[0] - 6, armY = B[1] + 1;
+  // arms with a little strut, motor pods
+  ctx.strokeStyle = P.dark; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(B[0] + 2, B[1] + 4); ctx.lineTo(ax, armY); ctx.moveTo(B[0] + B[2] - 2, B[1] + 4); ctx.lineTo(-ax, armY); ctx.stroke();
+  ctx.strokeStyle = rgba(P.light, 0.5); ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(B[0] + 2, B[1] + 3.2); ctx.lineTo(ax, armY - 0.8); ctx.moveTo(B[0] + B[2] - 2, B[1] + 3.2); ctx.lineTo(-ax, armY - 0.8); ctx.stroke();
+  for (const px of [ax, -ax]) {
+    if (P.fx === 'jets') { rr(px - 5, armY - 3, 10, 7, 3); ctx.fillStyle = P.light; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = '#0b0c12'; ctx.stroke(); ctx.fillStyle = P.dark; rr(px - 3.5, armY - 2, 7, 2.2, 1); ctx.fill(); ctx.fillStyle = P.accent; ctx.fillRect(px - 5, armY + 1.5, 10, 1.2); }
+    else { rr(px - 2.5, armY - 3, 5, 5, 1.5); ctx.fillStyle = P.dark; ctx.fill(); ctx.lineWidth = 0.8; ctx.strokeStyle = OL; ctx.stroke(); }
+  }
+  // under-parts (before the body so it covers their tops)
+  if (type === 'normal') drill(0, B[1] + B[3] - 1, 9, 4, 0, P);
+  if (type === 'bigdrill') { drill(0, B[1] + B[3] - 1, 12, 5.5, 0, P); drill(-9, B[1] + B[3] - 3, 7, 3, 0, P, 0.5); drill(9, B[1] + B[3] - 3, 7, 3, 0, P, -0.5); }
+  if (type === 'bomber') hangBomb(0, B[1] + B[3] + 3, 4.5, P, 0, false, true);
+  if (type === 'drillbomber') hangBomb(0, B[1] + B[3] + 3, 4.5, P, 0, true, true);
+  if (type === 'heavybomber') hangBomb(0, B[1] + B[3] + 5, 7, P, 0, false, true);
   if (type === 'heavy') { rr(-12, B[1] + B[3] - 2, 24, 6, 2); ctx.fillStyle = P.dark; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = OL; ctx.stroke(); ctx.fillStyle = P.light; for (const bx of [-8, 0, 8]) { ctx.beginPath(); ctx.arc(bx, B[1] + B[3] + 1, 1.1, 0, 6.283); ctx.fill(); } }
-  if (type === 'laser') { rr(-3, B[1] + B[3] - 2, 6, 7, 1.5); ctx.fillStyle = P.dark; ctx.fill(); ctx.lineWidth = 0.9; ctx.strokeStyle = OL; ctx.stroke();
-    ctx.fillStyle = P.accent; ctx.beginPath(); ctx.arc(0, B[1] + B[3] + 5.5, 2.4, 0, 6.283); ctx.fill();
-    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.4 + act * 0.6; ctx.drawImage(soft(P.accent), -7, B[1] + B[3] - 1, 14, 14); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+  if (type === 'laser') { rr(-3, B[1] + B[3] - 2, 6, 7, 1.5); ctx.fillStyle = P.dark; ctx.fill(); ctx.lineWidth = 0.9; ctx.strokeStyle = OL; ctx.stroke(); ctx.fillStyle = rgba(P.accent, 0.8); ctx.beginPath(); ctx.arc(0, B[1] + B[3] + 5.5, 2.4, 0, 6.283); ctx.fill(); }
   // body
-  if (type === 'bomber' || type === 'drillbomber') { ctx.beginPath(); ctx.ellipse(0, -3, 11, 8.5, 0, 0, 6.283); }
-  else if (type === 'laser') { ctx.beginPath(); ctx.moveTo(-13, -3); ctx.quadraticCurveTo(-10, -10, 0, -10); ctx.quadraticCurveTo(10, -10, 13, -3); ctx.quadraticCurveTo(8, 3, 0, 3); ctx.quadraticCurveTo(-8, 3, -13, -3); ctx.closePath(); }
-  else rr(B[0], B[1], B[2], B[3], type === 'heavy' || type === 'heavybomber' ? 3 : 5);
-  ctx.fillStyle = bodyFill(B[0], B[1], B[2], B[3], P); ctx.fill();
-  ctx.lineWidth = 1.3; ctx.strokeStyle = OL; ctx.stroke();
+  const bodyPath = () => {
+    if (type === 'bomber' || type === 'drillbomber') { ctx.beginPath(); ctx.ellipse(0, -3, 11, 8.5, 0, 0, 6.283); }
+    else if (type === 'laser') { ctx.beginPath(); ctx.moveTo(-13, -3); ctx.quadraticCurveTo(-10, -10, 0, -10); ctx.quadraticCurveTo(10, -10, 13, -3); ctx.quadraticCurveTo(8, 3, 0, 3); ctx.quadraticCurveTo(-8, 3, -13, -3); ctx.closePath(); }
+    else rr(B[0], B[1], B[2], B[3], type === 'heavy' || type === 'heavybomber' ? 3 : 5);
+  };
+  bodyPath(); ctx.fillStyle = bodyFill(B[0], B[1], B[2], B[3], P); ctx.fill();
   ctx.save(); ctx.clip();
-  // details per type
+  // panel seams + rivets: makes it look built, not drawn
+  ctx.strokeStyle = rgba(P.dark, 0.55); ctx.lineWidth = 0.6;
+  ctx.beginPath(); ctx.moveTo(B[0], B[1] + B[3] * 0.62); ctx.lineTo(B[0] + B[2], B[1] + B[3] * 0.62); ctx.moveTo(B[0] + B[2] * 0.22, B[1]); ctx.lineTo(B[0] + B[2] * 0.22, B[1] + B[3] * 0.62); ctx.moveTo(B[0] + B[2] * 0.78, B[1]); ctx.lineTo(B[0] + B[2] * 0.78, B[1] + B[3] * 0.62); ctx.stroke();
+  ctx.fillStyle = rgba(P.light, 0.8); for (const fx of [0.12, 0.88]) { ctx.beginPath(); ctx.arc(B[0] + B[2] * fx, B[1] + B[3] * 0.8, 0.7, 0, 6.283); ctx.fill(); }
   if (type === 'heavy' || type === 'heavybomber') { ctx.fillStyle = rgba(P.accent, 0.85); for (let k = -3; k < 5; k++) { ctx.beginPath(); ctx.moveTo(k * 7, B[1] + B[3] - 5); ctx.lineTo(k * 7 + 4, B[1] + B[3] - 5); ctx.lineTo(k * 7 + 7, B[1] + B[3]); ctx.lineTo(k * 7 + 3, B[1] + B[3]); ctx.fill(); } }
-  if (P.fx === 'rust') { const R = seeded(d.id * 31 + 7); for (let k = 0; k < 5; k++) { ctx.fillStyle = rgba(k % 2 ? '#5a2a10' : '#c06a2a', 0.55); ctx.beginPath(); ctx.arc(B[0] + R() * B[2], B[1] + R() * B[3], 1 + R() * 2.2, 0, 6.283); ctx.fill(); } }
-  if (P.fx === 'chrome' || P.fx === 'gold') { const sx = ((t * 30) % 70) - 35; const g = ctx.createLinearGradient(sx - 6, 0, sx + 6, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, 'rgba(255,255,255,0.7)'); g.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = g; ctx.fillRect(B[0], B[1], B[2], B[3]); }
-  if (P.fx === 'stars') { const R = seeded(d.id * 17 + 3); for (let k = 0; k < 8; k++) { const tw = 0.4 + 0.6 * Math.abs(Math.sin(t * 2 + k)); ctx.fillStyle = rgba(k % 3 ? '#ffffff' : P.accent, tw); ctx.fillRect(B[0] + R() * B[2], B[1] + R() * B[3], 1, 1); } }
+  if (P.fx === 'rust') { const R = seeded(typeSeed(d) + 7); for (let k = 0; k < 6; k++) { ctx.fillStyle = rgba(k % 2 ? '#5a2a10' : '#c06a2a', 0.55); ctx.beginPath(); ctx.arc(B[0] + R() * B[2], B[1] + R() * B[3], 1 + R() * 2.2, 0, 6.283); ctx.fill(); } }
+  if (P.fx === 'stars') { const R = seeded(typeSeed(d) + 3); for (let k = 0; k < 10; k++) { ctx.fillStyle = rgba(k % 3 ? '#ffffff' : P.accent, 0.4 + R() * 0.5); ctx.fillRect(B[0] + R() * B[2], B[1] + R() * B[3], 1, 1); } }
+  // glossy highlight across the top
+  const hg = ctx.createLinearGradient(0, B[1], 0, B[1] + B[3] * 0.45); hg.addColorStop(0, 'rgba(255,255,255,0.45)'); hg.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = hg; ctx.fillRect(B[0], B[1], B[2], B[3] * 0.45);
+  // accent stripe (lights up when busy, see droneMoving)
+  ctx.fillStyle = rgba(P.accent, 0.55); ctx.fillRect(B[0], B[1] + B[3] * 0.62 + 0.6, B[2], 1.4);
   ctx.restore();
-  // face / sensor: a dark visor with a glowing eye
+  bodyPath(); ctx.lineWidth = 1.3; ctx.strokeStyle = OUTLINE(P); ctx.stroke();
+  // visor (the eye itself moves, so it's drawn every frame)
   const ey = type === 'laser' ? -5 : B[1] + 5;
-  rr(-6, ey - 2.5, 12, 5, 2); ctx.fillStyle = 'rgba(8,10,16,0.9)'; ctx.fill();
-  const eyeX = Math.sin(t * 1.3 + d.id) * 3;
-  ctx.fillStyle = P.accent; ctx.beginPath(); ctx.arc(eyeX, ey, 1.5 + act * 0.6, 0, 6.283); ctx.fill();
-  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.6; ctx.drawImage(soft(P.accent), eyeX - 5, ey - 5, 10, 10); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
-  if (P.fx === 'neon' || P.fx === 'beam') { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.3 + 0.15 * Math.sin(t * 4); ctx.drawImage(soft(P.accent), B[0] - 8, B[1] - 8, B[2] + 16, B[3] + 16); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
-  if (P.fx === 'gold' && Math.sin(t * 3 + d.id) > 0.6) { ctx.globalCompositeOperation = 'lighter'; star4(B[0] + B[2] * 0.75, B[1] + 3, 2.5, '#ffffff'); ctx.globalCompositeOperation = 'source-over'; }
+  rr(-6.5, ey - 2.8, 13, 5.6, 2.4); ctx.fillStyle = 'rgba(6,8,14,0.95)'; ctx.fill(); ctx.lineWidth = 0.6; ctx.strokeStyle = rgba(P.light, 0.5); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.18)'; rr(-5.5, ey - 2.2, 6, 1.4, 0.7); ctx.fill();
+  // rank chevrons
+  if (d.rank > 1) { ctx.strokeStyle = RANK_COL[d.rank]; ctx.lineWidth = 1.1; for (let k = 0; k < d.rank - 1; k++) { const x = B[0] + 3 + k * 3.2, y = B[1] + B[3] - 4; ctx.beginPath(); ctx.moveTo(x, y - 1.5); ctx.lineTo(x + 1.4, y); ctx.lineTo(x, y + 1.5); ctx.stroke(); } }
+  drawHat(d);
 }
-// rank: little chevrons on the body, rank V also glows
-function rankMarks(d, t) {
-  if (d.rank <= 1 || d.type === 'alien') return;
-  const B = BODY_BOX[d.type], c = RANK_COL[d.rank];
-  ctx.strokeStyle = c; ctx.lineWidth = 1.1;
-  for (let k = 0; k < d.rank - 1; k++) { const x = B[0] + 3 + k * 3.2, y = B[1] + B[3] - 4; ctx.beginPath(); ctx.moveTo(x, y - 1.5); ctx.lineTo(x + 1.4, y); ctx.lineTo(x, y + 1.5); ctx.stroke(); }
+// ---- the moving part (every frame): propellers, eye, lights, flames ----
+function droneMoving(d, P, t, act) {
+  const type = d.type;
+  if (type === 'alien') {
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35 + act * 0.4; ctx.drawImage(soft(P.accent), -16, -2, 32, 18); ctx.globalAlpha = 1;
+    for (let k = 0; k < 7; k++) { const a = k / 7 * 6.283 + t * 2; if (Math.sin(a) <= -0.2) continue; const lx = Math.cos(a) * 16, c = ['#ff4a4a', '#ffd84a', '#7dff3a', '#4ad0ff'][(k + Math.floor(t * 6)) % 4]; ctx.fillStyle = c; ctx.beginPath(); ctx.arc(lx, 1 + Math.sin(a) * 2, 1.4, 0, 6.283); ctx.fill(); ctx.globalAlpha = 0.5; ctx.drawImage(soft(c), lx - 4, Math.sin(a) * 2 - 3, 8, 8); ctx.globalAlpha = 1; }
+    ctx.globalCompositeOperation = 'source-over'; return;
+  }
+  const B = BODY_BOX[type], ax = B[0] - 6, armY = B[1] + 1;
+  for (const [px, ph] of [[ax, 0], [-ax, 1.3]]) {
+    if (P.fx === 'jets') {   // High Tech: red exhaust flames
+      const fl = 5 + Math.sin(t * 40 + ph) * 1.5 + Math.random() * 2;
+      ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createLinearGradient(0, armY + 4, 0, armY + 4 + fl); g.addColorStop(0, 'rgba(255,240,200,0.95)'); g.addColorStop(0.4, rgba(P.accent, 0.8)); g.addColorStop(1, rgba(P.accent, 0));
+      ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(px - 3.5, armY + 4); ctx.lineTo(px + 3.5, armY + 4); ctx.lineTo(px, armY + 4 + fl); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 0.35; ctx.drawImage(soft(P.accent), px - 7, armY + 1, 14, 14); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+      continue;
+    }
+    // a spinning propeller seen from the side: a blur disc + one blade that grows and shrinks
+    ctx.globalAlpha = 0.25; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(px, armY - 4, 9.5, 1.6, 0, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
+    const w = 9 * Math.abs(Math.cos(t * 38 + ph)) + 0.8;
+    ctx.strokeStyle = P.fx === 'neon' ? P.accent2 || P.accent : '#1a1d24'; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(px - w, armY - 4); ctx.lineTo(px + w, armY - 4); ctx.stroke();
+    ctx.fillStyle = OUTLINE(P); ctx.beginPath(); ctx.arc(px, armY - 4, 1.3, 0, 6.283); ctx.fill();
+    // blinking nav light on each motor
+    if (Math.sin(t * 4 + ph * 2) > 0.3) { ctx.fillStyle = px < 0 ? '#ff4a4a' : '#4aff7a'; ctx.beginPath(); ctx.arc(px, armY + 1, 0.9, 0, 6.283); ctx.fill(); }
+  }
+  // drills spin when busy
+  if ((type === 'normal' || type === 'bigdrill') && act > 0.2) drill(0, B[1] + B[3] - 1, type === 'bigdrill' ? 14 : 11, type === 'bigdrill' ? 5.5 : 4, t * 4, P);
+  if (type === 'bomber' || type === 'drillbomber' || type === 'heavybomber') { const r = type === 'heavybomber' ? 7 : 4.5, by = B[1] + B[3] + (type === 'heavybomber' ? 5 : 3); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.6 + 0.4 * Math.sin(t * 20); ctx.drawImage(soft('#ffd27a'), -3, by - r - 7, 6, 6); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+  if (type === 'laser') { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.4 + act * 0.6; ctx.drawImage(soft(P.accent), -7, B[1] + B[3] - 1, 14, 14); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+  // the eye looks around
+  const ey = type === 'laser' ? -5 : B[1] + 5, ex = Math.sin(t * 1.3 + d.id) * 3;
+  ctx.fillStyle = P.accent; ctx.beginPath(); ctx.arc(ex, ey, 1.5 + act * 0.6, 0, 6.283); ctx.fill();
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.6; ctx.drawImage(soft(P.accent), ex - 5, ey - 5, 10, 10);
+  // accent stripe pulses when busy, soft glow underneath
+  ctx.globalAlpha = 0.25 + act * 0.5; ctx.fillStyle = P.accent; ctx.fillRect(B[0] + 2, B[1] + B[3] * 0.62 + 0.6, B[2] - 4, 1.4);
+  ctx.globalAlpha = 0.18 + act * 0.25; ctx.drawImage(soft(P.accent), B[0], B[1] + B[3] - 4, B[2], 12);
+  if (P.fx === 'neon' || P.fx === 'beam') { ctx.globalAlpha = 0.3 + 0.15 * Math.sin(t * 4); ctx.drawImage(soft(P.accent), B[0] - 8, B[1] - 8, B[2] + 16, B[3] + 16); }
+  if (P.fx === 'gold' && Math.sin(t * 3 + d.id) > 0.6) { ctx.globalAlpha = 1; star4(B[0] + B[2] * 0.75, B[1] + 3, 2.5, '#ffffff'); }
+  if (P.fx === 'chrome' || P.fx === 'gold') { const sx = ((t * 30) % 70) - 35; if (Math.abs(sx) < B[2] / 2) { ctx.globalAlpha = 0.35; ctx.fillStyle = '#ffffff'; ctx.fillRect(sx - 1.5, B[1] + 1, 3, B[3] - 2); } }
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
 }
-function drawHat(d, t) {
+// hats, fitted to each body shape
+function drawHat(d) {
   if (!d.hat) return;
-  const B = BODY_BOX[d.type], top = B[1], cx = 0;
-  if (d.hat === 'helmet') {
-    ctx.beginPath(); ctx.arc(cx, top + 6, B[2] * 0.5 + 1, Math.PI, 0); ctx.closePath();
-    ctx.fillStyle = 'rgba(170,215,255,0.28)'; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(230,245,255,0.9)'; ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(cx, top + 6, B[2] * 0.5 - 2, Math.PI * 1.15, Math.PI * 1.45); ctx.stroke();
-    ctx.fillStyle = '#c8d0dc'; ctx.fillRect(-B[2] * 0.5 - 1, top + 5, B[2] + 2, 2);
+  const [top, hw, midY] = HAT_FIT[d.type], k = hw / 10;
+  if (d.hat === 'helmet') {   // a glass bubble over the top half
+    const r = hw + 2.5, cy = d.type === 'alien' ? -4 : top + hw * 0.75;
+    ctx.beginPath(); ctx.arc(0, cy, r, Math.PI, 0); ctx.closePath();
+    ctx.fillStyle = 'rgba(170,215,255,0.22)'; ctx.fill(); ctx.lineWidth = 1.1; ctx.strokeStyle = 'rgba(230,245,255,0.9)'; ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(0, cy, r - 2.2, Math.PI * 1.15, Math.PI * 1.45); ctx.stroke();
+    ctx.fillStyle = '#c8d0dc'; rr(-r - 0.5, cy - 1, r * 2 + 1, 2.2, 1); ctx.fill(); ctx.lineWidth = 0.6; ctx.strokeStyle = '#5a6474'; ctx.stroke();
   } else if (d.hat === 'antenna') {
-    for (const sd of [-1, 1]) { const bx = sd * 4 + Math.sin(t * 3 + sd) * 1.2, by = top - 9; ctx.strokeStyle = '#3a8a2a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(sd * 3, top + 1); ctx.quadraticCurveTo(sd * 5, top - 4, bx, by); ctx.stroke(); ctx.fillStyle = '#7dff3a'; ctx.beginPath(); ctx.arc(bx, by, 1.8, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5; ctx.drawImage(soft('#7dff3a'), bx - 5, by - 5, 10, 10); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
-  } else if (d.hat === 'rings') {
-    ctx.save(); ctx.rotate(-0.25); ctx.strokeStyle = '#e8c27a'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.ellipse(0, B[1] + B[3] / 2, B[2] * 0.75, 3, 0, 0, Math.PI); ctx.stroke(); ctx.strokeStyle = '#a8763a'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.ellipse(0, B[1] + B[3] / 2, B[2] * 0.68, 2.4, 0, 0, Math.PI); ctx.stroke(); ctx.restore();
+    for (const sd of [-1, 1]) { const bx = sd * 4.5 * k, by = top - 9; ctx.strokeStyle = '#3a8a2a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(sd * 3 * k, top + 1); ctx.quadraticCurveTo(sd * 5 * k, top - 4, bx, by); ctx.stroke(); ctx.fillStyle = '#7dff3a'; ctx.beginPath(); ctx.arc(bx, by, 1.8, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#1e5a14'; ctx.lineWidth = 0.6; ctx.stroke(); }
+  } else if (d.hat === 'rings') {   // Saturn rings around the middle of the body
+    ctx.save(); ctx.translate(0, midY); ctx.rotate(-0.22); ctx.strokeStyle = '#e8c27a'; ctx.lineWidth = 1.7; ctx.beginPath(); ctx.ellipse(0, 0, hw * 1.55, 3.2, 0, 0.05, Math.PI - 0.05); ctx.stroke(); ctx.strokeStyle = '#a8763a'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.ellipse(0, 0, hw * 1.4, 2.5, 0, 0.05, Math.PI - 0.05); ctx.stroke(); ctx.restore();
   } else if (d.hat === 'crown') {
-    ctx.beginPath(); ctx.moveTo(-6, top + 1); ctx.lineTo(-6, top - 4); ctx.lineTo(-3, top - 1.5); ctx.lineTo(0, top - 6); ctx.lineTo(3, top - 1.5); ctx.lineTo(6, top - 4); ctx.lineTo(6, top + 1); ctx.closePath();
-    ctx.fillStyle = '#ffc21a'; ctx.fill(); ctx.lineWidth = 0.9; ctx.strokeStyle = '#7a4a00'; ctx.stroke();
-    ctx.globalCompositeOperation = 'lighter'; star4(0, top - 6, 2 + Math.sin(t * 4), '#fff6c0'); ctx.globalCompositeOperation = 'source-over';
+    const s = Math.max(0.8, k);
+    ctx.save(); ctx.translate(0, top + 0.5); ctx.scale(s, s);
+    ctx.beginPath(); ctx.moveTo(-6, 0.5); ctx.lineTo(-6, -4.5); ctx.lineTo(-3, -2); ctx.lineTo(0, -6.5); ctx.lineTo(3, -2); ctx.lineTo(6, -4.5); ctx.lineTo(6, 0.5); ctx.closePath();
+    const g = ctx.createLinearGradient(0, -6.5, 0, 0.5); g.addColorStop(0, '#fff2a0'); g.addColorStop(1, '#c08a00'); ctx.fillStyle = g; ctx.fill(); ctx.lineWidth = 0.9; ctx.strokeStyle = '#7a4a00'; ctx.stroke();
+    ctx.fillStyle = '#ff4a6a'; ctx.beginPath(); ctx.arc(0, -1.5, 1.1, 0, 6.283); ctx.fill();
+    ctx.restore();
   }
 }
-// one reusable little canvas per effect (pixel / glitch skins draw the drone into it first)
+// cache of drone bodies, per look + pixel size
+const DCACHE = new Map();
+function droneBody(d, P, res) {
+  const rb = Math.max(0.5, Math.round(res * 4) / 4), key = d.type + '|' + (d.skin || '') + '|' + (d.hat || '') + '|' + d.rank + '|' + rb;
+  let c = DCACHE.get(key);
+  if (!c) {
+    if (DCACHE.size > 160) DCACHE.clear();
+    c = document.createElement('canvas'); c.width = Math.ceil(68 * rb); c.height = Math.ceil(62 * rb);
+    const x = c.getContext('2d'); x.setTransform(rb, 0, 0, rb, 34 * rb, 36 * rb);
+    const keep = ctx; ctx = x; droneStatic(d, P); ctx = keep;
+    DCACHE.set(key, c); PERF.droneSprites = (PERF.droneSprites || 0) + 1;
+  }
+  ctx.drawImage(c, -34, -36, 68, 62);
+}
 const DSPR = {};
 function dspr(k, w, h) { let c = DSPR[k]; if (!c) c = DSPR[k] = document.createElement('canvas'); if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } return c; }
 function drawDrone(d, x, y, o) {
@@ -3781,25 +3851,25 @@ function drawDrone(d, x, y, o) {
   const P = dronePal(d), t = o.t !== undefined ? o.t : G.time, act = o.act || 0, sc = o.scale || 1;
   ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc); if (o.tilt) ctx.rotate(o.tilt);
   if (d.rank >= 5 || d.type === 'alien') { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25 + 0.12 * Math.sin(t * 3); ctx.drawImage(soft(d.type === 'alien' ? '#7dff3a' : RANK_COL[5]), -30, -26, 60, 52); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
-  const paint = () => { droneShape(d, P, t, act); rankMarks(d, t); drawHat(d, t); };
+  const m = ctx.getTransform && ctx.getTransform(), res = m && m.a !== undefined ? Math.hypot(m.a, m.b) : K * DPR * sc;   // pixels per unit right now
   if (P.fx === 'pixel' || P.fx === 'glitch') {
     // draw into a small canvas first. Pixel: a TINY canvas blown up without smoothing = chunky pixels.
-    const pix = P.fx === 'pixel', res = pix ? 0.55 : Math.min(4, Math.max(1, K * DPR * sc)), Wd = Math.ceil(64 * res), Hd = Math.ceil(56 * res);
+    const pix = P.fx === 'pixel', r2 = pix ? 0.55 : Math.min(4, Math.max(1, res)), Wd = Math.ceil(68 * r2), Hd = Math.ceil(62 * r2);
     const c = dspr(pix ? 'pix' : 'gl', Wd, Hd), cx2 = c.getContext('2d');
-    cx2.setTransform(1, 0, 0, 1, 0, 0); cx2.clearRect(0, 0, Wd, Hd); cx2.setTransform(res, 0, 0, res, Wd / 2, Hd / 2);
-    const keep = ctx; ctx = cx2; paint(); ctx = keep;
-    if (pix) { ctx.imageSmoothingEnabled = false; ctx.drawImage(c, -32, -28, 64, 56); ctx.imageSmoothingEnabled = true; }
+    cx2.setTransform(1, 0, 0, 1, 0, 0); cx2.clearRect(0, 0, Wd, Hd); cx2.setTransform(r2, 0, 0, r2, 34 * r2, 36 * r2);
+    const keep = ctx; ctx = cx2; droneBody(d, P, r2); droneMoving(d, P, t, act); ctx = keep;
+    if (pix) { ctx.imageSmoothingEnabled = false; ctx.drawImage(c, -34, -36, 68, 62); ctx.imageSmoothingEnabled = true; }
     else {   // GL1TCH: colour channels split apart, slices jump sideways, the whole thing flickers
       const burst = Math.sin(t * 7.3 + d.id) > 0.55 || Math.random() < 0.06, sp = burst ? 2.5 : 0.9;
       ctx.globalCompositeOperation = 'lighter';
-      for (const [dx, col] of [[-sp, '#ff00ff'], [sp, '#00ff66']]) { const tc = dspr('glt' + col, Wd, Hd), tx = tc.getContext('2d'); tx.globalCompositeOperation = 'copy'; tx.drawImage(c, 0, 0); tx.globalCompositeOperation = 'source-in'; tx.fillStyle = col; tx.fillRect(0, 0, Wd, Hd); ctx.globalAlpha = 0.55; ctx.drawImage(tc, -32 + dx, -28, 64, 56); }
+      for (const [dx, col] of [[-sp, '#ff00ff'], [sp, '#00ff66']]) { const tc = dspr('glt' + col, Wd, Hd), tx = tc.getContext('2d'); tx.globalCompositeOperation = 'copy'; tx.drawImage(c, 0, 0); tx.globalCompositeOperation = 'source-in'; tx.fillStyle = col; tx.fillRect(0, 0, Wd, Hd); ctx.globalAlpha = 0.55; ctx.drawImage(tc, -34 + dx, -36, 68, 62); }
       ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
-      if (burst) { for (let k = 0; k < 4; k++) { const sy = k * Hd / 4, off = (Math.random() - 0.5) * 8; ctx.drawImage(c, 0, sy, Wd, Hd / 4, -32 + off, -28 + k * 14, 64, 14); } }
-      else ctx.drawImage(c, -32, -28, 64, 56);
+      if (burst) { for (let k = 0; k < 4; k++) { const sy = k * Hd / 4, off = (Math.random() - 0.5) * 8; ctx.drawImage(c, 0, sy, Wd, Hd / 4, -34 + off, -36 + k * 15.5, 68, 15.5); } }
+      else ctx.drawImage(c, -34, -36, 68, 62);
       if (Math.random() < 0.3) { ctx.fillStyle = Math.random() < 0.5 ? '#00ff66' : '#ff00ff'; ctx.fillRect(rnd(-20, 16), rnd(-14, 12), rnd(3, 10), rnd(1, 2)); }
       ctx.font = '900 5px monospace'; ctx.fillStyle = 'rgba(0,255,102,0.8)'; ctx.textAlign = 'center'; ctx.fillText(Math.random() < 0.5 ? '01' : '10', Math.sin(t * 3) * 14, -16 - (t * 10) % 8);
     }
-  } else paint();
+  } else { droneBody(d, P, res); droneMoving(d, P, t, act); }
   ctx.restore();
 }
 // world drawing: drones + their bombs, drills, lasers, alien beams, shock rings
@@ -3809,7 +3879,7 @@ function drawDroneWorld() {
   for (const r of G.rocks) if (r.alienGem >= 0 && r.state === 'rock') { const p = 0.5 + 0.5 * Math.sin(G.time * 4 + r.seed); ctx.globalCompositeOperation = 'lighter'; const af = gsc(); ctx.globalAlpha = 0.25 + 0.2 * p; ctx.drawImage(soft('#7dff3a'), r.x - 30 * af, wy(r.y) - 30 * af, 60 * af, 60 * af); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; drawGem(gemArt(b.name, r.alienGem), r.x + 15 * af, wy(r.y) - 15 * af, 11 * Math.max(0.4, af), { glow: '#7dff3a', alpha: 0.85 }); }
   for (const g of G.rings) { const k = g.t / 0.45; ctx.globalAlpha = Math.max(0, 1 - k); ctx.strokeStyle = g.col; ctx.lineWidth = 3 * (1 - k) + 0.5; ctx.beginPath(); ctx.arc(g.x, wy(g.y), Math.max(1, g.r * ease(k)), 0, 6.283); ctx.stroke(); }
   ctx.globalAlpha = 1;
-  for (const bo of G.dbombs) { const blink = Math.sin(bo.t * (8 + bo.t * 14)) > 0; hangBomb(bo.x, wy(bo.y), bo.big ? 6.5 : 4, { dark: '#222', accent: blink ? '#ff3030' : bo.col }, G.time, bo.drills); }
+  for (const bo of G.dbombs) { const blink = Math.sin(bo.t * (8 + bo.t * 14)) > 0; hangBomb(bo.x, wy(bo.y), bo.big ? 6.5 : 4, { dark: '#222', accent: blink ? '#ff3030' : bo.col }, G.time, bo.drills, false); }
   for (const p of G.dproj) drill(p.x, wy(p.y), 9, 3, p.spin, null, Math.atan2(-p.dy, p.dx) - Math.PI / 2);
   for (const d of deployed()) {
     const s = DRT.get(d.id); if (!s) continue;
@@ -3854,11 +3924,11 @@ function cardDrone(d, x, y, w, h, id, opts) {
   region(id, x, y, w, h, () => clickDrone(d));
   ctx.fillStyle = canM ? 'rgba(125,255,122,0.18)' : sel ? 'rgba(120,170,255,0.22)' : UI.hot === id ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)';
   rr(x, y, w, h, 10); ctx.fill();
-  ctx.lineWidth = sel || canM ? 2 : 1; ctx.strokeStyle = canM ? '#7dff7a' : sel ? '#8fb0ff' : rgba(RANK_COL[d.rank], 0.5); ctx.stroke();
+  ctx.lineWidth = sel || canM ? 2 : 1; ctx.strokeStyle = canM ? '#7dff7a' : sel ? '#8fb0ff' : rgba(RCOL[DRONE_TYPES[d.type].rar], 0.6); ctx.stroke();
   ctx.save(); if (merging && !canM && A !== d) ctx.globalAlpha *= 0.35;
   drawDrone(d, x + w / 2, y + h * 0.42, { scale: Math.min(w, h) / 38, t: G.time + d.id });
   txt(DRONE_TYPES[d.type].name, x + w / 2, y + h - 18, fitSize(DRONE_TYPES[d.type].name, 11, w - 8, FB), '#ffffff', { font: FB, weight: 900, shadow: false });
-  txt(d.type === 'alien' ? 'Rank ' + RANK_NAMES[d.rank] : 'Rank ' + RANK_NAMES[d.rank], x + w / 2, y + h - 7, 9, RANK_COL[d.rank], { font: FB, weight: 900, shadow: false });
+  txt(DRONE_TYPES[d.type].rar + ' - ' + RANK_NAMES[d.rank], x + w / 2, y + h - 7, fitSize(DRONE_TYPES[d.type].rar + ' - ' + RANK_NAMES[d.rank], 9, w - 6, FB), RCOL[DRONE_TYPES[d.type].rar], { font: FB, weight: 900, shadow: false });
   ctx.restore();
 }
 function clickDrone(d) {
@@ -3923,8 +3993,9 @@ function renderDrones() {
   }
   if (!d) { txt('Tap a drone to see it, merge it or give it a skin', w / 2, y0 + 100, 15, '#8a90a0', { font: FB, weight: 800 }); return; }
   ctx.fillStyle = rgba(RANK_COL[d.rank], 0.12); rr(32, y0 + 12, 170, 186, 12); ctx.fill();
-  drawDrone(d, 117, y0 + 96, { scale: 3.6, t: G.time });
-  txt(droneName(d), 222, y0 + 26, fitSize(droneName(d), 22, 300), RANK_COL[d.rank], { align: 'left', stroke: 3 });
+  drawDrone(d, 117, y0 + 100, { scale: 2.4, t: G.time });
+  txt(droneName(d), 222, y0 + 26, fitSize(droneName(d), 22, 230), RANK_COL[d.rank], { align: 'left', stroke: 3 });
+  txt(DRONE_TYPES[d.type].rar, 545, y0 + 27, 13, RCOL[DRONE_TYPES[d.type].rar], { align: 'right', font: FB, weight: 900 });
   txt(DRONE_TYPES[d.type].desc, 222, y0 + 52, fitSize(DRONE_TYPES[d.type].desc, 12, 330, FB), '#c9cfdc', { align: 'left', font: FB, weight: 800 });
   const stats = d.type === 'alien' ? 'Every ' + Math.round(droneCd(d)) + 's   Takes up to: ' + (d.rank >= 5 ? 'any mineral' : 'the ' + (d.rank + 1) + ' cheapest of a biome')
     : 'Every ' + droneCd(d).toFixed(1) + 's   ' + RK.dmg[d.rank] + ' crack' + (RK.dmg[d.rank] > 1 ? 's' : '') + ' per hit   Speed x' + RK.spd[d.rank] + (d.type === 'laser' ? '   ' + laserLanes(d.rank).length + ' beam' + (laserLanes(d.rank).length > 1 ? 's' : '') : '');
@@ -3937,18 +4008,27 @@ function renderDrones() {
     else { let e = -1; for (let q = 0; q < G.slotsOpen; q++) if (!G.slots[q] || !droneById(G.slots[q])) { e = q; break; } if (e < 0) { toast('All your slots are full', '#ff8a8a'); AUDIO.sfx('deny'); return; } G.slots[e] = d.id; }
     save(); } });
   btn('dmerge', 382, y0 + 112, 150, 34, 'Merge...', { col: '#3a8a4a', size: 15, fn: () => { G.mergeSel = d.id; AUDIO.sfx('click'); } });
-  // skins + hats you own: tap one to put it on (one owned copy = one drone at a time)
-  const ownS = Object.keys(SKINS).filter(id => G.skins[id] > 0), ownH = Object.keys(HATS).filter(id => G.hats[id] > 0);
-  txt('SKIN', 560, y0 + 26, 12, '#c9cfdc', { align: 'left', font: FB, weight: 900 });
-  const chip = (id, label, x, y, on, ok, col, fn) => { btn(id, x, y, 92, 24, label, { col: on ? '#3aa04a' : ok ? col : '#2a2e38', size: 11, r: 7, fn: () => { if (!on && !ok) { toast('That one is on another drone already', '#ff8a8a'); AUDIO.sfx('deny'); return; } fn(); AUDIO.sfx('click'); save(); } }); };
-  chip('skn_none', 'None', 560, y0 + 36, !d.skin, true, '#4a5470', () => { d.skin = null; });
-  ownS.forEach((id, i) => { const n = i + 1; chip('skn_' + id, SKINS[id].name, 560 + (n % 3) * 96, y0 + 36 + Math.floor(n / 3) * 28, d.skin === id, skinFree(id) > 0, '#4a5470', () => { d.skin = id; }); });
-  const hy = y0 + 36 + Math.ceil((ownS.length + 1) / 3) * 28 + 10;
-  if (ownH.length) {
-    txt('HAT', 560, hy, 12, '#c9cfdc', { align: 'left', font: FB, weight: 900 });
-    chip('hat_none', 'None', 560, hy + 10, !d.hat, true, '#5a4a70', () => { d.hat = null; });
-    ownH.forEach((id, i) => { const n = i + 1; chip('hat_' + id, HATS[id].name, 560 + (n % 3) * 96, hy + 10 + Math.floor(n / 3) * 28, d.hat === id, hatFree(id) > 0, '#5a4a70', () => { d.hat = id; }); });
-  } else if (!ownS.length) txt('Get skins from the Skin Crate or the Alien Pass', 560, y0 + 76, 11, '#8a90a0', { align: 'left', font: FB, weight: 800 });
+  // skins + hats: white boxes showing how THIS drone would look (one owned copy = one drone at a time)
+  const hats = G.dressTab === 1, list = [null].concat(hats ? Object.keys(HATS).filter(id => G.hats[id] > 0) : Object.keys(SKINS).filter(id => G.skins[id] > 0));
+  btn('dress0', 560, y0 + 10, 84, 26, 'Skins', { col: hats ? '#343c50' : '#4a5ad0', size: 13, r: 7, fn: () => { G.dressTab = 0; G.dressPage = 0; AUDIO.sfx('click'); } });
+  btn('dress1', 650, y0 + 10, 84, 26, 'Hats', { col: hats ? '#7a4ad0' : '#343c50', size: 13, r: 7, fn: () => { G.dressTab = 1; G.dressPage = 0; AUDIO.sfx('click'); } });
+  const dpages = Math.max(1, Math.ceil(list.length / 6)); G.dressPage = clamp(G.dressPage || 0, 0, dpages - 1);
+  if (dpages > 1) { btn('dressL', 744, y0 + 10, 38, 26, '<', { col: '#343c50', size: 13, r: 7, fn: () => { G.dressPage = Math.max(0, G.dressPage - 1); AUDIO.sfx('click'); } }); btn('dressR', 788, y0 + 10, 38, 26, '>', { col: '#343c50', size: 13, r: 7, fn: () => { G.dressPage = Math.min(dpages - 1, G.dressPage + 1); AUDIO.sfx('click'); } }); }
+  list.slice(G.dressPage * 6, G.dressPage * 6 + 6).forEach((id, i) => {
+    const x = 562 + (i % 3) * 90, y = y0 + 44 + Math.floor(i / 3) * 80, tw = 84, th = 74, id2 = 'dress_' + (id || 'none');
+    const on = hats ? d.hat === id : d.skin === id, ok = !id || on || (hats ? hatFree(id) : skinFree(id)) > 0;
+    region(id2, x, y, tw, th, () => { if (!ok) { toast('That one is on another drone already', '#ff8a8a'); AUDIO.sfx('deny'); return; } if (hats) d.hat = id; else d.skin = id; AUDIO.sfx('click'); save(); });
+    rr(x, y, tw, th, 9); ctx.fillStyle = UI.hot === id2 ? '#ffffff' : '#eef1f6'; ctx.fill();
+    ctx.lineWidth = on ? 3 : 1; ctx.strokeStyle = on ? '#3aa04a' : id ? (RCOL[(hats ? HATS[id] : SKINS[id]).rar] || '#c8d0dc') : '#c8d0dc'; ctx.stroke();
+    ctx.save(); if (!ok) ctx.globalAlpha = 0.35;
+    drawDrone({ id: d.id, type: d.type, rank: d.rank, skin: hats ? d.skin : id, hat: hats ? id : d.hat }, x + tw / 2, y + 32, { scale: 1.45 });
+    ctx.restore();
+    const nm = id ? (hats ? HATS[id].name : SKINS[id].name) : 'None';
+    txt(nm, x + tw / 2, y + th - 9, fitSize(nm, 11, tw - 8, FB), '#1a1d24', { font: FB, weight: 900, shadow: false });
+    if (!ok) txt('in use', x + tw / 2, y + 12, 10, '#c0392b', { font: FB, weight: 900, shadow: false });
+    const cnt = id ? (hats ? G.hats[id] : G.skins[id]) : 0; if (cnt > 1) txt('x' + cnt, x + tw - 8, y + 11, 10, '#4a5470', { align: 'right', font: FB, weight: 900, shadow: false });
+  });
+  if (list.length === 1) txt(hats ? 'Hats come from the Alien Pass' : 'Skins come from the Skin Crate + the Alien Pass', 562, y0 + 140, 11, '#8a90a0', { align: 'left', font: FB, weight: 800 });
 }
 function drawCrate(x, y, s, col, t, shake) {
   ctx.save(); ctx.translate(x + (shake ? (Math.random() - 0.5) * shake : 0), y); ctx.scale(s, s);
@@ -3968,10 +4048,32 @@ function renderDroneShop(w, h) {
     txt(C.name, x + cw / 2, y + 116, fitSize(C.name, 19, cw - 20), C.col, { stroke: 3 });
     let lines;
     if (k === 'skin') lines = Object.entries(C.skins).map(([s, v]) => SKINS[s].name + ' ' + v + '%');
-    else { const tot = Object.values(C.odds).reduce((a, b) => a + b, 0); lines = Object.entries(C.odds).map(([tp, v]) => DRONE_TYPES[tp].name + ' ' + Math.round(v / tot * 100) + '%'); lines.push('Rank: ' + C.ranks.map((v, r) => v ? RANK_NAMES[r + 1] + ' ' + v + '%' : '').filter(Boolean).join('  ')); }
+    else { const w = crateOdds(C), tot = Object.values(w).reduce((a, b) => a + b, 0); lines = Object.entries(w).map(([tp, v]) => DRONE_TYPES[tp].name + ' (' + DRONE_TYPES[tp].rar + ') ' + fmtPct(v / tot)); lines.push('Always rank I - merge for more'); }
     lines.forEach((l, j) => txt(l, x + cw / 2, y + 140 + j * 16, fitSize(l, 12, cw - 24, FB), l.startsWith('Laser') ? '#ff6a7a' : l.startsWith('Golden') ? '#ffd84a' : '#c9cfdc', { font: FB, weight: 800, shadow: false }));
     btn('crate_' + k, x + 36, y + ch - 44, cw - 72, 34, have ? 'Open free (' + have + ')' : fmt(C.price), { col: have ? '#7a3aa8' : G.creditz >= C.price ? '#3aa04a' : '#6a3a3a', size: 17, fn: () => buyCrate(k) });
   });
+}
+// NEW BIOME: nearly full screen, the biome's colour, its minerals; closes by itself or with a click
+function renderBiomeFx() {
+  const F = G.biomeFx; if (!F || G.crateFx || G.mergeFx) return;
+  setScreen();
+  const b = BIOMES[F.i], t = F.t, a = Math.min(1, t * 3, (7 - t) * 2), pop = easeBack(Math.min(1, t / 0.45));
+  ctx.globalAlpha = a; ctx.fillStyle = 'rgba(3,4,8,0.8)'; ctx.fillRect(0, 0, W, H);
+  region('biomefx', 0, 0, W, H, () => { if (F.t > 0.8) { G.biomeFx = null; AUDIO.sfx('click'); } });
+  const pw = Math.min(W - 24, 900), ph = Math.min(H - 24, 470), px = W / 2 - pw / 2, py = H / 2 - ph / 2, u = Math.min(pw / 900, ph / 470);
+  ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(0.8 + 0.2 * pop, 0.8 + 0.2 * pop); ctx.translate(-W / 2, -H / 2);
+  ctx.save(); ctx.translate(W / 2, py + ph * 0.42); ctx.rotate(G.time * 0.3); ctx.globalCompositeOperation = 'lighter';
+  for (let r = 0; r < 14; r++) { ctx.rotate(Math.PI / 7); ctx.globalAlpha = a * 0.1; ctx.fillStyle = b.accent; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-40 * u, -420 * u); ctx.lineTo(40 * u, -420 * u); ctx.closePath(); ctx.fill(); }
+  ctx.restore(); ctx.globalAlpha = a;
+  const g = ctx.createLinearGradient(0, py, 0, py + ph); g.addColorStop(0, rgba(b.accent, 0.35)); g.addColorStop(1, 'rgba(10,12,18,0.92)');
+  rr(px, py, pw, ph, 24 * u); ctx.fillStyle = '#10131c'; ctx.fill(); ctx.fillStyle = g; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = b.accent; ctx.stroke();
+  txt('NEW BIOME UNLOCKED!', W / 2, py + 54 * u, 26 * u, '#ffffff', { stroke: 4 });
+  txt(b.name, W / 2, py + 140 * u, fitSize(b.name, 84 * u, pw - 60), b.accent, { stroke: 7 });
+  txt('Biome ' + (F.i + 1) + ' of ' + BIOMES.length + '   -   Creditz x' + b.bonus + '   -   rock hardness x' + b.factor, W / 2, py + 210 * u, fitSize('Biome 00 of 00   -   Creditz x000   -   rock hardness x0000', 18 * u, pw - 60, FB), '#e8ecf4', { font: FB, weight: 900 });
+  const ms = b.minerals, gw = Math.min(130 * u, (pw - 60) / ms.length);
+  ms.forEach((m, k) => { const gx2 = W / 2 + (k - (ms.length - 1) / 2) * gw, gy = py + 320 * u; drawGem(gemArt(b.name, k), gx2, gy, 44 * u, { glow: RCOL[m[2]], rank: rank(m[2]), rot: Math.sin(G.time * 2 + k) * 0.15 }); txt(gemArt(b.name, k).name, gx2, gy + 50 * u, fitSize(gemArt(b.name, k).name, 14 * u, gw - 8, FB), '#ffffff', { font: FB, weight: 900 }); txt(m[2], gx2, gy + 68 * u, fitSize(m[2], 12 * u, gw - 8, FB), RCOL[m[2]], { font: FB, weight: 900 }); });
+  if (t > 0.8) txt(G.touch || TOUCH ? 'Tap to start mining' : 'Click to start mining', W / 2, py + ph - 36 * u, 16 * u, 'rgba(255,255,255,' + (0.55 + 0.4 * Math.sin(G.time * 4)) + ')', { font: FB, weight: 900 });
+  ctx.restore(); ctx.globalAlpha = 1;
 }
 // big pop-ups: opening a crate, and merging two drones
 function renderDroneFx() {
@@ -3988,7 +4090,7 @@ function renderDroneFx() {
   }
   const k = t - T0;
   const item = G.crateFx ? F.item : { drone: F.d };
-  const col = item.drone ? RANK_COL[item.drone.rank] : RCOL[SKINS[item.skin].rar] || '#ffffff';
+  const col = RCOL[item.drone ? DRONE_TYPES[item.drone.type].rar : SKINS[item.skin].rar] || '#ffffff';
   // light rays turning behind the prize
   ctx.save(); ctx.translate(cx, cy); ctx.rotate(G.time * 0.5); ctx.globalCompositeOperation = 'lighter';
   for (let r = 0; r < 12; r++) { ctx.rotate(Math.PI / 6); ctx.globalAlpha = 0.12; ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-30 * s, -260 * s); ctx.lineTo(30 * s, -260 * s); ctx.closePath(); ctx.fill(); }
@@ -3997,7 +4099,10 @@ function renderDroneFx() {
   const pop = easeBack(Math.min(1, k / 0.35));
   const show = item.drone || { id: 1, type: 'normal', rank: 1, skin: item.skin, hat: null };
   drawDrone(show, cx, cy, { scale: 4 * s * pop });
-  const title = item.drone ? droneName(item.drone) : SKINS[item.skin].name + ' skin', sub = item.drone ? (G.mergeFx ? 'MERGED!' : 'NEW DRONE!') : SKINS[item.skin].rar.toUpperCase() + ' SKIN';
+  const rar = item.drone ? DRONE_TYPES[item.drone.type].rar : SKINS[item.skin].rar;
+  const title = item.drone ? droneName(item.drone) : SKINS[item.skin].name + ' skin', sub = (item.drone ? (G.mergeFx ? 'MERGED!' : 'NEW DRONE!') : 'NEW SKIN!');
+  const rline = rar.toUpperCase() + (item.pct ? '  -  ' + fmtPct(item.pct / 100) + ' chance' : '');
+  txt(rline, cx, cy + 70 * s, 20 * s, RCOL[rar] || '#ffffff', { stroke: 4 });
   txt(sub, cx, cy - 110 * s, 22 * s, '#ffffff', { stroke: 4 });
   txt(title, cx, cy + 100 * s, fitSize(title, 34 * s, W - 40), col, { stroke: 5 });
   if (item.drone) txt(DRONE_TYPES[item.drone.type].desc, cx, cy + 132 * s, fitSize(DRONE_TYPES[item.drone.type].desc, 14, W - 40, FB), '#c9cfdc', { font: FB, weight: 800 });
@@ -4007,6 +4112,31 @@ function renderDroneFx() {
 // ====================================================================
 //  ALIEN PASS menu + the XP bar above the dock
 // ====================================================================
+// the big PASS button on the left side (or a smaller one under the quest chip when there's no room)
+function renderPassButton() {
+  const P = G.pass; if (!P) return;
+  const gridLeft = toScreen(-236, 0).x, room = gridLeft - 12, open = () => { AUDIO.sfx('click'); G.passPage = Math.min(4, Math.floor(P.lvl / 10)); openMenu('pass'); };
+  if (room >= 70) {
+    const w = Math.min(84, room - 6), h = 150, x = 10, y = H / 2 - h / 2 - 10, hot = UI.hot === 'passbig';
+    region('passbig', x, y, w, h, open);
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; rr(x, y + 4, w, h, 14); ctx.fill();
+    const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, hot ? '#5ad02a' : '#3a9a1a'); g.addColorStop(1, '#14400a'); ctx.fillStyle = g; rr(x, y, w, h, 14); ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = '#9aff4a'; ctx.stroke();
+    drawDrone({ id: 9, type: 'alien', rank: 5, skin: null, hat: null }, x + w / 2, y + 34 + Math.sin(G.time * 2) * 3, { scale: w / 50 });
+    txt('PASS', x + w / 2, y + 72, Math.min(20, w / 3.4), '#ffffff', { stroke: 3 });
+    txt('Lv ' + P.lvl, x + w / 2, y + 96, 15, '#c8ff9a', { stroke: 3 });
+    ctx.fillStyle = 'rgba(0,0,0,0.4)'; rr(x + 8, y + 110, w - 16, 7, 3.5); ctx.fill(); ctx.fillStyle = '#9aff4a'; rr(x + 8, y + 110, (w - 16) * (P.lvl >= PASS_MAX ? 1 : clamp(P.xp / xpNeed(P.lvl + 1), 0, 1)), 7, 3.5); ctx.fill();
+    txt(seasonText(), x + w / 2, y + 134, fitSize(seasonText(), 10, w - 8, FB), '#ffffff', { font: FB, weight: 900, shadow: false });
+    ctx.restore();
+  } else {
+    const x = 12, y = 88, w = 118, h = 28;
+    region('passbig', x, y, w, h, open);
+    ctx.fillStyle = UI.hot === 'passbig' ? '#5ad02a' : '#2a7a1a'; rr(x, y, w, h, 10); ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = '#9aff4a'; ctx.stroke();
+    drawDrone({ id: 9, type: 'alien', rank: 5, skin: null, hat: null }, x + 18, y + 15, { scale: 0.65 });
+    txt('PASS  Lv ' + P.lvl, x + 72, y + 14.5, 13, '#ffffff', { stroke: 2.5 });
+  }
+}
 function renderPassBar() {
   const P = G.pass; if (!P) return;
   const pw = Math.min(320, Math.max(150, W - 250)), px = W / 2 - pw / 2, py = H - 90;
@@ -4038,6 +4168,7 @@ function renderPass() {
   for (let k = 0; k < 18; k++) { ctx.fillStyle = 'rgba(180,255,150,' + (0.2 + 0.2 * Math.sin(G.time * 2 + k)) + ')'; ctx.fillRect((k * 137) % (w - 40) + 20, (k * 71) % 60 + 40, 2, 2); }
   drawDrone({ id: 9, type: 'alien', rank: 5, skin: null, hat: null }, 70, 58 + Math.sin(G.time * 2) * 4, { scale: 1.4 });
   txt('Level ' + P.lvl + ' / ' + PASS_MAX, w / 2, 48, 22, '#9aff4a', { stroke: 3 });
+  txt('Season 1  -  ' + seasonText(), w - 70, 46, 12, seasonLeft() > 0 ? '#c8ff9a' : '#ff8a8a', { align: 'right', font: FB, weight: 900 });
   const bw = 420, bx = w / 2 - bw / 2;
   ctx.fillStyle = 'rgba(0,0,0,0.5)'; rr(bx, 66, bw, 16, 8); ctx.fill();
   ctx.fillStyle = '#7dff3a'; rr(bx, 66, Math.max(16, bw * (P.lvl >= PASS_MAX ? 1 : clamp(P.xp / need, 0, 1))), 16, 8); ctx.fill();
