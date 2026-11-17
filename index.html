@@ -592,6 +592,8 @@ function addFound(key, i) {
 const rockValue = b => { const c = realChances(b); return Math.max(1, c.p.reduce((s, p, i) => s + p * b.minerals[i][1], 0)); };
 // bonus payouts (chests, offline) pass noRate so they never feed back into the income estimate
 function giveCreditz(n, noRate) { n = num(n, 0); if (!noRate) G.earned = (G.earned || 0) + n; G.creditz += n; if (G.creditz > G.high) G.high = G.creditz; if (!noRate) quest('earn', n); }
+// big screen flashes get annoying (and wash the screen out) when drones find rare stuff every second
+function canFlash(by) { if (by && by !== 'mouse' || G.time - (G.flashT || -9) < 1) return false; G.flashT = G.time; return true; }
 function breakRock(rock, special) {
   const b = BIOMES[G.biome];
   G.stats.rocks++;
@@ -607,7 +609,7 @@ function breakRock(rock, special) {
     const pure = Math.random() < PURE_CHANCE;
     gemKey = pure ? 'Pure' : 'Gold'; i = G.biome; gain = (pure ? PURE_VALUE : GOLD_VALUE) * bestValue(b) * totalMult(); rar = pure ? 'Admin' : 'Exotic';
     ach('golden'); if (pure) ach('pure');
-    G.flash = Math.max(G.flash, pure ? 0.7 : 0.45); G.flashCol = '#ffd84a'; coins(rock.x, rock.y, pure ? 40 : 22);
+    if (canFlash(special) || pure) { G.flash = Math.max(G.flash, pure ? 0.7 : 0.45); G.flashCol = '#ffd84a'; } coins(rock.x, rock.y, pure ? 40 : 22);
     G.lights.push({ x: rock.x, y: rock.y, r: pure ? 200 : 130, col: '#ffd84a', life: 1, max: 1 });
     if (pure) toast('PURE GOLD!  ' + ART.gems.Pure[i].name, '#fff2a8');
   }
@@ -636,7 +638,7 @@ function breakRock(rock, special) {
   G.floats.push({ x: rock.x, y: rock.y + 36, text: '+' + fmt(gain), col: '#ffd84a', t: 0, size: 15 + Math.min(8, rk) });
   sparkle(rock.x, rock.y, RCOL[rar], 8 + rk * 3);
   G.lights.push({ x: rock.x, y: rock.y, r: 50 + rk * 12, col: RCOL[rar], life: 0.6, max: 0.6 });
-  if (rk >= 5) { G.flash = 0.25 + rk * 0.02; G.flashCol = RCOL[rar]; G.shake = Math.max(G.shake, 3 + rk * 0.4); toast(rar.toUpperCase() + '!  ' + mineralName(gemKey, i), RCOL[rar]); }
+  if (rk >= 5) { if (canFlash(special)) { G.flash = 0.25 + rk * 0.02; G.flashCol = RCOL[rar]; } G.shake = Math.max(G.shake, 3 + rk * 0.4); toast(rar.toUpperCase() + '!  ' + mineralName(gemKey, i), RCOL[rar]); }
   if (first) G.floats.push({ x: rock.x, y: rock.y + 52, text: 'NEW!', col: '#7dff7a', t: 0, size: 12 });
   AUDIO.sfx('find', rk);
   if (rk >= rank('Mythical')) ach('mythic');
@@ -1089,7 +1091,7 @@ function tick() {
   if (G.crateFx) G.crateFx.t += DT; if (G.mergeFx) G.mergeFx.t += DT;
   for (const l of G.lights) l.life -= DT;
   compact(G.lights, l => l.life > 0);
-  if (G.lights.length > 60) G.lights.splice(0, G.lights.length - 60);
+  if (G.lights.length > 40) G.lights.splice(0, G.lights.length - 40);
   for (const f of G.floats) { f.t += DT; f.y += 0.9; }
   compact(G.floats, f => f.t < 1.5);
   if (G.floats.length > 40) G.floats.splice(0, G.floats.length - 40);
@@ -1569,7 +1571,8 @@ function txt(s, x, y, size, col, o) {
   if (o.stroke) { ctx.lineWidth = o.stroke; ctx.strokeStyle = o.strokeCol || '#0b0c12'; ctx.lineJoin = 'round'; ctx.strokeText(s, x, y); }
   ctx.fillStyle = col; ctx.fillText(s, x, y);
 }
-function fitSize(s, size, maxW, font) { ctx.font = size + 'px ' + (font || FH); const w = ctx.measureText(s).width; return w > maxW ? Math.max(8, size * maxW / w) : size; }
+const FITC = new Map();   // text widths we already measured
+function fitSize(s, size, maxW, font) { const k = s + '|' + size + '|' + (font || FH); let w = FITC.get(k); if (w === undefined) { if (FITC.size > 3000) FITC.clear(); ctx.font = size + 'px ' + (font || FH); w = ctx.measureText(s).width; if (document.fonts && document.fonts.status === 'loaded') FITC.set(k, w); } return w > maxW ? Math.max(8, size * maxW / w) : size; }
 
 // ---------------- background: his two-rectangle mine wall, as a lit cave ----------------
 function seeded(seed) { let s = seed; return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; }
@@ -1707,6 +1710,7 @@ function drawFrontFx() {
 // "destination-out" means: drawing here ERASES the dark layer instead of painting on it.
 const LIGHT = { c: null, dark: new Map() };
 function drawLighting(shx, shy) {
+  LIGHT.vig = false;
   const lv = gx('light'); if (!lv || G.scene !== 'play') return;
   const b = BIOMES[G.biome];
   const w = Math.max(2, Math.ceil(W / 4)), h = Math.max(2, Math.ceil(H / 4));
@@ -1726,7 +1730,7 @@ function drawLighting(shx, shy) {
     x.globalAlpha = Math.min(1, a); x.drawImage(soft('#ffffff'), (sx - rr2) * q, (sy - rr2) * q, rr2 * 2 * q, rr2 * 2 * q);
     if (col && lv > 1) tint.push([sx, sy, rr2, Math.min(1, a), col]);
   };
-  if (G.mouse.over && !G.menu && !G.mouse.onUI) { const m = toWorld(G.mouse.x, G.mouse.y); L(m.x, m.y, 125, 1, '#ffc070'); }   // your torch
+  if (G.mouse.over && !G.menu && !G.mouse.onUI) { const m = toWorld(G.mouse.x, G.mouse.y); L(m.x, m.y, 125 * (1 + 0.04 * Math.sin(G.time * 17) + 0.03 * Math.sin(G.time * 29)), 1, '#ffc070'); }   // your torch
   for (const l of G.lights) L(l.x, l.y, l.r * 1.5, l.life / l.max, l.col);
   for (const r of G.rocks) { if (r.state === 'gem' && r.gemT < 2) L(r.x, r.y, 48, 0.8, RCOL[r.rarity]); else if (r.golden && r.state === 'rock') L(r.x, r.y, 62, 0.6, '#ffcc33'); }
   for (const bo of G.bombs) if (bo.t >= 0) L(bo.x, bo.y, 95, 0.9, '#ffb04a');
@@ -1738,12 +1742,20 @@ function drawLighting(shx, shy) {
     if (s.ends) for (const e of s.ends) for (let f = 0; f <= 1; f += 0.25) L(e.ox + Math.cos(s.ang) * e.len * f, e.oy + Math.sin(s.ang) * e.len * f, 50 + d.rank * 6, 0.8, ac);
     if (d.type === 'alien' && s.state === 'beam' && s.target) L(s.target.x, s.target.y + 20, 70, 0.8, '#7dff3a'); }
   for (const b of G.dbombs) L(b.x, b.y, 26, 0.6, '#ff5a3a');
+  if (gx('bg') > 0) for (const ln of LANTERNS) L(ln[0], ln[1] - 6, 135 * lanternFlick(ln[2]), 0.95, lanternCol());
   if (b.amb === 'lava') L(0, -150, 300, 0.55, '#ff6a1a');
+  LIGHT.vig = !!gx('grade');
+  if (LIGHT.vig) {   // darker corners, drawn into the small layer
+    x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1;
+    const vk = w + 'x' + h; if (LIGHT.vk !== vk) { LIGHT.vk = vk; const vc = LIGHT.vc || (LIGHT.vc = document.createElement('canvas')); vc.width = w; vc.height = h; const v = vc.getContext('2d'), g = v.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.38, w / 2, h / 2, Math.hypot(w, h) * 0.56); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.5)'); v.fillStyle = g; v.fillRect(0, 0, w, h); }
+    x.drawImage(LIGHT.vc, 0, 0);
+  }
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1;
   ctx.drawImage(c, 0, 0, cv.width, cv.height);
   if (tint.length) {   // Full: coloured light spills onto the rocks around it
     setScreen(); ctx.globalCompositeOperation = 'lighter';
-    for (const [sx, sy, r, a, col] of tint) { ctx.globalAlpha = a * 0.2; ctx.drawImage(soft(col), sx - r, sy - r, r * 2, r * 2); }
+    const tk = 0.16 * Math.min(1, 8 / Math.max(1, tint.length));
+    for (const [sx, sy, r, a, col] of tint) { ctx.globalAlpha = a * tk; ctx.drawImage(soft(col), sx - r, sy - r, r * 2, r * 2); }
     ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
   }
 }
@@ -1755,12 +1767,15 @@ function bloomCv(k, w, h) { let c = BLOOM[k]; if (!c) c = BLOOM[k] = document.cr
 function drawBloom() {
   const lv = gx('bloom'); if (!lv) return;
   const w1 = Math.max(4, Math.ceil(cv.width / 6)), h1 = Math.max(4, Math.ceil(cv.height / 6));
-  const a = bloomCv('a', w1, h1), ax = a.getContext('2d');
-  ax.globalAlpha = 1; ax.imageSmoothingEnabled = true; ax.imageSmoothingQuality = 'high';
-  ax.globalCompositeOperation = 'copy'; ax.drawImage(cv, 0, 0, w1, h1);
-  ax.globalCompositeOperation = 'multiply'; ax.drawImage(a, 0, 0); ax.drawImage(a, 0, 0); ax.drawImage(a, 0, 0);   // x^8
-  const b = bloomCv('b', Math.max(2, Math.ceil(w1 / 4)), Math.max(2, Math.ceil(h1 / 4))), bx = b.getContext('2d');
-  bx.globalCompositeOperation = 'copy'; bx.imageSmoothingQuality = 'high'; bx.drawImage(a, 0, 0, b.width, b.height);
+  const a = bloomCv('a', w1, h1), ax = a.getContext('2d'), b = bloomCv('b', Math.max(2, Math.ceil(w1 / 4)), Math.max(2, Math.ceil(h1 / 4)));
+  BLOOM.n = (BLOOM.n || 0) + 1;
+  if (BLOOM.n % 2 === 0 || BLOOM.w !== w1 || BLOOM.h !== h1) {   // you can't see a glow that is 1 frame old, but it halves the cost
+    BLOOM.w = w1; BLOOM.h = h1;
+    ax.globalAlpha = 1; ax.imageSmoothingEnabled = true; ax.imageSmoothingQuality = 'high';
+    ax.globalCompositeOperation = 'copy'; ax.drawImage(cv, 0, 0, w1, h1);
+    ax.globalCompositeOperation = 'multiply'; ax.drawImage(a, 0, 0); ax.drawImage(a, 0, 0); ax.drawImage(a, 0, 0);   // x^8
+    const bx = b.getContext('2d'); bx.globalCompositeOperation = 'copy'; bx.imageSmoothingQuality = 'high'; bx.drawImage(a, 0, 0, b.width, b.height);
+  }
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = true;
   ctx.globalCompositeOperation = 'screen';
   ctx.globalAlpha = lv > 1 ? 0.7 : 0.5; ctx.drawImage(a, 0, 0, cv.width, cv.height);
@@ -1775,7 +1790,7 @@ function drawGrade() {
     ctx.globalCompositeOperation = 'soft-light'; ctx.globalAlpha = 0.28; ctx.fillStyle = BIOMES[bi].accent; ctx.fillRect(0, 0, cv.width, cv.height);
     ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
     setScreen();
-    overlay('vignette2', 1, x => { const g = x.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.38, W / 2, H / 2, Math.hypot(W, H) * 0.56); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.5)'); x.fillStyle = g; x.fillRect(0, 0, W, H); });
+    if (!LIGHT.vig) overlay('vignette2', 1, x => { const g = x.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.38, W / 2, H / 2, Math.hypot(W, H) * 0.56); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.5)'); x.fillStyle = g; x.fillRect(0, 0, W, H); });
   }
   if (gx('grain')) {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -1786,6 +1801,46 @@ function drawGrade() {
   }
 }
 
+// rays behind very rare minerals: one sprite with 10 soft spokes, spun around
+const rays = col => fxCanvas('rays' + col, 128, 128, (x) => {
+  x.translate(64, 64);
+  for (let k = 0; k < 10; k++) { x.rotate(Math.PI / 5); const g = x.createLinearGradient(0, 0, 0, -64); g.addColorStop(0, rgba(col, 0.9)); g.addColorStop(1, rgba(col, 0)); x.fillStyle = g; x.beginPath(); x.moveTo(-2, 0); x.lineTo(-9, -64); x.lineTo(9, -64); x.lineTo(2, 0); x.closePath(); x.fill(); }
+});
+// LANTERNS hanging at the sides of the rock wall (world positions), with flickering flames
+const LANTERNS = [[-226, 160, 0], [226, 160, 2.1], [-226, 0, 4.3], [226, 0, 1.2]];
+const lanternFlick = ph => 1 + 0.05 * Math.sin(G.time * 13 + ph) + 0.04 * Math.sin(G.time * 31 + ph * 2) + (Math.sin(G.time * 3.3 + ph) > 0.97 ? -0.08 : 0);
+const lanternCol = () => mix(BIOMES[G.biome].accent, '#ffb060', 0.65);
+function drawLanterns() {
+  if (gx('bg') < 1 || G.scene !== 'play') return;
+  const col = lanternCol();
+  for (const [lx, ly, ph] of LANTERNS) {
+    const x = lx + Math.sin(G.time * 1.3 + ph) * 0.8, y = wy(ly), f = lanternFlick(ph);
+    ctx.strokeStyle = '#1a1a20'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(lx, y - 16); ctx.lineTo(x, y - 8); ctx.stroke();
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35 * f; ctx.drawImage(soft(col), x - 30, y - 28, 60, 60); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    rr(x - 4.5, y - 8, 9, 3, 1); ctx.fillStyle = '#2a2a30'; ctx.fill();
+    rr(x - 4, y - 5, 8, 11, 2); ctx.fillStyle = rgba(col, 0.35); ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = '#1a1a20'; ctx.stroke();
+    ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#fff2c0'; ctx.beginPath(); ctx.ellipse(x, y + 1 - f, 1.6 * f, 3 * f, 0, 0, 6.283); ctx.fill(); ctx.fillStyle = col; ctx.globalAlpha = 0.8; ctx.beginPath(); ctx.ellipse(x, y + 1.5 - f, 2.6 * f, 4 * f, 0, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    rr(x - 4.5, y + 5, 9, 2.5, 1); ctx.fillStyle = '#2a2a30'; ctx.fill();
+    ctx.strokeStyle = '#1a1a20'; ctx.beginPath(); ctx.moveTo(x - 4, y - 5); ctx.lineTo(x - 4, y + 6); ctx.moveTo(x + 4, y - 5); ctx.lineTo(x + 4, y + 6); ctx.stroke();
+  }
+}
+// FOREGROUND: dark rock silhouettes at the very top + bottom edge, sliding with parallax (they feel close to you)
+function drawForeground() {
+  if (gx('bg') < 2 || G.scene !== 'play') return;
+  const bi = G.biome, key = 'fg' + bi + '|' + W + 'x' + H;
+  const c = fxCanvas(key, Math.ceil(W + 60), Math.ceil(H), (x, w, h) => {
+    if (fxCache.size > 40) for (const k of [...fxCache.keys()]) if (k.startsWith('fg') && k !== key) fxCache.delete(k);
+    const o = bgCols(bi)[0], dark = mix(o, '#000000', 0.82), rim = rgba(mix(BIOMES[bi].accent, '#ffffff', 0.3), 0.35), R = seeded(bi * 131 + 7);
+    const band = (top) => {
+      x.beginPath(); x.moveTo(0, top ? 0 : h);
+      for (let px = 0; px <= w + 40; px += 26 + R() * 30) { const d = top ? 8 + R() * 24 + (R() < 0.18 ? 20 + R() * 30 : 0) : 10 + R() * 26 + (R() < 0.15 ? 25 + R() * 30 : 0); x.lineTo(px, top ? d : h - d); }
+      x.lineTo(w, top ? 0 : h); x.closePath();
+      x.fillStyle = dark; x.fill(); x.lineWidth = 1.5; x.strokeStyle = rim; x.stroke();
+    };
+    band(true); band(false);
+  });
+  setScreen(); ctx.drawImage(c, -30 + PAR.x * 1.8, PAR.y * 1.2);
+}
 // ---------------- ambient drawing ----------------
 function drawAmbient(front) {
   setScreen();
@@ -1961,7 +2016,8 @@ function drawRock(r, bname) {
   const jx = r.shake ? (Math.random() - 0.5) * r.shake * 0.7 : 0, jy = r.shake ? (Math.random() - 0.5) * r.shake * 0.7 : 0;
   const x = r.x + jx * 0.5, y = wy(r.y) + jy * 0.5, s = 23, q = s * 0.95;
   ctx.save();
-  ctx.translate(x, y); ctx.scale(grow, grow);
+  const sq = r.flash > 0 ? r.flash * 0.08 : 0;   // squash when hit
+  ctx.translate(x, y + sq * 10); ctx.scale(grow * (1 + sq), grow * (1 - sq));
   ctx.globalAlpha = born;
   ctx.drawImage(r.spr, -ROCK_BOX / 2, -ROCK_BOX / 2, ROCK_BOX, ROCK_BOX);
   { const fx = BIOME_FX[bname]; if (fx && fx.liveSparks && !QUALITY.drop && gx('parts') > 0) liveSparks(r, bname, fx.liveSparks); }
@@ -2465,6 +2521,7 @@ function render() {
   renderWorld(shx, shy);
   drawAmbient(true);
   drawFrontFx();
+  drawForeground();
   drawLighting(shx, shy);
   drawBloom();
   drawGrade();
@@ -2521,6 +2578,10 @@ function renderWorld(shx, shy) {
       x = x + (target.x - x) * t; y = y + (wy(target.y) - y) * t - Math.sin(t * Math.PI) * 60; sz *= 1 - t * 0.6; alpha = 1 - t * 0.3;
       if (t > 0.97 && !r.arrived) { r.arrived = true; G.hudPulse = 1; }
     }
+    if (rk >= 5 && r.gemT < 2.2 && gx('bg') > 0) {
+      const ra = rays(RCOL[r.rarity]), rs = 34 + rk * 3, fa = Math.min(1, r.gemT * 3) * clamp((2.2 - r.gemT) * 3, 0, 1);
+      ctx.save(); ctx.translate(x, y); ctx.rotate(G.time * 0.8 + r.seed); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.55 * fa * pop; ctx.drawImage(ra, -rs, -rs, rs * 2, rs * 2); ctx.rotate(-G.time * 1.9); ctx.globalAlpha = 0.3 * fa * pop; ctx.drawImage(ra, -rs * 0.7, -rs * 0.7, rs * 1.4, rs * 1.4); ctx.restore();
+    }
     if (gx('shadows') && r.gemT < 2) { ctx.globalAlpha = 0.45 * pop; ctx.drawImage(soft('#000000'), r.x - 13, wy(r.y) + 7, 26, 8); ctx.globalAlpha = 1; }
     drawGem(art, x, y, sz, { glow: RCOL[r.rarity], rank: rk, alpha, small: r.gemT < 2, rot: Math.sin(G.time * 2 + r.seed) * 0.08 });
     if (r.gemKey === 'Gold' || r.gemKey === 'Pure') {   // gold shine: rotating glints around it
@@ -2538,6 +2599,7 @@ function renderWorld(shx, shy) {
   }
   for (const d of G.drills) if (d.target || d.y < 190) drawDrill(d);
   drawDroneWorld();
+  drawLanterns();
   if (G.mega) drawMega(G.mega, b.name);
   for (const d of G.drops) drawGem(gemArt(b.name, d.i), d.x, wy(d.y), 22, { glow: RCOL[b.minerals[d.i][2]], rank: 3, rot: Math.sin(G.time * 3 + d.ph) * 0.3 });
   // meteors
@@ -2577,7 +2639,7 @@ function renderWorld(shx, shy) {
     if (p.kind === 'chunk') {
       ctx.save(); ctx.translate(x, y); ctx.rotate(p.rot); ctx.globalAlpha = a;
       ctx.fillStyle = p.col; ctx.strokeStyle = '#07070a'; ctx.lineWidth = 1;
-      const s = p.s; ctx.beginPath(); ctx.moveTo(-s * (0.5 + p.pts[0] * 0.5), -s * 0.6); ctx.lineTo(s * (0.5 + p.pts[1] * 0.5), -s * 0.4); ctx.lineTo(s * 0.4, s * (0.4 + p.pts[2] * 0.4)); ctx.lineTo(-s * 0.6, s * 0.5); ctx.closePath(); ctx.fill(); ctx.stroke();
+      const s = p.s; ctx.beginPath(); ctx.moveTo(-s * (0.5 + p.pts[0] * 0.5), -s * 0.6); ctx.lineTo(s * (0.5 + p.pts[1] * 0.5), -s * 0.4); ctx.lineTo(s * 0.4, s * (0.4 + p.pts[2] * 0.4)); ctx.lineTo(-s * 0.6, s * 0.5); ctx.closePath(); ctx.fill(); if (!p.hi) p.hi = lighten(p.col, 0.4); ctx.save(); ctx.clip(); ctx.fillStyle = p.hi; ctx.globalAlpha = a * 0.7; ctx.fillRect(-s, -s, s * 2, s * 0.45); ctx.restore(); ctx.stroke();
       ctx.restore();
     } else if (p.kind === 'dust' || p.kind === 'smoke') { ctx.globalAlpha = a * (p.kind === 'smoke' ? 0.55 : 0.35); ctx.drawImage(soft(p.col), x - p.s, y - p.s, p.s * 2, p.s * 2); }
     else if (p.kind === 'spark') { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; ctx.strokeStyle = p.col; ctx.lineWidth = p.s; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - p.vx * 2, y + p.vy * 2); ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; }
@@ -2591,7 +2653,8 @@ function renderWorld(shx, shy) {
   ctx.globalAlpha = 1;
   // lights (additive glow)
   ctx.globalCompositeOperation = 'lighter';
-  for (const l of G.lights) { ctx.globalAlpha = (l.life / l.max) * 0.7; ctx.drawImage(soft(l.col), l.x - l.r, wy(l.y) - l.r, l.r * 2, l.r * 2); }
+  const lk = 0.7 * Math.min(1, 10 / Math.max(1, G.lights.length));
+  for (const l of G.lights) { ctx.globalAlpha = (l.life / l.max) * lk; ctx.drawImage(soft(l.col), l.x - l.r, wy(l.y) - l.r, l.r * 2, l.r * 2); }
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
   for (const f of G.floats) { ctx.globalAlpha = clamp((1.5 - f.t) * 2, 0, 1); const sc = f.t < 0.15 ? easeBack(f.t / 0.15) : 1; txt(f.text, f.x, wy(f.y), f.size * sc, f.col, { stroke: 3 }); }
   ctx.globalAlpha = 1;
@@ -2679,8 +2742,9 @@ function renderHUD() {
   // dock
   const dock = [['biomes', 'Biomes', 'globe', '#2f8f6a'], ['book', 'Book', 'book', '#8a5a2e'], ['rebirth', 'Rebirth', 'rebirth', '#c48a12'], ['shop', 'Shop', 'shop', '#3a5fd0'], ['drones', 'Drones', 'drone', '#2a8aa8']];
   renderPassBar(); setScreen();
-  const leftPad = W < 520 ? (G.bombLevel > 0 ? 76 : 10) : G.bombLevel > 0 ? 90 : 20;
-  const bw = Math.min(150, (W - leftPad * 2) / 4 - 10), bh = 52, total = dock.length * bw + (dock.length - 1) * 10;
+  const narrow = W < 560, gap = narrow ? 6 : 10;   // narrow screens: the bomb button sits above the dock instead of beside it
+  const leftPad = narrow ? 8 : G.bombLevel > 0 ? 90 : 20;
+  const bw = Math.min(150, (W - leftPad * 2 - (dock.length - 1) * gap) / dock.length), bh = 52, total = dock.length * bw + (dock.length - 1) * gap;
   let x = W / 2 - total / 2;
   const y = H - bh - 18;
   for (const [id, label, icon, col] of dock) {
@@ -2688,11 +2752,11 @@ function renderHUD() {
     btn('dock_' + id, x, y, bw, bh, bw > 100 ? label : '', { icon, col: on ? lighten(col, 0.2) : col, size: 19, fn: () => { AUDIO.sfx('click'); if (id === 'book' && G.menu !== 'book') G.bookTab = Math.min(G.bookTab, BOOK_TABS().length - 1); openMenu(id); } });
     if (id === 'rebirth' && G.creditz >= rebirthCost()) { const pz = 0.5 + 0.5 * Math.sin(G.time * 6); ctx.fillStyle = 'rgba(255,230,120,' + pz + ')'; ctx.beginPath(); ctx.arc(x + bw - 6, y + 6, 6, 0, 6.283); ctx.fill(); }
     if (id === 'shop' && SHOP_ORDER.some(k => { const c = costOf(k, G[LVL_KEY[k]]); return c !== undefined && G.creditz >= c; })) { ctx.fillStyle = '#7dff7a'; ctx.beginPath(); ctx.arc(x + bw - 6, y + 6, 5, 0, 6.283); ctx.fill(); }
-    x += bw + 10;
+    x += bw + gap;
   }
   // bomb chip: the ring fills to 100%, then pops when the bomb is ready
   if (G.bombLevel > 0) {
-    const cx = 44, cy = H - 44, r = 26, ready = G.bombCD <= 0, tier = bombTier(G.bombLevel);
+    const cx = 44, cy = W < 560 ? H - 122 : H - 44, r = 26, ready = G.bombCD <= 0, tier = bombTier(G.bombLevel);
     region('bombchip', cx - r, cy - r - 4, r * 2, r * 2 + 18, () => { if (G.bombCD > 0) return; G.bombArm = !G.bombArm; AUDIO.sfx('click'); });
     if (G.bombArm) { ctx.fillStyle = 'rgba(255,90,40,' + (0.25 + 0.2 * Math.sin(G.time * 10)) + ')'; ctx.beginPath(); ctx.arc(cx, cy, r + 8, 0, 6.283); ctx.fill(); }
     ctx.fillStyle = 'rgba(10,12,18,0.75)'; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.283); ctx.fill();
@@ -2701,7 +2765,7 @@ function renderHUD() {
     ctx.lineWidth = 4 * pop; ctx.lineCap = 'round'; ctx.strokeStyle = ready ? (tier.name === 'orange' ? '#ffb04a' : tier.spark) : '#6a7080';
     ctx.beginPath(); ctx.arc(cx, cy, (r - 3) * pop, -Math.PI / 2, -Math.PI / 2 + 6.283 * Math.max(0.001, frac)); ctx.stroke(); ctx.lineCap = 'butt';
     drawIcon('bomb', cx, cy - 2, 26, tier.name === 'orange' ? '#2a2d36' : tier.name === 'black' ? '#14081f' : tier.name === 'white' ? '#e9f0ff' : '#2a5aff');
-    txt(G.bombArm ? (G.touch ? 'TAP A ROCK' : 'CLICK A SPOT') : ready ? (G.touch ? 'TAP' : 'SPACE') : Math.ceil(G.bombCD) + 's', cx, cy + r + 9, 10, ready ? '#ffd27a' : '#9aa0aa', { font: FB, weight: 900 });
+    txt(G.bombArm ? (G.touch || TOUCH ? 'TAP A ROCK' : 'CLICK A SPOT') : ready ? (G.touch || TOUCH ? 'TAP' : 'SPACE') : Math.ceil(G.bombCD) + 's', cx, cy + r + 9, 10, ready ? '#ffd27a' : '#9aa0aa', { font: FB, weight: 900 });
   }
   // chest buffs with timers
   let bi = 0;
@@ -2713,20 +2777,23 @@ function renderHUD() {
   }
   // toasts
   G.toasts.forEach((t, i) => {
-    const a = clamp(Math.min(t.t * 6, (2.6 - t.t) * 3), 0, 1), yy = TOP + 44 + i * 34 - (1 - a) * 10;
-    ctx.globalAlpha = a; const sz = fitSize(t.text, 17, W - 60); ctx.font = sz + 'px ' + FH; const w = Math.min(W - 20, ctx.measureText(t.text).width + 36);
-    ctx.fillStyle = 'rgba(12,14,22,0.88)'; rr(W / 2 - w / 2, yy - 15, w, 30, 15); ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = rgba(t.col, 0.7); ctx.stroke();
+    const u = H < 520 ? 0.72 : 1, a = clamp(Math.min(t.t * 6, (2.6 - t.t) * 3), 0, 1), yy = TOP + 44 * u + i * 34 * u - (1 - a) * 10;
+    ctx.globalAlpha = a; const sz = fitSize(t.text, 17 * u, W - 60); ctx.font = sz + 'px ' + FH; const w = Math.min(W - 20, ctx.measureText(t.text).width + 36 * u);
+    ctx.fillStyle = 'rgba(12,14,22,0.88)'; rr(W / 2 - w / 2, yy - 15 * u, w, 30 * u, 15 * u); ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = rgba(t.col, 0.7); ctx.stroke();
     txt(t.text, W / 2, yy + 1, sz, t.col, { shadow: false });
     ctx.globalAlpha = 1;
   });
   // achievement popups (two at a time; the rest queue)
   G.achPop.slice(0, 2).forEach((p, i) => {
     const a = ACH.find(x => x[0] === p.id), slide = ease(Math.min(p.t * 3, (4 - p.t) * 3));
-    const w = Math.min(260, W - 30), x = W - (w + 14) * slide, yy = TOP + 14 + i * 70;
-    ctx.fillStyle = 'rgba(16,18,28,0.95)'; rr(x, yy, w, 60, 12); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#ffd84a'; ctx.stroke();
-    drawIcon('trophy', x + 30, yy + 30, 30, '#ffd84a');
-    txt('Achievement!', x + 56, yy + 18, 12, '#ffd84a', { align: 'left', font: FB, weight: 900 });
-    txt(a[1], x + 56, yy + 37, fitSize(a[1], 18, w - 66), '#ffffff', { align: 'left' });
+    const u = H < 520 ? 0.65 : 1;
+    const w = Math.min(260 * u, W - 30), x = W - (w + 14) * slide, yy = TOP + 14 * u + i * 70 * u;
+    ctx.save(); ctx.translate(x, yy); ctx.scale(u, u); const ww = w / u;
+    ctx.fillStyle = 'rgba(16,18,28,0.95)'; rr(0, 0, ww, 60, 12); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#ffd84a'; ctx.stroke();
+    drawIcon('trophy', 30, 30, 30, '#ffd84a');
+    txt('Achievement!', 56, 18, 12, '#ffd84a', { align: 'left', font: FB, weight: 900 });
+    txt(a[1], 56, 37, fitSize(a[1], 18, ww - 66), '#ffffff', { align: 'left' });
+    ctx.restore();
   });
 }
 
@@ -3581,7 +3648,8 @@ function rotor(x, y, t, P, phase) {
   ctx.beginPath(); ctx.moveTo(x - w, y - 3.5); ctx.lineTo(x + w, y - 3.5); ctx.stroke();
   ctx.fillStyle = OL; ctx.beginPath(); ctx.arc(x, y - 3.5, 1.3, 0, 6.283); ctx.fill();
 }
-function bodyFill(x, y, w, h, P) { const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, P.light); g.addColorStop(0.45, P.body); g.addColorStop(1, P.dark); return g; }
+const BFILL = new Map();
+function bodyFill(x, y, w, h, P) { const k = y + '|' + h + '|' + P.light + P.body + P.dark; let g = BFILL.get(k); if (!g) { if (BFILL.size > 200) BFILL.clear(); g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, P.light); g.addColorStop(0.45, P.body); g.addColorStop(1, P.dark); BFILL.set(k, g); } return g; }
 function drill(x, y, len, w, t, P, ang) {
   ctx.save(); ctx.translate(x, y); if (ang) ctx.rotate(ang);
   ctx.beginPath(); ctx.moveTo(-w, 0); ctx.lineTo(w, 0); ctx.lineTo(0, len); ctx.closePath();
