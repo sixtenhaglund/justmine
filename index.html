@@ -112,7 +112,7 @@ const BIOME_INDEX = name => BIOMES.findIndex(b => b.name === name);
 const BIOME_FX = {
   'Common Caverns': { brk: 'rock' },
   'Magnetic Mountain': { liveSparks: ['#7fa8ff', '#ff6a6a'], brk: 'sparks', bcol: ['#7fa8ff', '#ff6a6a'] },
-  'Heavy Hights': { brk: 'heavy' },
+  'Heavy Hights': { brk: 'heavy', molten: true },
   'Crystal Cave': { brk: 'shards', bcol: 'rainbow' },
   'Red Ravines': { brk: 'embers' },
   'Cryo Cliffs': { brk: 'ice', jagged: 0.55, brighten: '#dff6ff' },   // thin jagged cracks; the rock gets brighter as you mine it
@@ -503,7 +503,7 @@ function spawnRock(x0, y0) {
   if (b.magnet && rnd(1, 2) === 2) rock.hue = 125;
   if (b.rainbow) { rock.hue = G.crystalHue; G.crystalHue = (G.crystalHue + 5) % 200; }
   if (Math.random() < (G.rush > 0 ? 1 / 8 : goldenChance())) rock.golden = true;
-  else if (Math.random() < chestChance()) { rock.chest = Math.random() < 0.25 ? 'golden' : 'orange'; rock.hpMax = rock.hp = rock.chest === 'golden' ? 18 : 12; }
+  else if (Math.random() < chestChance()) { const cr = Math.random(); rock.chest = cr < 0.12 ? 'golden' : cr < 0.4 ? 'iron' : 'orange'; rock.hpMax = rock.hp = { golden: 22, iron: 16, orange: 12 }[rock.chest]; }
   else if (G.biome >= 1 && rnd(1, 12) === 1) {   // reinforced: extra armour layers to break first (higher tiers in later biomes)
     const maxT = Math.min(4, 1 + Math.floor(G.biome / 5));
     rock.tier = Math.max(1, maxT - Math.floor(Math.pow(Math.random(), 1.6) * maxT));
@@ -526,6 +526,7 @@ function recolor(rock) {
 }
 const aliveRocks = () => { let n = 0; for (const r of G.rocks) if (r.state === 'rock') n++; return n; };
 // chests: about one every 1-2 grids; Golden touch and Luck nudge it up a little
+// chests: wooden 60%, iron 28%, golden 12%
 const chestChance = () => (1 / 60) * (1 + 0.05 * G.goldenLevel + 0.03 * G.luckLevel) * upv('chestup', 1);
 const buffOn = k => (G.buffs[k] || 0) > 0;
 // remove items from a list without making a new array every frame
@@ -670,20 +671,20 @@ function armorDebris(r, layer) {
 // ---------- chests ----------
 function openChest(r) {
   r.state = 'open'; r.openT = 0;
-  const golden = r.chest === 'golden';
-  G.stats.chests = (G.stats.chests || 0) + 1; quest('chest', 1); addXP(golden ? 60 : 25);
+  const golden = r.chest === 'golden', tier = golden ? 2 : r.chest === 'iron' ? 1 : 0, glow = ['#ffb04a', '#cfe0ff', '#ffe27a'][tier];
+  G.stats.chests = (G.stats.chests || 0) + 1; quest('chest', 1); addXP([25, 40, 60][tier]);
   if (G.stats.chests >= 10) ach('chest10'); if (G.stats.chests >= 50) ach('chest50');
-  coins(r.x, r.y, golden ? 34 : 20); sparkle(r.x, r.y, golden ? '#ffe27a' : '#ffb04a', golden ? 30 : 18);
-  G.lights.push({ x: r.x, y: r.y, r: golden ? 180 : 120, col: golden ? '#ffe27a' : '#ffb04a', life: 1, max: 1 });
-  G.flash = Math.max(G.flash, golden ? 0.5 : 0.3); G.flashCol = '#ffd84a'; G.shake = Math.max(G.shake, 4);
-  AUDIO.sfx('chest');
-  const roll = Math.random() * 100, w = golden ? [30, 30, 30] : [40, 30, 20];
-  const b = BIOMES[G.biome], name = golden ? 'Golden chest' : 'Chest';
+  coins(r.x, r.y, [20, 26, 34][tier]); sparkle(r.x, r.y, glow, [18, 24, 30][tier]);
+  G.lights.push({ x: r.x, y: r.y, r: [120, 150, 180][tier], col: glow, life: 1, max: 1 });
+  G.flash = Math.max(G.flash, [0.3, 0.38, 0.5][tier]); G.flashCol = golden ? '#ffd84a' : tier ? '#dfe8ff' : '#ffd84a'; G.shake = Math.max(G.shake, 4);
+  AUDIO.sfx('chest'); if (tier) AUDIO.sfx(golden ? 'goldhit' : 'ironhit');
+  const roll = Math.random() * 100, w = [[40, 30, 20], [35, 30, 25], [30, 30, 30]][tier];
+  const b = BIOMES[G.biome], name = ['Chest', 'Iron chest', 'Golden chest'][tier];
   if (roll < w[0]) {
-    const amt = rockValue(b) * totalMult() * (golden ? 120 : 40);   // worth ~40 rocks (120 for golden)
+    const amt = rockValue(b) * totalMult() * [40, 70, 120][tier];   // worth ~40 rocks (70 iron, 120 golden)
     giveCreditz(amt, true); toast(name + ': +' + fmt(amt) + ' Creditz', '#ffe27a');
   } else if (roll < w[0] + w[1]) {
-    const k = ['cash', 'speed', 'luck'][rnd(0, 2)], dur = golden ? 60 : rnd(30, 45);
+    const k = ['cash', 'speed', 'luck'][rnd(0, 2)], dur = [rnd(30, 45), 50, 60][tier];
     G.buffs[k] = Math.max(G.buffs[k] || 0, dur);
     toast(name + ': ' + { cash: 'x2 Creditz', speed: 'x2 mining speed', luck: 'Extra luck' }[k] + ' for ' + dur + 's!', '#7dff7a');
   } else if (roll < w[0] + w[1] + w[2]) {
@@ -748,8 +749,9 @@ function hitRock(rock, by) {
   if (rock.chest) {   // chests: knock off HP, then they burst open
     rock.hp -= by === 'bomb' ? 2 : 1;
     rock.cool = wait0 * 0.6 + DT; rock.coolMax = rock.cool; rock.shake = 5; rock.flash = 1;
-    emit('plank', rock.x, rock.y, 3, { col: rock.chest === 'golden' ? ['#ffe27a', '#b07a10'] : ['#c8741a', '#6a3a0a'] });
-    AUDIO.sfx('thud'); if (by === 'mouse') G.mouse.swing = 1;
+    if (rock.chest === 'orange') emit('plank', rock.x, rock.y, 3, { col: ['#c8741a', '#6a3a0a'] });
+    else emit('plate', rock.x, rock.y, 3, { col: rock.chest === 'golden' ? ['#ffe27a', '#b07a10'] : ['#d0d8e2', '#5a6474'] });
+    AUDIO.sfx(rock.chest === 'golden' ? 'goldhit' : rock.chest === 'iron' ? 'ironhit' : 'thud'); if (by === 'mouse') G.mouse.swing = 1;
     if (rock.hp <= 0) openChest(rock);
     return;
   }
@@ -1397,7 +1399,7 @@ const AUDIO = (() => {
     } catch (e) {}
   }
   const lastPlay = {};
-  const MIN_GAP = { dhit: 0.05, dbomb: 0.06, drop: 0.08, laser: 0.3, slam: 0.08, glitch: 0.12, retro: 0.04, hit: 0.04, tick: 0.06, find: 0.05, empty: 0.05, clank: 0.08, impact: 0.05, whistle: 0.1, regen: 0.5, ach: 0.3, deny: 0.15, buy: 0.05, thunder: 1 };
+  const MIN_GAP = { goldhit: 0.05, ironhit: 0.05, dhit: 0.05, dbomb: 0.06, drop: 0.08, laser: 0.3, slam: 0.08, glitch: 0.12, retro: 0.04, hit: 0.04, tick: 0.06, find: 0.05, empty: 0.05, clank: 0.08, impact: 0.05, whistle: 0.1, regen: 0.5, ach: 0.3, deny: 0.15, buy: 0.05, thunder: 1 };
   function sfx(name, x) {
     if (name === 'click') { pop('pop', 1, 0.8); }
     if (!ac) return;
@@ -1447,6 +1449,8 @@ const AUDIO = (() => {
       case 'crate': noise(t, 1.1, 0.2, o, { type: 'bandpass', f: 400, fTo: 3000, q: 2 }); for (let k = 0; k < 5; k++) note(mtof(60 + k * 4), t + 1.05 + k * 0.06, 0.6, 'triangle', 0.1, o); noise(t + 1.05, 0.4, 0.4, o, { f: 4000, fTo: 300 }); break;
       case 'merge': note(220, t, 0.9, 'sawtooth', 0.08, o, { slide: 880, lp: 1500, lpTo: 6000 }); for (const [k, d] of [[72, 0.9], [79, 0.98], [84, 1.06], [91, 1.14]]) note(mtof(k), t + d, 0.5, 'triangle', 0.1, o); break;
       case 'dlevel': for (const [k, d] of [[76, 0], [83, 0.07], [88, 0.14]]) note(mtof(k), t + d, 0.25, 'triangle', 0.08, o); break;
+      case 'goldhit': note(1900, t, 0.3, 'triangle', 0.1, o); note(2850, t, 0.45, 'sine', 0.06, o); note(3800, t + 0.01, 0.5, 'sine', 0.035, o); noise(t, 0.04, 0.22, o, { type: 'highpass', f: 4000 }); break;   // a bright ring
+      case 'ironhit': note(420, t, 0.16, 'square', 0.06, o, { lp: 2200 }); note(640, t, 0.24, 'triangle', 0.09, o); note(1310, t, 0.18, 'sine', 0.03, o); noise(t, 0.06, 0.3, o, { type: 'bandpass', f: 1800, q: 2 }); break;   // a dull clank
       case 'level': for (const [k, d] of [[67, 0], [74, 0.08], [79, 0.16], [86, 0.24]]) { note(mtof(k), t + d, 0.4, 'square', 0.06, o, { lp: 3500 }); note(mtof(k + 12), t + d, 0.3, 'sine', 0.04, o); } break;
       case 'glitch': for (let k = 0; k < 5; k++) note(200 + Math.random() * 2000, t + k * 0.03, 0.03, 'square', 0.04, o); noise(t, 0.12, 0.15, o, { type: 'highpass', f: 3000 }); break;
       case 'retro': {   // 8-bit versions for the Pixel skin
@@ -2028,8 +2032,14 @@ function rockBody(r, bname) {
         ctx.globalAlpha = c.o || 1; ctx.strokeStyle = cc; jaggedCrack(c, jw, sd); ctx.globalAlpha = 1;
         return;
       }
+      if (fx.molten) {   // molten crack: a red glow around it, then (below) a hot bright core
+        const m = ctx.getTransform(), upx = Math.hypot(m.a, m.b) || 1;
+        ctx.save(); ctx.shadowColor = 'rgba(255,40,10,0.95)'; ctx.shadowBlur = 0.9 * upx; ctx.strokeStyle = cc; ctx.lineWidth = w * 1.1; ctx.stroke(path(c.d)); ctx.restore();
+        ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(255,60,20,0.14)'; ctx.lineWidth = w * 3; ctx.stroke(path(c.d)); ctx.globalCompositeOperation = 'source-over';
+      }
       if (lum > 90) { ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(cc, 0.22); ctx.lineWidth = w * 3.6; ctx.stroke(path(c.d)); ctx.globalCompositeOperation = 'source-over'; }
       ctx.globalAlpha = c.o || 1; ctx.strokeStyle = cc; ctx.lineWidth = w; ctx.stroke(path(c.d)); ctx.globalAlpha = 1;
+      if (fx.molten) { ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(lighten(cc, 0.6), 0.85); ctx.lineWidth = w * 0.38; ctx.stroke(path(c.d)); ctx.globalCompositeOperation = 'source-over'; }
     });
     // a thin light edge under each crack so it looks chiselled into the rock
     ctx.translate(0.22, 0.28);
@@ -2081,6 +2091,7 @@ function drawRock(r, bname) {
   ctx.globalAlpha = born;
   if (r.slot >= 0) ctx.drawImage(ATLAS.c, (r.slot % ATLAS.cols) * S, Math.floor(r.slot / ATLAS.cols) * S, S, S, -ROCK_BOX / 2, -ROCK_BOX / 2, ROCK_BOX, ROCK_BOX);
   else ctx.drawImage(r.spr, -ROCK_BOX / 2, -ROCK_BOX / 2, ROCK_BOX, ROCK_BOX);
+  { const fx = BIOME_FX[bname]; if (fx && fx.molten && r.costume > 0 && gx('parts') > 0) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = born * (0.04 + 0.035 * r.costume) * (0.7 + 0.3 * Math.sin(G.time * 3 + r.seed)); ctx.drawImage(soft('#ff3a1a'), -26, -26, 52, 52); ctx.globalAlpha = born; ctx.globalCompositeOperation = 'source-over'; } }
   { const fx = BIOME_FX[bname]; if (fx && fx.liveSparks && !QUALITY.drop && gx('parts') > 0) liveSparks(r, bname, fx.liveSparks); }
   if (r.golden) {
     const sx = ((G.time * 40 + r.seed) % 90) - 45;
@@ -2234,33 +2245,35 @@ function drawArmor(r, s) {
 // loot chests: orange wood or golden, with an HP bar; when opened the lid pops off
 function drawChest(r) {
   // a SQUARE chest (Sixten asked): 40x40, lid = top third, stays inside its 48-wide grid cell
-  const gold = r.chest === 'golden', open = r.state === 'open', t = open ? r.openT : 0;
+  const gold = r.chest === 'golden', iron = r.chest === 'iron', open = r.state === 'open', t = open ? r.openT : 0;
   const jx = r.shake ? (Math.random() - 0.5) * r.shake : 0, x = r.x + jx, y = wy(r.y);
   const born = clamp((G.time - r.born) / 0.35, 0, 1), grow = 0.55 + 0.45 * ease(born);
-  const body = gold ? ['#ffe27a', '#b07a10'] : ['#d9822b', '#7a400e'], band = gold ? '#fff6c0' : '#4a3a2a';
+  const body = gold ? ['#ffe27a', '#b07a10'] : iron ? ['#c8d0da', '#4e5866'] : ['#d9822b', '#7a400e'], band = gold ? '#fff6c0' : iron ? '#2a3038' : '#4a3a2a';
   const S = 20, LID = -6;   // half size, and where the lid meets the box
   ctx.save(); ctx.translate(x, y); ctx.scale(grow * gsc(), grow * gsc()); ctx.globalAlpha = born * (open ? 1 - t * 0.6 : 1);
   ctx.fillStyle = 'rgba(0,0,0,0.4)'; rr(-S + 2, -S + 3, S * 2, S * 2, 5); ctx.fill();
   // box (below the lid)
   let g = ctx.createLinearGradient(-S, LID, S, S); g.addColorStop(0, body[0]); g.addColorStop(1, body[1]);
   ctx.fillStyle = g; rr(-S, LID, S * 2, S - LID, 4); ctx.fill(); ctx.strokeStyle = '#1a0e04'; ctx.lineWidth = 1.5; ctx.stroke();
-  if (!gold) { ctx.strokeStyle = 'rgba(60,30,8,0.6)'; ctx.lineWidth = 0.8; for (const yy of [2, 9]) { ctx.beginPath(); ctx.moveTo(-S + 1, yy); ctx.lineTo(S - 1, yy); ctx.stroke(); } }
+  if (iron) { ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(-S + 1, LID + 1, S * 2 - 2, 1.2); ctx.fillStyle = '#1a1e24'; for (const xx of [-S + 5.7, S - 5.8]) for (const yy of [LID + 3, S - 10]) { ctx.beginPath(); ctx.arc(xx, yy, 0.9, 0, 6.283); ctx.fill(); } }
+  if (!gold && !iron) { ctx.strokeStyle = 'rgba(60,30,8,0.6)'; ctx.lineWidth = 0.8; for (const yy of [2, 9]) { ctx.beginPath(); ctx.moveTo(-S + 1, yy); ctx.lineTo(S - 1, yy); ctx.stroke(); } }
   ctx.fillStyle = band; for (const xx of [-S + 4, S - 7.5]) ctx.fillRect(xx, LID, 3.5, S - LID);
   // HP cracks
   const dmg = 1 - Math.max(0, r.hp) / r.hpMax, R = seeded(Math.floor(r.seed * 100));
   ctx.strokeStyle = 'rgba(20,10,0,0.75)'; ctx.lineWidth = 1;
   for (let k = 0; k < Math.floor(dmg * 9); k++) { const sx = -S + 3 + R() * (S * 2 - 6), sy = -S + 3 + R() * (S * 2 - 10); ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + (R() - 0.5) * 10, sy + (R() - 0.5) * 8); ctx.stroke(); }
   // HP bar inside the bottom of the box
-  if (!open) { ctx.fillStyle = 'rgba(11,12,18,0.85)'; rr(-S + 4, S - 7, S * 2 - 8, 4, 2); ctx.fill(); ctx.fillStyle = gold ? '#fff2a0' : '#ffd27a'; rr(-S + 4, S - 7, Math.max(0, (S * 2 - 8) * r.hp / r.hpMax), 4, 2); ctx.fill(); }
+  if (!open) { ctx.fillStyle = 'rgba(11,12,18,0.85)'; rr(-S + 4, S - 7, S * 2 - 8, 4, 2); ctx.fill(); ctx.fillStyle = gold ? '#fff2a0' : iron ? '#dfe8f2' : '#ffd27a'; rr(-S + 4, S - 7, Math.max(0, (S * 2 - 8) * r.hp / r.hpMax), 4, 2); ctx.fill(); }
   // lid (flies up and spins when opened)
   ctx.save();
   if (open) { ctx.translate(0, -t * 70); ctx.rotate(t * 2.5); ctx.globalAlpha = born * Math.max(0, 1 - t); }
   g = ctx.createLinearGradient(0, -S, 0, LID); g.addColorStop(0, lighten(body[0], 0.2)); g.addColorStop(1, body[1]);
   ctx.fillStyle = g; rr(-S, -S, S * 2, LID + S, 4); ctx.fill(); ctx.strokeStyle = '#1a0e04'; ctx.lineWidth = 1.5; ctx.stroke();
   ctx.fillStyle = band; for (const xx of [-S + 4, S - 7.5]) ctx.fillRect(xx, -S, 3.5, LID + S);
-  ctx.fillStyle = gold ? '#b07a10' : '#2a2a2a'; rr(-4, LID - 4, 8, 9, 2); ctx.fill(); ctx.fillStyle = '#0a0602'; ctx.fillRect(-0.8, LID - 1.5, 1.6, 4);
+  ctx.fillStyle = gold ? '#b07a10' : iron ? '#6a7484' : '#2a2a2a'; rr(-4, LID - 4, 8, 9, 2); ctx.fill();
+  if (iron) { ctx.fillStyle = '#1a1e24'; for (const xx of [-S + 5.7, S - 5.8]) { ctx.beginPath(); ctx.arc(xx, -S + 3, 0.9, 0, 6.283); ctx.fill(); } ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.fillRect(-S + 1, -S + 1, S * 2 - 2, 1.2); } ctx.fillStyle = '#0a0602'; ctx.fillRect(-0.8, LID - 1.5, 1.6, 4);
   ctx.restore();
-  if (open) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.max(0, 1 - t) * 0.8; ctx.drawImage(soft(gold ? '#ffe27a' : '#ffb04a'), -40, -50, 80, 80); ctx.globalCompositeOperation = 'source-over'; }
+  if (open) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.max(0, 1 - t) * 0.8; ctx.drawImage(soft(gold ? '#ffe27a' : iron ? '#cfe0ff' : '#ffb04a'), -40, -50, 80, 80); ctx.globalCompositeOperation = 'source-over'; }
   if (gold && !open) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25 + 0.15 * Math.sin(G.time * 4 + r.seed); ctx.drawImage(soft('#ffcc33'), -36, -36, 72, 72); ctx.globalCompositeOperation = 'source-over'; }
   if (r.flash > 0 && !open) { ctx.globalAlpha = r.flash * 0.4; ctx.fillStyle = '#ffffff'; rr(-S, -S, S * 2, S * 2, 5); ctx.fill(); }
   ctx.restore();
