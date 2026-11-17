@@ -1654,8 +1654,34 @@ function rr(x, y, w, h, r) {
   r = Math.min(r, w / 2, h / 2);
   ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
 }
+// TEXT CACHE: drawing text is slow (the shadow + outline + fill = 3 text draws). Text that looks the same as last time
+// is drawn once into a small picture and then just stamped. Only for straight (not rotated) text, snapped to real pixels so it stays sharp.
+const TXC = new Map(); let TXT_CACHE = true;
 function txt(s, x, y, size, col, o) {
   o = o || {};
+  if (TXT_CACHE && ctx.getTransform && s !== '') {
+    const m = ctx.getTransform();
+    if (m && m.b === 0 && m.c === 0 && m.a > 0 && Math.abs(m.a - m.d) < 1e-6 && size >= 6) {
+      const sc = m.a, key = s + '|' + size + '|' + col + '|' + (o.weight || '') + (o.font || '') + '|' + (o.align || 'c') + '|' + (o.shadow === false ? 0 : 1) + '|' + (o.stroke || 0) + (o.strokeCol || '') + '|' + sc.toFixed(3);
+      let e = TXC.get(key);
+      if (!e) {
+        if (TXC.size > 900) TXC.clear();
+        const font = (o.weight || '') + ' ' + size + 'px ' + (o.font || FH); ctx.font = font;
+        const tw = ctx.measureText(s).width, pad = (o.stroke || 0) + Math.max(1.5, size * 0.08) + 2, w = tw + pad * 2, h = size * 1.5 + pad * 2;
+        const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w * sc)); c.height = Math.max(1, Math.ceil(h * sc));
+        const x2 = c.getContext('2d'); x2.setTransform(sc, 0, 0, sc, 0, 0); x2.font = font; x2.textAlign = 'left'; x2.textBaseline = 'middle';
+        const ox = pad, oy = h / 2;
+        if (o.shadow !== false) { x2.fillStyle = 'rgba(0,0,0,0.55)'; x2.fillText(s, ox, oy + Math.max(1.5, size * 0.08)); }
+        if (o.stroke) { x2.lineWidth = o.stroke; x2.strokeStyle = o.strokeCol || '#0b0c12'; x2.lineJoin = 'round'; x2.strokeText(s, ox, oy); }
+        x2.fillStyle = col; x2.fillText(s, ox, oy);
+        e = { c, w, h, ax: (o.align === 'left' ? 0 : o.align === 'right' ? tw : tw / 2) + pad, ay: oy }; TXC.set(key, e);
+      }
+      // snap the top-left corner to a whole device pixel so the stamp stays crisp
+      const dx = Math.round((x - e.ax) * m.a + m.e) - m.e, dy = Math.round((y - e.ay) * m.d + m.f) - m.f;
+      ctx.drawImage(e.c, dx / m.a, dy / m.d, e.c.width / sc, e.c.height / sc);
+      return;
+    }
+  }
   ctx.font = (o.weight || '') + ' ' + size + 'px ' + (o.font || FH);
   ctx.textAlign = o.align || 'center'; ctx.textBaseline = 'middle';
   if (o.shadow !== false) { ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillText(s, x, y + Math.max(1.5, size * 0.08)); }
@@ -1789,18 +1815,26 @@ function gearPath(x, y, r, teeth, ang) {
   }
   ctx.closePath();
 }
+const GEARC = new Map();
+function gearSprite(r, teeth, depth) {   // one gear, drawn once (it only ever turns, so a picture is enough)
+  const key = Math.round(r) + '|' + teeth + '|' + depth + '|' + DPR; let c = GEARC.get(key); if (c) return c;
+  if (GEARC.size > 30) GEARC.clear();
+  const S = Math.ceil((r * 2 + 6) * DPR); c = document.createElement('canvas'); c.width = c.height = S;
+  const keep = ctx; ctx = c.getContext('2d'); ctx.setTransform(DPR, 0, 0, DPR, S / 2, S / 2);
+  const g = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
+  g.addColorStop(0, depth > 0.6 ? 'rgba(150,110,50,0.5)' : 'rgba(110,80,36,0.35)'); g.addColorStop(1, depth > 0.6 ? 'rgba(70,46,18,0.5)' : 'rgba(50,32,12,0.35)');
+  gearPath(0, 0, r, teeth, 0); ctx.fillStyle = g; ctx.fill();
+  ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(232,192,112,' + (depth > 0.6 ? 0.28 : 0.16) + ')'; ctx.stroke();
+  ctx.globalCompositeOperation = 'destination-out'; ctx.globalAlpha = 0.85;
+  for (let k = 0; k < 5; k++) { const sa = k / 5 * 6.283 + 0.6; ctx.beginPath(); ctx.moveTo(Math.cos(sa - 0.42) * r * 0.3, Math.sin(sa - 0.42) * r * 0.3); ctx.arc(0, 0, r * 0.66, sa - 0.42, sa + 0.42); ctx.lineTo(Math.cos(sa + 0.42) * r * 0.3, Math.sin(sa + 0.42) * r * 0.3); ctx.closePath(); ctx.fill(); }
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  ctx.beginPath(); ctx.arc(0, 0, r * 0.16, 0, 6.283); ctx.fillStyle = 'rgba(232,192,112,' + (depth > 0.6 ? 0.35 : 0.22) + ')'; ctx.fill();
+  ctx = keep; GEARC.set(key, c); return c;
+}
 function drawClockworkBack(shx) {
   for (const [gx0, gy0, gr0, teeth, spd, depth] of CLOCK_GEARS) {
-    const x = gx0 * W + shx * 0.2 * depth + PAR.x * depth * 0.6, y = gy0 * H + PAR.y * depth * 0.6, r = gr0 * H, a = G.time * spd;
-    const g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
-    g.addColorStop(0, depth > 0.6 ? 'rgba(150,110,50,0.5)' : 'rgba(110,80,36,0.35)'); g.addColorStop(1, depth > 0.6 ? 'rgba(70,46,18,0.5)' : 'rgba(50,32,12,0.35)');
-    gearPath(x, y, r, teeth, a); ctx.fillStyle = g; ctx.fill();
-    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(232,192,112,' + (depth > 0.6 ? 0.28 : 0.16) + ')'; ctx.stroke();
-    // spokes cut out of the gear (holes show the dark behind)
-    ctx.save(); ctx.globalCompositeOperation = 'destination-out'; ctx.globalAlpha = 0.85;
-    for (let k = 0; k < 5; k++) { const sa = a + k / 5 * 6.283 + 0.6; ctx.beginPath(); ctx.moveTo(x + Math.cos(sa - 0.42) * r * 0.3, y + Math.sin(sa - 0.42) * r * 0.3); ctx.arc(x, y, r * 0.66, sa - 0.42, sa + 0.42); ctx.lineTo(x + Math.cos(sa + 0.42) * r * 0.3, y + Math.sin(sa + 0.42) * r * 0.3); ctx.closePath(); ctx.fill(); }
-    ctx.restore();
-    ctx.beginPath(); ctx.arc(x, y, r * 0.16, 0, 6.283); ctx.fillStyle = 'rgba(232,192,112,' + (depth > 0.6 ? 0.35 : 0.22) + ')'; ctx.fill();
+    const x = gx0 * W + shx * 0.2 * depth + PAR.x * depth * 0.6, y = gy0 * H + PAR.y * depth * 0.6, r = gr0 * H, c = gearSprite(r, teeth, depth), S = c.width / DPR;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(G.time * spd); ctx.drawImage(c, -S / 2, -S / 2, S, S); ctx.restore();
   }
   // puffs of steam rising from the bottom
   ctx.globalCompositeOperation = 'lighter';
@@ -4350,7 +4384,7 @@ function droneBody(d, P, res) {
 // every pixel fully solid or fully empty (no soft edges), colours snapped to a small palette, and a dark 1-pixel outline.
 const PIXC = new Map();
 function pixelSprite(d, P, t, act) {
-  const fr = Math.floor(t * 8) % 16, key = d.id + '|' + d.type + '|' + d.rank + '|' + (d.hat || '') + '|' + fr + '|' + (act > 0.5 ? 1 : 0);
+  const fr = Math.floor(t * 8) % 16, key = d.type + '|' + d.rank + '|' + (d.hat || '') + '|' + fr + '|' + (act > 0.5 ? 1 : 0);
   let c = PIXC.get(key);
   if (c) return c;
   if (PIXC.size > 400) PIXC.clear();
