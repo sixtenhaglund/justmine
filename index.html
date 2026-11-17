@@ -4093,7 +4093,7 @@ function droneStatic(d, P) {
   rr(-6.5, ey - 2.8, 13, 5.6, 2.4); ctx.fillStyle = 'rgba(6,8,14,0.95)'; ctx.fill(); ctx.lineWidth = 0.6; ctx.strokeStyle = rgba(P.light, 0.5); ctx.stroke();
   ctx.fillStyle = 'rgba(255,255,255,0.18)'; rr(-5.5, ey - 2.2, 6, 1.4, 0.7); ctx.fill();
   // rank chevrons
-  if (d.rank > 1) { ctx.strokeStyle = RANK_COL[d.rank]; ctx.lineWidth = 1.1; for (let k = 0; k < d.rank - 1; k++) { const x = B[0] + 3 + k * 3.2, y = B[1] + B[3] - 4; ctx.beginPath(); ctx.moveTo(x, y - 1.5); ctx.lineTo(x + 1.4, y); ctx.lineTo(x, y + 1.5); ctx.stroke(); } }
+  // (rank marks on the body removed: the rank shows in the corner badge instead)
   drawHat(d);
 }
 // ---- the moving part (every frame): propellers, eye, lights, flames ----
@@ -4403,8 +4403,8 @@ function renderDrones() {
     ctx.restore();
     const nm = id ? (hats ? HATS[id].name : SKINS[id].name) : 'None';
     txt(nm, x + tw / 2, y + th - 9, fitSize(nm, 11, tw - 8, FB), '#1a1d24', { font: FB, weight: 900, shadow: false });
-    if (!ok) txt('in use', x + tw / 2, y + 12, 10, '#c0392b', { font: FB, weight: 900, shadow: false });
-    const cnt = id ? (hats ? G.hats[id] : G.skins[id]) : 0; if (cnt > 1) txt('x' + cnt, x + tw - 8, y + 11, 10, '#4a5470', { align: 'right', font: FB, weight: 900, shadow: false });
+    if (!ok) txt('in use', x + tw / 2, y + th - 24, 10, '#c0392b', { font: FB, weight: 900, shadow: false });
+    if (id) { const cnt = (hats ? G.hats[id] : G.skins[id]) || 0, free = hats ? hatFree(id) : skinFree(id), lab = 'x' + cnt + (cnt > 1 && free < cnt ? ' (' + Math.max(0, free) + ' free)' : ''), bw2 = 10 + lab.length * 5.6; rr(x + tw - bw2 - 3, y + 3, bw2, 15, 7); ctx.fillStyle = '#2a3446'; ctx.fill(); txt(lab, x + tw - bw2 / 2 - 3, y + 11, 10, '#ffffff', { font: FB, weight: 900, shadow: false }); }   // how many you own
   });
   unclip();
   if (list.length > 6) txt('scroll', 828, y0 + 23, 10, '#8a90a0', { align: 'right', font: FB, weight: 800 });
