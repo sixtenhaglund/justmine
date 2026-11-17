@@ -23,6 +23,20 @@
   #codebox button { flex: 1; padding: 10px; font-size: 16px; font-weight: 900; border: 0; border-radius: 10px; color: #fff; background: #3aa04a; cursor: pointer; }
   #codebox button + button { background: #4a5470; }
   #codebox p { min-height: 18px; margin: 10px 0 0; color: #ff8a8a; font-weight: 800; }
+  #acct { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(3,4,8,0.7); z-index: 5; font-family: "Nunito", "Segoe UI", Arial, sans-serif; }
+  #acct .cb { background: linear-gradient(#252b3a, #151923); border: 2px solid #d4a21a; border-radius: 16px; padding: 18px 20px; width: min(360px, 88vw); color: #fff; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
+  #acct b { font-family: "Lilita One", "Arial Black", sans-serif; font-weight: 400; font-size: 24px; letter-spacing: 1px; color: #ffd84a; }
+  #acct input { display: block; width: 100%; box-sizing: border-box; margin: 10px 0; padding: 10px 12px; font-size: 18px; font-weight: 800; border-radius: 10px; border: 2px solid #3a4256; background: #0b0d14; color: #fff; outline: none; }
+  #acct input:focus { border-color: #ffd84a; }
+  #acct .row { display: flex; gap: 10px; margin-top: 8px; }
+  #acct button { flex: 1; padding: 10px; font-size: 16px; font-weight: 900; border: 0; border-radius: 10px; color: #fff; background: #3aa04a; cursor: pointer; }
+  #acct button:disabled { opacity: 0.5; }
+  #acct .row button + button { background: #4a5470; }
+  #acct .tabs button { background: #2a2e3a !important; font-size: 14px; padding: 8px; }
+  #acct .tabs button.on { background: #b0841a !important; }
+  #acct small { display: block; color: #9aa3b5; font-weight: 800; font-size: 12px; min-height: 0; }
+  #acct p { min-height: 18px; margin: 10px 0 0; color: #ff8a8a; font-weight: 800; }
+  #acct #acwho { color: #7dff7a; font-size: 18px; }
 </style>
 </head>
 <body>
@@ -347,6 +361,7 @@ function fmt(n) {
 // ---------------- saving (localStorage: a small storage box the browser keeps for this page) ----------------
 const SAVE_KEY = 'justmine.save.v1';   // same key since version 1, so old saves keep working
 function save() {
+  pushScore(false);
   try {
     const lv = {}; for (const k in LEVEL_DEFAULTS) lv[k] = G[k];
     localStorage.setItem(SAVE_KEY, JSON.stringify({
@@ -354,6 +369,7 @@ function save() {
       rebirths: G.rebirths, rmult: G.rebirthMult, biomeName: BIOMES[G.biome].name, hue: G.crystalHue,
       found: G.found, ach: G.ach, reachedNames: BIOMES.filter((b, i) => G.reached & (1 << i)).map(b => b.name), visitedNames: BIOMES.filter((b, i) => G.visited & (1 << i)).map(b => b.name), stats: G.stats,
       heartHP: G.heartHP, won: G.won, settings: G.settings, quests: G.quests, questsDone: G.questsDone, boostT: G.boostT, rate: G.rate || 0, savedAt: Date.now(),
+      owner: G.owner || null,
       drones: G.drones, slots: G.slots, slotsOpen: G.slotsOpen, skins: G.skins, hats: G.hats, crates: G.crates, pass: G.pass, codes: G.codes, nextId: G.nextId,
     }));
   } catch (e) {}
@@ -395,6 +411,7 @@ function loadSave() {
     for (const q of G.quests) { if (!q.xp) q.xp = Math.round(QUEST_TYPES[q.type].xp(q.n)); if (!q.mult) q.mult = G.rebirthMult; }
     G.questsDone = s.questsDone | 0; G.boostT = clamp(num(+s.boostT, 0), 0, 600);
     G.rate = num(+s.rate, 0);
+    G.owner = typeof s.owner === 'string' ? s.owner : null;
     loadDrones(s);
     // offline mining: pay out a share of your Creditz per second for the time you were away
     const away = (Date.now() - num(+s.savedAt, Date.now())) / 1000;
@@ -613,6 +630,7 @@ function breakRock(rock, special) {
   const first = addFound(gemKey, i);
   rock.state = 'gem'; rock.gemKey = gemKey; rock.gem = i; rock.gemT = 0; rock.value = gain; rock.rarity = rar;
   const rk = rank(rar);
+  if (rock.golden) addXP(20); else if (rk >= 4) addXP((rk - 3) * 4);   // Legendary +4, Mythical +8, Angelic +12 ...
   if (rk >= rank('Legendary')) quest('rare', 1);
   if (rk >= rank('Mythical')) quest('mythic', 1);
   G.floats.push({ x: rock.x, y: rock.y + 36, text: '+' + fmt(gain), col: '#ffd84a', t: 0, size: 15 + Math.min(8, rk) });
@@ -639,7 +657,7 @@ function armorDebris(r, layer) {
 function openChest(r) {
   r.state = 'open'; r.openT = 0;
   const golden = r.chest === 'golden';
-  G.stats.chests = (G.stats.chests || 0) + 1; quest('chest', 1);
+  G.stats.chests = (G.stats.chests || 0) + 1; quest('chest', 1); addXP(golden ? 60 : 25);
   if (G.stats.chests >= 10) ach('chest10'); if (G.stats.chests >= 50) ach('chest50');
   coins(r.x, r.y, golden ? 34 : 20); sparkle(r.x, r.y, golden ? '#ffe27a' : '#ffb04a', golden ? 30 : 18);
   G.lights.push({ x: r.x, y: r.y, r: golden ? 180 : 120, col: golden ? '#ffe27a' : '#ffb04a', life: 1, max: 1 });
@@ -818,7 +836,7 @@ function hitMega(dmg) {
   const st = Math.min(4, Math.floor((1 - m.hp / MEGA_HP) * 5)); if (st !== m.costume) { m.costume = st; recolor(m); }
   chunks(m.x + rnd(-40, 40), m.y + rnd(-40, 40), m.col, 3, true); AUDIO.sfx('hit', 3);
   if (m.hp > 0) return;
-  G.mega = null; G.stats.mega = (G.stats.mega || 0) + 1; ach('mega');
+  G.mega = null; G.stats.mega = (G.stats.mega || 0) + 1; ach('mega'); addXP(150);
   const b = BIOMES[G.biome];
   for (let k = 0; k < 4; k++) chunks(m.x + rnd(-30, 30), m.y + rnd(-30, 30), m.col, 10);
   dust(m.x, m.y, m.col, 16); G.shake = 14; G.flash = 0.6; G.flashCol = '#ffe2b0';
@@ -885,6 +903,7 @@ function ach(id) {
   const a = ACH.find(x => x[0] === id); if (!a) return;
   G.ach[id] = 1;
   G.achPop.push({ id, t: 0 });
+  addXP(75);   // every achievement: +75 XP
   if (G.scene === 'play') AUDIO.sfx('ach');
 }
 function checkAch() {
@@ -962,7 +981,7 @@ function tick() {
         d.t += DT; d.y -= d.vy; d.x += Math.sin(G.time * 2 + d.ph) * 0.3;
         if (G.mouse.over && !G.mouse.onUI && Math.abs(w.x - d.x) < 20 && Math.abs(w.y - d.y) < 20) {
           d.gone = true; const g = b.minerals[d.i][1] * totalMult(); giveCreditz(g); addFound(b.name, d.i);
-          G.stats.rain = (G.stats.rain || 0) + 1; sparkle(d.x, d.y, RCOL[b.minerals[d.i][2]], 8);
+          G.stats.rain = (G.stats.rain || 0) + 1; addXP(2); sparkle(d.x, d.y, RCOL[b.minerals[d.i][2]], 8);
           G.floats.push({ x: d.x, y: d.y + 14, text: '+' + fmt(g), col: '#9ad8ff', t: 0, size: 12 }); AUDIO.sfx('tick');
         } else if (d.y < -110) { d.gone = true; emit('shard', d.x, -105, 5, { col: ['#ffffff', '#9ad8ff'], sp: 2, s: 2.5 }); }
       }
@@ -1177,7 +1196,7 @@ function teleport(i) {
   const paid = isUnlocked(i);
   if (!paid && !canVisit(i)) { toast('Visit ' + BIOMES[i - 1].name + ' first'); AUDIO.sfx('deny'); return; }
   if (!paid && G.creditz < BIOMES[i].req) { toast('Unlocking ' + BIOMES[i].name + ' costs ' + fmt(BIOMES[i].req) + ' Creditz'); AUDIO.sfx('deny'); return; }
-  if (!paid) { G.creditz -= BIOMES[i].req; G.shown = G.creditz; toast('Unlocked ' + BIOMES[i].name + '!', BIOMES[i].accent); }   // pay once, travel free after
+  if (!paid) { G.creditz -= BIOMES[i].req; G.shown = G.creditz; toast('Unlocked ' + BIOMES[i].name + '!  +' + Math.round((60 + 40 * i) * xpMult()) + ' XP', BIOMES[i].accent); addXP(60 + 40 * i); }   // pay once, travel free after
   loadBiome(i, true); fixQuests();
   AUDIO.sfx('teleport');
   checkAch(); save();
@@ -1199,6 +1218,7 @@ function tryRebirth() {
   if (G.creditz < rebirthCost()) { toast('You need ' + fmt(rebirthCost()) + ' Creditz to Rebirth'); AUDIO.sfx('deny'); return; }
   G.rebirthMult *= 2;               // his "change RebirthMultiplier by RebirthMultiplier"
   G.rebirths++;
+  const rxp = 300 + 150 * (G.rebirths - 2); addXP(rxp); toast('Rebirth: +' + Math.round(rxp * xpMult()) + ' Alien Pass XP', '#7dff3a');
   resetRun();
   const unlocked = PERKS.find(p => p[0] === rebirthsDone());
   loadBiome(0, true); fixQuests();
@@ -1208,7 +1228,7 @@ function tryRebirth() {
   if (rebirthsDone() === HEART_REBIRTHS && !G.won) toast('Something woke up deep in ' + BIOMES[BIOMES.length - 1].name + '...', '#b678ff');
   G.flash = 1; G.flashCol = '#fff2c0';
   AUDIO.sfx('rebirth');
-  checkAch(); save();
+  checkAch(); save(); pushScore(true);
 }
 function openMenu(m) {
   if (m && (!canLoad() || G.victory)) return;
@@ -1217,12 +1237,8 @@ function openMenu(m) {
   if (G.menu) { G.menuT[G.menu] = G.menuT[G.menu] || 0; AUDIO.sfx('open'); }
 }
 function startGame(fresh) {
-  if (fresh) {
-    wipeSave();
-    Object.assign(G, LEVEL_DEFAULTS, { creditz: 0, shown: 0, high: 0, rebirths: 1, rebirthMult: 1, biome: 0, found: {}, ach: {}, visited: 1, reached: 1, pick: 0, quests: [], questsDone: 0, boostT: 0,
-      stats: { rocks: 0, empty: 0, minerals: 0, time: 0, bombs: 0, hard: 0, chests: 0, rain: 0, mega: 0 }, heartHP: HEART_HP, won: false, crystalHue: 0 });
-    loadDrones({});
-  } else loadSave();
+  if (fresh) freshState();
+  else loadSave();
   G.dbombs = []; G.dproj = []; G.rings = []; G.droneSel = null; G.mergeSel = null; G.crateFx = null; G.mergeFx = null; DRT.clear();
   G.scene = 'play'; G.victory = 0; G.menu = null;
   if (fresh) G.away = null;
@@ -1230,6 +1246,17 @@ function startGame(fresh) {
   loadBiome(G.biome, true);
   AUDIO.sfx('teleport');
   save();
+}
+function freshState() {
+  const owner = NET.user ? NET.user.id : null;
+  {
+    try { const old = localStorage.getItem(SAVE_KEY); if (old) backupSave(JSON.parse(old), 'new game'); } catch (e) {}   // a copy, just in case
+    wipeSave();
+    Object.assign(G, LEVEL_DEFAULTS, { creditz: 0, shown: 0, high: 0, rebirths: 1, rebirthMult: 1, biome: 0, found: {}, ach: {}, visited: 1, reached: 1, pick: 0, quests: [], questsDone: 0, boostT: 0,
+      stats: { rocks: 0, empty: 0, minerals: 0, time: 0, bombs: 0, hard: 0, chests: 0, rain: 0, mega: 0 }, heartHP: HEART_HP, won: false, crystalHue: 0 });
+    loadDrones({});
+    G.owner = owner;
+  }
 }
 
 // ====================================================================
@@ -2434,7 +2461,7 @@ function render() {
   drawBg(G.scene === 'title' ? 0 : G.biome, shx * 0.4 + PAR.x, shy * 0.4 + PAR.y);
   drawBackFx(shx);
   drawAmbient(false);
-  if (G.scene === 'title') { drawAmbient(true); drawBloom(); drawGrade(); renderTitle(); renderSettings(); finishUI(); return; }
+  if (G.scene === 'title') { drawAmbient(true); drawBloom(); drawGrade(); renderTitle(); renderLeaders(); renderSettings(); finishUI(); return; }
   renderWorld(shx, shy);
   drawAmbient(true);
   drawFrontFx();
@@ -2623,6 +2650,7 @@ function renderHUD() {
   btn('vol', W - 52, 12, 40, 36, '', { icon: 'speaker', col: G.settings.vol === 3 ? '#7a3030' : '#3a4a6a', r: 10, fn: () => { G.settings.vol = (G.settings.vol + 1) % 4; AUDIO.applyVolume(); AUDIO.sfx('click'); save(); } });
   setScreen();
   if (G.settings.vol < 3) { ctx.fillStyle = '#ffffff'; for (let k = 0; k < 3 - G.settings.vol; k++) ctx.fillRect(W - 24 + k * 4, 38 - k * 4, 3, 4 + k * 4); } else txt('x', W - 22, 36, 13, '#ff8a8a', { font: FB, weight: 900 });
+  if (W >= 600) btn('lbbtn', W - 190, 12, 40, 36, '', { icon: 'trophy', col: G.menu === 'leaders' ? '#8a6a1a' : '#5a4a1a', r: 10, fn: () => { AUDIO.sfx('click'); openLeaders(); } });
   btn('gear', W - 144, 12, 40, 36, '', { icon: 'gear', col: G.menu === 'settings' ? '#5a6a8a' : '#3a4a6a', r: 10, fn: () => { AUDIO.sfx('click'); openSettings(); } });
   btn('music', W - 98, 12, 40, 36, '', { icon: 'note', col: G.settings.music ? '#3a4a6a' : '#7a3030', r: 10, fn: () => { G.settings.music = !G.settings.music; AUDIO.applyVolume(); AUDIO.sfx('click'); save(); } });
   // next biome chip (right side, under the best score)
@@ -2637,9 +2665,9 @@ function renderHUD() {
     txt(lab, nx + cw2 / 2, ny + 10.5, fitSize(lab, 11, cw2 - 14, FB), G.creditz >= nbB.req ? '#7dff7a' : '#ffffff', { font: FB, weight: 900, shadow: false });
   }
   setScreen();
-  if (W >= 760) {
-    txt('BEST ' + fmt(G.high), W - 154, 30, 12, '#ffd84a', { align: 'right', font: FB, weight: 900 });
-    if (G.rebirthMult > 1) txt('Rebirth x' + fmt(G.rebirthMult), W - 154, 46, 11, '#ffb36a', { align: 'right', font: FB, weight: 800 });
+  if (W >= 880) {
+    txt('BEST ' + fmt(G.high), W - 200, 30, 12, '#ffd84a', { align: 'right', font: FB, weight: 900 });
+    if (G.rebirthMult > 1) txt('Rebirth x' + fmt(G.rebirthMult), W - 200, 46, 11, '#ffb36a', { align: 'right', font: FB, weight: 800 });
   }
   // event banners (bars drain to exactly 0)
   const ev = G.shower > 0 ? ['METEOR SHOWER', G.shower / 15, '#ff8a3a', '#ffb04a'] : G.rush > 0 ? ['GOLD RUSH', G.rush / (perk(12) ? 40 : 20), '#ffc21a', '#ffe27a']
@@ -2801,7 +2829,7 @@ function renderSettings() {
   UI.live = true; setScreen(); ctx.globalAlpha = 1;
 }
 function renderMenus() {
-  renderShop(); renderBiomes(); renderRebirth(); renderBook(); renderDrones(); renderPass(); renderSettings();
+  renderShop(); renderBiomes(); renderRebirth(); renderBook(); renderDrones(); renderPass(); renderLeaders(); renderSettings();
   UI.live = true;
   setScreen(); ctx.globalAlpha = 1;
 }
@@ -3097,8 +3125,10 @@ function renderTitle() {
   if (save) btn('new', W / 2 - bw / 2 + 30, by + 74, bw - 60, 40, G.confirmNew > 0 ? (TOUCH ? 'Sure? Tap again' : 'Sure? Click again') : 'New game', { col: G.confirmNew > 0 ? '#b03a3a' : '#4a5470', size: 17,
     fn: () => { AUDIO.init(); AUDIO.sfx('click'); if (G.confirmNew > 0) { G.confirmNew = 0; startGame(true); } else G.confirmNew = 3; } });
   setScreen();
-  const keys = TOUCH ? 'Bomb: tap the bomb button, then tap a rock    -    Settings: the gear button' : 'SPACE or right-click = Bomb    B Biomes  -  S Shop  -  R Rebirth  -  K Book  -  D Drones  -  P Pass  -  M mute';
+  const keys = TOUCH ? 'Bomb: tap the bomb button, then tap a rock    -    Settings: the gear button' : 'SPACE or right-click = Bomb    B Biomes  -  S Shop  -  R Rebirth  -  K Book  -  D Drones  -  P Pass  -  L Leaderboard  -  M mute';
   btn('gear', W - 56, 14, 44, 40, '', { icon: 'gear', col: '#3a4a6a', r: 10, fn: () => { AUDIO.init(); AUDIO.sfx('click'); openSettings(); } });
+  btn('lbtitle', W - 108, 14, 44, 40, '', { icon: 'trophy', col: '#5a4a1a', r: 10, fn: () => { AUDIO.init(); AUDIO.sfx('click'); openLeaders(); } });
+  btn('acctitle', W - 244, 14, 128, 40, NET.user ? NET.name : 'Log in', { col: NET.user ? '#2a6a3a' : '#3a5fd0', size: 15, r: 10, fn: () => { AUDIO.init(); AUDIO.sfx('click'); openAccount(); } });
   setScreen();
   txt(keys, W / 2, H - 52, fitSize(keys, 13, W - 30, FB), '#9aa3b5', { font: FB, weight: 800 });
   if (G.high > 0) txt('BEST  ' + fmt(G.high) + ' Creditz', W / 2, H - 76, 15, '#ffd84a', { font: FB, weight: 900 });
@@ -3197,7 +3227,7 @@ function openCrate(kind) {
     let rank = +pickW(w); if (Math.random() < upv('cluck', 0)) rank++;
     item = { drone: addDrone(type, Math.min(5, rank)) };
   }
-  G.crateFx = { kind, item, t: 0 }; G.menu = null; AUDIO.sfx('crate'); save();
+  G.crateFx = { kind, item, t: 0 }; G.menu = null; AUDIO.sfx('crate'); addXP(15); save();
 }
 function buyCrate(kind) {
   if (G.crateFx) return;
@@ -3220,7 +3250,7 @@ function doMerge(a, b) {
   G.drones.push(n);
   if (k >= 0 && k < G.slotsOpen) G.slots[k] = n.id;
   G.droneSel = n.id; G.mergeSel = null;
-  G.mergeFx = { a, b, d: n, t: 0 }; G.menu = null; AUDIO.sfx('merge'); save();
+  G.mergeFx = { a, b, d: n, t: 0 }; G.menu = null; AUDIO.sfx('merge'); addXP(40); save();
 }
 
 // ---------------- codes (typed in Settings) ----------------
@@ -3936,9 +3966,236 @@ function renderPass() {
     ctx.lineWidth = 2; ctx.strokeStyle = '#0b0c12'; ctx.stroke();
     txt(String(l), x, 300.5, 11, got ? '#0b1a08' : '#ffffff', { font: FB, weight: 900, shadow: false });
   }
-  txt('Earn XP:  break rocks +1  -  quests give a LOT (each one different)  -  playing +1 every 10s', w / 2, 352, fitSize('Earn XP:  break rocks +1  -  quests give a LOT (each one different)  -  playing +1 every 10s', 13, w - 60, FB), '#c9cfdc', { font: FB, weight: 800 });
-  txt('Level 25: Alien Ship I   -   Level 50: Alien Ship V', w / 2, 378, 14, '#9aff4a', { font: FB, weight: 900 });
+  const xl1 = 'XP:  rocks +1  -  quests 100-900  -  REBIRTH 300+  -  new biome 60+  -  achievement 75  -  Mega Rock 150';
+  const xl2 = 'chests 25/60  -  golden rock 20  -  Legendary+ minerals 4+  -  merge 40  -  crate 15  -  crystal 2  -  playing +1 / 10s';
+  txt(xl1, w / 2, 344, fitSize(xl1, 13, w - 50, FB), '#c9cfdc', { font: FB, weight: 800 }); txt(xl2, w / 2, 362, fitSize(xl2, 13, w - 50, FB), '#c9cfdc', { font: FB, weight: 800 });
+  txt('Level 25: Alien Ship I   -   Level 50: Alien Ship V', w / 2, 384, 14, '#9aff4a', { font: FB, weight: 900 });
   for (let k = 0; k < 5; k++) btn('ppg' + k, w / 2 - 125 + k * 52, 400, 46, 30, (k * 10 + 1) + '-' + (k * 10 + 10), { col: G.passPage === k ? '#5ad02a' : '#343c50', size: 11, r: 8, fn: () => { G.passPage = k; AUDIO.sfx('click'); } });
+}
+
+// ====================================================================
+//  ONLINE: accounts (username + password) and the leaderboard, using Supabase.
+//  Supabase = a free online SQL database (PostgreSQL, a cousin of MySQL) with a login system built in.
+//  The game NEVER sees or stores your password: Supabase scrambles it (hashing) and only keeps the scramble.
+//  The "key" below is meant to be public. What keeps the data safe are the rules in setup.sql
+//  ("Row Level Security": everybody may READ the leaderboard, but you may only change YOUR OWN row).
+// ====================================================================
+const CLOUD = { url: '', key: '' };   // filled in after the Supabase project exists (see SETUP-ONLINE.md)
+const cloudOn = () => !!(CLOUD.url && CLOUD.key);
+const NET = { sb: null, user: null, name: null, err: '', board: {}, boardT: {}, me: {}, busy: {}, lastPush: 0, ready: false };
+const BOARDS = [['best', 'Best Creditz', v => fmt(v)], ['rebirths', 'Rebirths', v => String(v)], ['pass_lvl', 'Alien Pass', v => 'Lv ' + v]];
+const USER_RE = /^[A-Za-z0-9_]{3,16}$/;
+const BAD = ['fuck', 'shit', 'bitch', 'nigg', 'cunt', 'dick', 'penis', 'porn', 'sex', 'nazi', 'hitler', 'fag', 'rape', 'whore', 'slut'];
+const badName = u => BAD.some(w => u.toLowerCase().includes(w));
+// Supabase logins need an e-mail, but kids shouldn't have to give one. So the username becomes a pretend address.
+const fakeEmail = u => u.toLowerCase() + '@players.justmine.game';
+function loadSupabase() {
+  return new Promise((res, rej) => {
+    if (window.supabase) return res();
+    const sc = document.createElement('script');
+    sc.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
+    sc.onload = () => res(); sc.onerror = () => rej(new Error('offline'));
+    document.head.appendChild(sc);
+  });
+}
+async function netInit() {
+  if (!cloudOn() || NET.sb) return;
+  try {
+    await loadSupabase();
+    NET.sb = window.supabase.createClient(CLOUD.url, CLOUD.key, { auth: { persistSession: true, storageKey: 'justmine.auth' } });
+    const { data } = await NET.sb.auth.getSession();
+    if (data && data.session) await afterLogin(data.session.user);
+    NET.ready = true;
+  } catch (e) { NET.err = 'Could not reach the leaderboard server'; }
+}
+function niceErr(e) {
+  const m = String((e && e.message) || e || '');
+  if (/already registered|already been registered|Database error/i.test(m)) return 'That username is taken';
+  if (/Invalid login/i.test(m)) return 'Wrong username or password';
+  if (/confirm/i.test(m)) return 'E-mail confirmation is ON in Supabase: turn it off (see SETUP-ONLINE.md)';
+  if (/rate|too many/i.test(m)) return 'Too many tries, wait a minute';
+  if (/fetch|network|Failed/i.test(m)) return 'No internet connection?';
+  return m || 'Something went wrong';
+}
+async function signUp(u, p) {
+  u = u.trim();
+  if (!USER_RE.test(u)) return 'Username: 3-16 letters, numbers or _';
+  if (badName(u)) return 'Please pick another username';
+  if (p.length < 6) return 'Password: at least 6 characters';
+  await netInit(); if (!NET.sb) return NET.err || 'Online is not set up yet';
+  try {
+    const { data, error } = await NET.sb.auth.signUp({ email: fakeEmail(u), password: p, options: { data: { username: u } } });
+    if (error) return niceErr(error);
+    if (!data.session) return niceErr('confirm');
+    await afterLogin(data.user); return 'ok';
+  } catch (e) { return niceErr(e); }
+}
+async function signIn(u, p) {
+  u = u.trim();
+  if (!u || !p) return 'Type your username and password';
+  await netInit(); if (!NET.sb) return NET.err || 'Online is not set up yet';
+  try {
+    const { data, error } = await NET.sb.auth.signInWithPassword({ email: fakeEmail(u), password: p });
+    if (error) return niceErr(error);
+    await afterLogin(data.user); return 'ok';
+  } catch (e) { return niceErr(e); }
+}
+async function signOut() { if (G.scene === 'play') save(); await uploadSave(); try { if (NET.sb) await NET.sb.auth.signOut(); } catch (e) {} NET.user = null; NET.name = null; NET.me = {}; toast('Logged out', '#9aa0aa'); }
+async function afterLogin(user) {
+  NET.user = user; NET.name = (user.user_metadata && user.user_metadata.username) || 'Player';
+  try { const { data } = await NET.sb.from('profiles').select('username').eq('id', user.id).maybeSingle(); if (data && data.username) NET.name = data.username; } catch (e) {}
+  NET.board = {}; NET.lastPush = 0;
+  await syncSave(user);
+  pushScore(true);
+}
+// ---------------- CLOUD SAVE ----------------
+// How far along is a save? (rebirths matter most, then best Creditz, then the pass, then playtime)
+function progressOf(sv) {
+  if (!sv || typeof sv !== 'object') return -1;
+  return (sv.rebirths | 0) * 1e6 + Math.log10(Math.max(0, +sv.high || 0) + 1) * 1e4 + ((sv.pass && sv.pass.lvl) | 0) * 100 + Math.min(99, ((sv.stats && +sv.stats.time) || 0) / 3600);
+}
+// keep up to 5 copies of saves we replaced, just in case (localStorage key "justmine.backups")
+function backupSave(sv, why) {
+  try { const B = JSON.parse(localStorage.getItem('justmine.backups') || '[]'); B.unshift({ at: Date.now(), why, save: sv }); localStorage.setItem('justmine.backups', JSON.stringify(B.slice(0, 5))); } catch (e) {}
+}
+async function uploadSave() {
+  if (!NET.user || !NET.sb) return;
+  try { const raw = localStorage.getItem(SAVE_KEY); if (!raw) return; const sv = JSON.parse(raw); if (sv.owner && sv.owner !== NET.user.id) return; await NET.sb.from('saves').upsert({ id: NET.user.id, data: sv, updated_at: new Date().toISOString() }); } catch (e) {}
+}
+function reloadGame() {   // the save in localStorage changed under us: load it into the running game
+  if (G.scene === 'play') { loadSave(); G.dbombs = []; G.dproj = []; G.rings = []; DRT.clear(); G.bombs = []; G.drills = []; G.menu = null; G.away = null; loadBiome(G.biome, true); }
+  else loadSave();
+}
+// Right after you log in or make an account. The rule: NEVER lose progress.
+async function syncSave(user) {
+  let cloud = null;
+  try { const { data, error } = await NET.sb.from('saves').select('data').eq('id', user.id).maybeSingle(); if (error) return; cloud = data && data.data; }
+  catch (e) { return; }   // no internet: don't touch anything
+  if (G.scene === 'play') save();   // make sure the newest local progress is in localStorage first
+  let local = null; try { local = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) {}
+  const mine = !!local && (!local.owner || local.owner === user.id);   // no owner = played before accounts existed: it's yours now
+  if (local && !mine) backupSave(local, 'another player on this device');
+  if (mine && (!cloud || progressOf(local) >= progressOf(cloud))) {
+    if (cloud) backupSave(cloud, 'older cloud save');
+    local.owner = user.id; G.owner = user.id;
+    localStorage.setItem(SAVE_KEY, JSON.stringify(local));
+    await uploadSave();
+    toast(cloud ? 'Your progress is saved to your account' : 'Your progress is now saved to your account!', '#7dff7a');
+  } else if (cloud) {
+    if (mine) backupSave(local, 'smaller local save');
+    cloud.owner = user.id; localStorage.setItem(SAVE_KEY, JSON.stringify(cloud)); G.owner = user.id;
+    reloadGame(); toast('Loaded your account\'s progress', '#7dff7a');
+  } else {   // a brand-new account on a computer where SOMEONE ELSE played: start fresh (their save is in their account + a backup)
+    freshState(); G.owner = user.id; if (G.scene === 'play') { G.menu = null; loadBiome(0, true); } save(); await uploadSave();
+  }
+}
+// send your scores (at most once a minute). The database only ever keeps the HIGHER number.
+async function pushScore(force) {
+  if (!NET.user || !NET.sb || G.scene !== 'play' && !force) return;
+  const now = Date.now(); if (!force && now - NET.lastPush < 60000) return;
+  NET.lastPush = now;
+  if (G.owner && G.owner !== NET.user.id) return;   // not your save: don't put its scores on your name
+  try { await NET.sb.from('profiles').update({ best: G.high, rebirths: rebirthsDone(), pass_lvl: G.pass ? G.pass.lvl : 0 }).eq('id', NET.user.id); } catch (e) {}
+  uploadSave();
+}
+async function fetchBoard(col) {
+  if (!NET.sb || NET.busy[col]) return;
+  NET.busy[col] = true;
+  try {
+    const { data, error } = await NET.sb.from('profiles').select('id,username,best,rebirths,pass_lvl').order(col, { ascending: false }).order('updated_at', { ascending: true }).limit(50);
+    if (error) throw error;
+    NET.board[col] = data || []; NET.boardT[col] = Date.now(); NET.err = '';
+    if (NET.user) {   // your own place, even if you're not in the top 50
+      const mine = (data || []).findIndex(r => r.id === NET.user.id);
+      if (mine >= 0) NET.me[col] = mine + 1;
+      else { const v = col === 'best' ? G.high : col === 'rebirths' ? rebirthsDone() : G.pass.lvl; const { count } = await NET.sb.from('profiles').select('id', { count: 'exact', head: true }).gt(col, v); NET.me[col] = (count || 0) + 1; }
+    }
+  } catch (e) { NET.err = niceErr(e); }
+  NET.busy[col] = false;
+}
+function openLeaders() { G.menu = G.menu === 'leaders' ? null : 'leaders'; G.menuT.leaders = G.menuT.leaders || 0; PAN.x = PAN.y = 0; G.lbPage = 0; NET.board = {}; if (G.menu) { AUDIO.sfx('open'); netInit(); } }
+// ---------------- the login / create account box (real HTML text boxes on top of the game) ----------------
+function openAccount() {
+  let box = document.getElementById('acct');
+  if (!box) {
+    box = document.createElement('div'); box.id = 'acct'; box.className = 'ovl';
+    box.innerHTML = '<div class="cb"><b id="actitle">ACCOUNT</b><div id="acform"><div class="row tabs"><button id="actab0">Log in</button><button id="actab1">Create account</button></div>' +
+      '<input id="acuser" maxlength="16" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="username">' +
+      '<input id="acpass" type="password" maxlength="72" autocomplete="current-password" placeholder="password">' +
+      '<small id="achint"></small><div class="row"><button id="acgo">Log in</button><button id="acx">Close</button></div></div>' +
+      '<div id="acin"><p id="acwho"></p><div class="row"><button id="acout">Log out</button><button id="acx2">Close</button></div></div><p id="acmsg"></p></div>';
+    document.body.appendChild(box);
+    const $ = id => document.getElementById(id);
+    let mode = 0;
+    const setMode = m => { mode = m; $('actab0').className = m ? '' : 'on'; $('actab1').className = m ? 'on' : ''; $('acgo').textContent = m ? 'Create account' : 'Log in'; $('acpass').autocomplete = m ? 'new-password' : 'current-password';
+      $('achint').textContent = m ? 'Your progress on this device moves into your new account. Don\'t use your real name (it\'s shown on the leaderboard). Password: 6+ characters, write it down!' : 'Your progress is kept: the game keeps whichever save is further along.'; $('acmsg').textContent = ''; };
+    $('actab0').onclick = () => setMode(0); $('actab1').onclick = () => setMode(1);
+    const close = () => { box.style.display = 'none'; };
+    $('acx').onclick = close; $('acx2').onclick = close;
+    $('acout').onclick = async () => { await signOut(); close(); };
+    const go = async () => {
+      $('acmsg').style.color = '#9ad8ff'; $('acmsg').textContent = 'Please wait...'; $('acgo').disabled = true;
+      const r = await (mode ? signUp : signIn)($('acuser').value, $('acpass').value);
+      $('acgo').disabled = false;
+      if (r === 'ok') { $('acpass').value = ''; close(); toast((mode ? 'Welcome, ' : 'Logged in as ') + NET.name + '!', '#7dff7a'); AUDIO.sfx('quest'); }
+      else { $('acmsg').style.color = '#ff8a8a'; $('acmsg').textContent = r; AUDIO.sfx('deny'); }
+    };
+    $('acgo').onclick = go;
+    for (const id of ['acuser', 'acpass']) $(id).addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') go(); if (e.key === 'Escape') close(); });
+    box.addEventListener('pointerdown', e => { if (e.target === box) close(); });
+    box.setMode = setMode;
+  }
+  const $ = id => document.getElementById(id);
+  const inn = !!NET.user;
+  $('acform').style.display = inn ? 'none' : 'block'; $('acin').style.display = inn ? 'block' : 'none';
+  $('acwho').textContent = inn ? 'Logged in as ' + NET.name : '';
+  box.setMode(0); $('acmsg').textContent = cloudOn() ? (NET.err || '') : 'Online is not set up yet (the Supabase keys are missing, see SETUP-ONLINE.md).';
+  box.style.display = 'flex';
+  if (!inn) setTimeout(() => $('acuser').focus(), 50);
+  netInit();
+}
+// ---------------- the leaderboard menu (drawn on the canvas like the other menus) ----------------
+function renderLeaders() {
+  const w = 600, h = 600;
+  const f = modalFrame('leaders', w, h); if (!f) return;
+  panel(0, 0, w, h, 'LEADERBOARD', '#d4a21a');
+  closeBtn(w - 46, 12);
+  G.lbTab = clamp(G.lbTab || 0, 0, BOARDS.length - 1);
+  const [col, label, show] = BOARDS[G.lbTab];
+  BOARDS.forEach(([c, n], i) => btn('lbt' + i, 24 + i * 186, 32, 178, 34, n, { col: G.lbTab === i ? '#b0841a' : '#343c50', size: 15, r: 9, fn: () => { G.lbTab = i; G.lbPage = 0; AUDIO.sfx('click'); } }));
+  if (!cloudOn()) { txt('Online is not set up yet', w / 2, 220, 22, '#ffffff'); txt('Your dad needs to make a free Supabase project (see SETUP-ONLINE.md)', w / 2, 256, fitSize('Your dad needs to make a free Supabase project (see SETUP-ONLINE.md)', 13, w - 60, FB), '#c9cfdc', { font: FB, weight: 800 }); return; }
+  const rows = NET.board[col];
+  if (!rows && !NET.busy[col]) fetchBoard(col);
+  if (rows && Date.now() - (NET.boardT[col] || 0) > 30000 && !NET.busy[col]) fetchBoard(col);   // refresh every 30 s while open
+  if (!rows) { txt(NET.err || 'Loading...', w / 2, 250, 18, NET.err ? '#ff8a8a' : '#c9cfdc', { font: FB, weight: 900 }); }
+  else {
+    const per = 10, pages = Math.max(1, Math.ceil(rows.length / per)); G.lbPage = clamp(G.lbPage || 0, 0, pages - 1);
+    if (!rows.length) txt('Nobody here yet. Be the first!', w / 2, 220, 18, '#c9cfdc', { font: FB, weight: 900 });
+    rows.slice(G.lbPage * per, G.lbPage * per + per).forEach((r, i) => {
+      const n = G.lbPage * per + i + 1, y = 82 + i * 40, mine = NET.user && r.id === NET.user.id;
+      ctx.fillStyle = mine ? 'rgba(125,255,122,0.16)' : i % 2 ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.06)'; rr(24, y, w - 48, 36, 9); ctx.fill();
+      const medal = ['#ffd84a', '#d8dee8', '#d08a4a'][n - 1];
+      if (medal) { ctx.fillStyle = medal; ctx.beginPath(); ctx.arc(52, y + 18, 13, 0, 6.283); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#0b0c12'; ctx.stroke(); }
+      txt('#' + n, 52, y + 18.5, n > 99 ? 11 : 14, medal ? '#0b0c12' : '#9aa3b5', { font: FB, weight: 900, shadow: false });
+      txt(r.username, 82, y + 18.5, fitSize(r.username, 17, 280), mine ? '#7dff7a' : '#ffffff', { align: 'left' });
+      txt(show(r[col]), w - 40, y + 18.5, 17, '#ffd84a', { align: 'right' });
+    });
+    if (pages > 1) {
+      btn('lbL', w / 2 - 110, 490, 50, 30, '<', { col: '#343c50', size: 16, r: 8, fn: () => { G.lbPage = Math.max(0, G.lbPage - 1); AUDIO.sfx('click'); } });
+      txt((G.lbPage + 1) + ' / ' + pages, w / 2, 505, 13, '#c9cfdc', { font: FB, weight: 900 });
+      btn('lbR', w / 2 + 60, 490, 50, 30, '>', { col: '#343c50', size: 16, r: 8, fn: () => { G.lbPage = Math.min(pages - 1, G.lbPage + 1); AUDIO.sfx('click'); } });
+    }
+  }
+  // you
+  ctx.fillStyle = 'rgba(0,0,0,0.3)'; rr(24, 532, w - 48, 50, 10); ctx.fill();
+  if (NET.user) {
+    const v = col === 'best' ? G.high : col === 'rebirths' ? rebirthsDone() : G.pass.lvl;
+    txt('You: ' + NET.name + (NET.me[col] ? '   #' + NET.me[col] : '') + '   ' + show(v), 44, 557, fitSize('You: ' + NET.name + '   #000   ' + show(v), 16, 380, FB), '#7dff7a', { align: 'left', font: FB, weight: 900 });
+    btn('lbacct', w - 160, 540, 130, 34, 'Account', { col: '#4a5470', size: 14, r: 8, fn: () => { AUDIO.sfx('click'); openAccount(); } });
+  } else {
+    txt('Log in to get on the leaderboard!', 44, 557, 15, '#c9cfdc', { align: 'left', font: FB, weight: 900 });
+    btn('lblogin', w - 200, 540, 170, 34, 'Log in / Sign up', { col: '#3aa04a', size: 14, r: 8, fn: () => { AUDIO.sfx('click'); openAccount(); } });
+  }
 }
 
 // ====================================================================
@@ -3997,6 +4254,7 @@ window.addEventListener('keydown', e => {
   if (G.scene === 'play' && !e.repeat) {
     const m = { KeyB: 'biomes', KeyS: 'shop', KeyR: 'rebirth', KeyK: 'book', KeyD: 'drones', KeyP: 'pass' }[e.code];
     if (m) { AUDIO.sfx('click'); openMenu(m); }
+    if (e.code === 'KeyL') { AUDIO.sfx('click'); openLeaders(); }
   }
 });
 window.addEventListener('keyup', e => { if (e.code === 'Space') G.keys.Space = false; });
@@ -4009,7 +4267,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && G.s
 //  START + MAIN LOOP (fixed 30 game frames a second, drawing every screen frame)
 // ====================================================================
 resize();
-function ready() { loadSave(); G.scene = 'title'; AUDIO.setSong(0); }
+function ready() { loadSave(); G.scene = 'title'; AUDIO.setSong(0); netInit(); }
 if (document.fonts && document.fonts.load) {
   Promise.all([document.fonts.load('40px "Lilita One"'), document.fonts.load('900 16px "Nunito"')]).catch(() => {}).then(() => { bgKey = ''; ready(); });
   setTimeout(() => { if (G.scene === 'loading') ready(); }, 2500);   // offline? use fallback fonts
