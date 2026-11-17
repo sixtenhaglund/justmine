@@ -488,6 +488,7 @@ function loadBiome(i, fromTeleport) {
 const GRID_SIZES = [[9, 5], [13, 7], [17, 9], [21, 11], [27, 14], [37, 19], [45, 23]];
 const gridDims = () => GRID_SIZES[clamp(G.rocksLevel | 0, 0, GRID_SIZES.length - 1)];
 const gsc = () => G.gs || 1;   // rock size compared to the original 48-unit grid (1 = normal, 0.18 = tiny)
+const vsc = () => Math.max(0.35, gsc());   // size of drones, bombs, robots... next to the rocks
 function makeGrid() {
   const [C, R] = gridDims(), cell = 384 / (C - 1), f = cell / 48; G.gs = f;
   const q = [];
@@ -807,7 +808,7 @@ function bombTier(L) {
   if (L === MAX_BOMB - 2) return { name: 'blue', tint: ['#bfe8ff', '#1a4aff'], glow: '#3a8aff', spark: '#7ad0ff', flash: '#9ad0ff', ring: '#6ab0ff' };
   return { name: 'orange', tint: null, glow: '#ffb347', spark: '#ffcf5a', flash: '#ffd27a', ring: '#ffd27a' };
 }
-function bombRadius(bo) { return 0.42 * bombArt(bo).size * 1.15 * bo.size / 100 * (1 + 0.15 * G.radiusLevel); }
+function bombRadius(bo) { return 0.42 * bombArt(bo).size * 1.15 * bo.size / 100 * (1 + 0.15 * G.radiusLevel) * gsc(); }
 function bombTouches(bo, rock) {
   const rad = bombRadius(bo);
   const half = 25.6 * gsc(), dx = Math.max(Math.abs(bo.x - rock.x) - half, 0), dy = Math.max(Math.abs(bo.y - rock.y) - half, 0);
@@ -819,10 +820,10 @@ function dropBomb(wx, wy) {
   G.bombCD = bombCooldown();
   const L = G.bombLevel, ex = BOMB_EXTRA[L];
   for (let k = 0; k <= G.clusterLevel; k++) {
-    const a = Math.random() * 6.283, d = k ? 50 + Math.random() * 70 : 0;
+    const a = Math.random() * 6.283, d = k ? (50 + Math.random() * 70) * gsc() : 0;
     const x = clamp(wx + Math.cos(a) * d, -230, 230), y = clamp(wy + Math.sin(a) * d, -100, 165);
     G.bombs.push({ x, y, size: 1 + rnd(ex[0], ex[1]), speed: 100, ghost: k ? -20 * k : 0, dir: 90 + rnd(0, 180), level: L, hits: new Set(), t: k ? -0.08 * k : 0 });
-    G.lights.push({ x, y, r: 120 + L * 35, col: bombTier(L).glow, life: 0.8, max: 0.8 });
+    G.lights.push({ x, y, r: (120 + L * 35) * vsc(), col: bombTier(L).glow, life: 0.8, max: 0.8 });
     smoke(x, y, 6 + L * 2, 30 + L * 10);
     for (let i = 0; i < 10 + L * 4; i++) {
       const aa = Math.random() * 6.283, v = 3 + Math.random() * (4 + L);
@@ -900,8 +901,8 @@ function spawnMeteor() {
 function meteorImpact(m) {
   const r = m.target;
   G.shake = Math.max(G.shake, 6);
-  G.lights.push({ x: r.x, y: r.y, r: 90, col: '#ff8a3a', life: 0.5, max: 0.5 });
-  smoke(r.x, r.y, 6, 26);
+  G.lights.push({ x: r.x, y: r.y, r: 90 * vsc(), col: '#ff8a3a', life: 0.5, max: 0.5 });
+  smoke(r.x, r.y, 6, 26 * vsc());
   for (let i = 0; i < 12; i++) { const a = Math.random() * 6.283, v = 2 + Math.random() * 4; G.parts.push({ kind: 'spark', x: r.x, y: r.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v + 2, life: 16, max: 16, col: '#ffb04a', s: 2 }); }
   AUDIO.sfx('impact');
   if (r.state === 'rock' && G.rocks.indexOf(r) >= 0) { r.costume = 4; breakRock(r, 'meteor'); }
@@ -1055,7 +1056,7 @@ function tick() {
         else if (G.heart) d.target = G.heart;
         d.wait = 0.4;
       }
-      const tx = d.target ? (d.target === G.heart ? (d.spin % 2 - 1) * 50 : d.target.x) + 16 : d.x, ty = d.target ? (d.target === G.heart ? 32 : d.target.y) + 26 : d.y;
+      const tx = d.target ? (d.target === G.heart ? (d.spin % 2 - 1) * 50 : d.target.x) + 16 * vsc() : d.x, ty = d.target ? (d.target === G.heart ? 32 : d.target.y) + 26 * vsc() : d.y;
       d.px = d.x; d.py = d.y; d.x += (tx - d.x) * 0.18; d.y += (ty - d.y) * 0.18;
       if (d.hitT > 0) d.hitT -= DT;
     }
@@ -1780,15 +1781,15 @@ function drawLighting(shx, shy) {
    // your torch
   for (const l of G.lights) L(l.x, l.y, l.r * 1.5, l.life / l.max, l.col);
   { const lf = Math.max(0.35, gsc()); for (const r of G.rocks) { if (r.state === 'gem' && r.gemT < 2) L(r.x, r.y, 48 * lf, 0.8, RCOL[r.rarity]); else if (r.golden && r.state === 'rock') L(r.x, r.y, 62 * lf, 0.6, '#ffcc33'); } }
-  for (const bo of G.bombs) if (bo.t >= 0) L(bo.x, bo.y, 95, 0.9, '#ffb04a');
+  for (const bo of G.bombs) if (bo.t >= 0) L(bo.x, bo.y, 95 * vsc(), 0.9, '#ffb04a');
   for (const m of G.meteors) { const t = m.t / m.dur; L(m.sx + (m.target.x - m.sx) * t, m.sy + (m.target.y - m.sy) * t, 85, 1, '#ff8a3a'); }
-  for (const d of G.drills) if (d.target || d.y < 190) L(d.x, d.y, 30, 0.5, null);
+  for (const d of G.drills) if (d.target || d.y < 190) L(d.x, d.y, 30 * vsc(), 0.5, null);
   for (const d of G.drops) L(d.x, d.y, 34, 0.7, RCOL[b.minerals[d.i][2]]);
   if (G.heart) L(0, 32, 160 + Math.sin(G.time * 3) * 16, 0.9, '#ff6a3a');
   for (const d of deployed()) { const s = DRT.get(d.id); if (!s) continue; const ac = dronePal(d).accent; L(s.x, s.y, 34, 0.45, null);
     if (s.ends) for (const e of s.ends) for (let f = 0; f <= 1; f += 0.5) L(e.ox + Math.cos(s.ang) * e.len * f, e.oy + Math.sin(s.ang) * e.len * f, 50 + d.rank * 6, 0.8, ac);
     if (d.type === 'alien' && s.state === 'beam' && s.target) L(s.target.x, s.target.y + 20, 70, 0.8, '#7dff3a'); }
-  for (const b of G.dbombs) L(b.x, b.y, 26, 0.6, '#ff5a3a');
+  for (const b of G.dbombs) L(b.x, b.y, 26 * vsc(), 0.6, '#ff5a3a');
   if (gx('bg') > 0) for (const ln of LANTERNS) L(ln[0], ln[1] - 6, 135 * lanternFlick(ln[2]), 0.95, lanternCol());
   if (b.amb === 'lava') L(0, -150, 300, 0.55, '#ff6a1a');
   LIGHT.vig = !!gx('grade');
@@ -2477,7 +2478,7 @@ function drawMega(m, bname) {
 }
 function drawDrill(d) {   // the Shop's auto miner: a little round robot with two side propellers and a pickaxe arm
   const x = d.px === undefined ? d.x : d.px + (d.x - d.px) * TICK_A, y = wy(d.py === undefined ? d.y : d.py + (d.y - d.py) * TICK_A) + Math.sin(G.time * 4 + d.spin) * 2, hit = d.hitT > 0;
-  ctx.save(); ctx.translate(x, y);
+  ctx.save(); ctx.translate(x, y); ctx.scale(vsc(), vsc());
   ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.ellipse(0, 22, 9, 2.6, 0, 0, 6.283); ctx.fill();
   // arms + propellers with blur discs
   ctx.strokeStyle = '#4a5466'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-6, -4); ctx.lineTo(-13, -8); ctx.moveTo(6, -4); ctx.lineTo(13, -8); ctx.stroke();
@@ -2849,19 +2850,19 @@ function renderWorld(shx, shy) {
   drawDroneWorld();
   drawLanterns();
   if (G.mega) drawMega(G.mega, b.name);
-  for (const d of G.drops) drawGem(gemArt(b.name, d.i), d.x, wy(d.y), 22, { glow: RCOL[b.minerals[d.i][2]], rank: 3, rot: Math.sin(G.time * 3 + d.ph) * 0.3 });
+  for (const d of G.drops) drawGem(gemArt(b.name, d.i), d.x, wy(d.y), 22 * vsc(), { glow: RCOL[b.minerals[d.i][2]], rank: 3, rot: Math.sin(G.time * 3 + d.ph) * 0.3 });
   // meteors
   for (const m of G.meteors) {
     const t = m.t / m.dur, x = m.sx + (m.target.x - m.sx) * t, y = m.sy + (m.target.y - m.sy) * t;
     ctx.globalCompositeOperation = 'lighter';
     for (let k = 1; k < 8; k++) { const tt = Math.max(0, t - k * 0.03), xx = m.sx + (m.target.x - m.sx) * tt, yy = m.sy + (m.target.y - m.sy) * tt; ctx.globalAlpha = 0.5 - k * 0.05; ctx.drawImage(soft(k < 3 ? '#ffd27a' : '#ff5a1a'), xx - 16 + k, wy(yy) - 16 + k, 32 - k * 2, 32 - k * 2); }
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = '#3a2a22'; ctx.strokeStyle = '#0b0705'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, wy(y), 6, 0, 6.283); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#3a2a22'; ctx.strokeStyle = '#0b0705'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, wy(y), 6 * vsc(), 0, 6.283); ctx.fill(); ctx.stroke();
   }
   // bombs: his burst shapes, coloured by tier, with light and shockwaves (the last tier implodes)
   for (const bo of G.bombs) {
     if (bo.t < 0) continue;
-    const art = bombArt(bo), tier = bombTier(bo.level), a = clamp(1 - bo.ghost / 100, 0, 1), px = art.size * bo.size / 100 * (1 + 0.15 * G.radiusLevel), bx = bo.x, by = wy(bo.y);
+    const art = bombArt(bo), tier = bombTier(bo.level), a = clamp(1 - bo.ghost / 100, 0, 1), px = art.size * bo.size / 100 * (1 + 0.15 * G.radiusLevel) * gsc(), bx = bo.x, by = wy(bo.y);
     if (tier.name === 'black') {
       const R = bombRadius(bo) * 1.2, life = clamp(bo.t / 0.7, 0, 1);
       const g = ctx.createRadialGradient(bx, by, 0, bx, by, R * 1.6); g.addColorStop(0, 'rgba(0,0,0,0.95)'); g.addColorStop(0.5, 'rgba(10,0,25,0.55)'); g.addColorStop(1, 'rgba(10,0,25,0)');
@@ -2876,7 +2877,7 @@ function renderWorld(shx, shy) {
     ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; ctx.drawImage(soft(tier.glow), bx - px, by - px, px * 2, px * 2); ctx.globalCompositeOperation = 'source-over';
     drawGem(art, bx, by, px, { alpha: a, rot: (bo.dir - 90) * Math.PI / 180 + bo.t * 0.6, tint: tier.tint });
     for (let k = 0; k < 2; k++) {
-      const rr2 = px * (0.7 + k * 0.35) + bo.t * 60 * (1 + k); ctx.globalAlpha = Math.max(0, 0.8 - bo.t * 1.3 - k * 0.2);
+      const rr2 = px * (0.7 + k * 0.35) + bo.t * 60 * (1 + k) * gsc(); ctx.globalAlpha = Math.max(0, 0.8 - bo.t * 1.3 - k * 0.2);
       ctx.lineWidth = 4 - k * 1.5; ctx.strokeStyle = k ? '#ffffff' : tier.ring; ctx.beginPath(); ctx.arc(bx, by, rr2, 0, 6.283); ctx.stroke();
     }
     ctx.globalAlpha = 1;
@@ -3864,14 +3865,14 @@ function tickDrones() {
 }
 function tickDrone(d, s) {
   s.px = s.x; s.py = s.y;   // where it was last tick (drawing slides between the two)
-  const T = DRONE_TYPES[d.type], R = d.rank, v = (d.type === 'alien' ? 1.3 + R * 0.45 : 3.2 * RK.spd[R]) * lvlSpd(d);
+  const T = DRONE_TYPES[d.type], R = d.rank, v = (d.type === 'alien' ? 1.3 + R * 0.45 : 3.2 * RK.spd[R]) * lvlSpd(d) * vsc();
   s.cd -= DT; s.t += DT; if (s.hitT > 0) s.hitT -= DT; s.act *= 0.9;
   switch (T.ai) {
     case 'drill': {   // Drone + Big Drill: park on a rock and drill it
       if (s.target && (s.target === G.heart ? !G.heart : !rockAlive(s.target))) s.target = null;
       if (!s.target) s.target = pickRock(d, s, d.type === 'bigdrill' ? { area: 'plus' } : null) || G.heart || null;
       if (!s.target) { idle(s, v); break; }
-      const isH = s.target === G.heart, tx = isH ? Math.sin(s.spin) * 50 : s.target.x, ty = (isH ? 32 : s.target.y) + 24;
+      const isH = s.target === G.heart, tx = isH ? Math.sin(s.spin) * 50 : s.target.x, ty = (isH ? 32 : s.target.y) + 24 * vsc();
       if (flyTo(s, tx, ty, v) && s.cd <= 0) {
         s.cd = droneCd(d); s.hitT = 0.18; s.act = 1;
         if (isH) hitHeart(RK.dmg[R]);
@@ -3883,14 +3884,14 @@ function tickDrone(d, s) {
     }
     case 'bomb': {   // Bomblayer family: wander, lay bombs; if only a rock or two is left, go straight to it
       const free = freeRocks();
-      if (free.length && free.length <= 2) { const r = free[0]; s.wx = r.x; s.wy = r.y + 22; }
+      if (free.length && free.length <= 2) { const r = free[0]; s.wx = r.x; s.wy = r.y + 22 * vsc(); }
       else if ((s.wT -= DT) <= 0) {
         s.wT = 1.4 + Math.random() * 2;
         const r = aiRank(d) >= 3 && free.length ? pickRock(d, s, { area: d.type === 'heavybomber' ? 70 : 40 }) : null;
-        if (r) { s.wx = r.x; s.wy = r.y + 22; } else { s.wx = (Math.random() - 0.5) * 400; s.wy = -60 + Math.random() * 200; }
+        if (r) { s.wx = r.x; s.wy = r.y + 22 * vsc(); } else { s.wx = (Math.random() - 0.5) * 400; s.wy = -60 + Math.random() * 200; }
       }
       flyTo(s, s.wx, s.wy, v * 0.7);
-      if (s.cd <= 0 && (free.length || G.heart || G.mega)) { s.cd = droneCd(d); layBomb(d, s.x, s.y - 12); }
+      if (s.cd <= 0 && (free.length || G.heart || G.mega)) { s.cd = droneCd(d); layBomb(d, s.x, s.y - 12 * vsc()); }
       break;
     }
     case 'heavy': {   // Heavy: hover high over a rock, then smash down on it
@@ -3898,10 +3899,10 @@ function tickDrone(d, s) {
         s.vy = (s.vy || 0) + 1.5; s.y -= s.vy;
         if (s.y <= s.ty) {
           s.y = s.ty; s.state = 'idle'; s.vy = 0; s.hitT = 0.3; s.act = 1; s.cd = droneCd(d);
-          crackArea(s.x, s.ty - 18, 'sq', RK.dmg[R], d);
-          G.shake = Math.max(G.shake, 4 + R); dust(s.x, s.ty - 14, '#a0a0a0', 10); chunks(s.x, s.ty - 18, '#8a8a8a', 6);
-          G.lights.push({ x: s.x, y: s.ty - 18, r: 80 + R * 10, col: dronePal(d).accent, life: 0.4, max: 0.4 });
-          G.rings.push({ x: s.x, y: s.ty - 18, t: 0, r: 75, col: dronePal(d).accent });
+          const hy = s.ty - 18 * vsc(); crackArea(s.x, hy, 'sq', RK.dmg[R], d);
+          G.shake = Math.max(G.shake, 4 + R); dust(s.x, hy, '#a0a0a0', 10); chunks(s.x, hy, '#8a8a8a', 6);
+          G.lights.push({ x: s.x, y: hy, r: (80 + R * 10) * vsc(), col: dronePal(d).accent, life: 0.4, max: 0.4 });
+          G.rings.push({ x: s.x, y: hy, t: 0, r: 75 * gsc(), col: dronePal(d).accent });
           droneSfx(d, 'slam'); s.target = null;
         }
         break;
@@ -3909,7 +3910,7 @@ function tickDrone(d, s) {
       if (s.target && !rockAlive(s.target)) s.target = null;
       if (!s.target) s.target = pickRock(d, s, { area: 'sq' });
       if (!s.target) { idle(s, v); break; }
-      if (flyTo(s, s.target.x, s.target.y + 70, v) && s.cd <= 0) { s.state = 'slam'; s.vy = 0; s.ty = s.target.y + 18; }
+      if (flyTo(s, s.target.x, s.target.y + 70 * vsc(), v) && s.cd <= 0) { s.state = 'slam'; s.vy = 0; s.ty = s.target.y + 18 * vsc(); }
       break;
     }
     case 'laser': {   // Laser: go somewhere, charge, then fire a beam that burns the first rock in its way
@@ -3936,14 +3937,14 @@ function tickDrone(d, s) {
       if (s.target && !rockAlive(s.target)) s.target = null;
       if (!s.target && s.cd <= 0) s.target = pickRock(d, s, { filter: r => !r.golden && !r.chest && !(r.alienGem >= 0) });
       if (!s.target) { idle(s, v); break; }
-      if (flyTo(s, s.target.x, s.target.y + 48, v)) { s.state = 'beam'; s.beamT = 0; droneSfx(d, 'ufo'); }
+      if (flyTo(s, s.target.x, s.target.y + 48 * vsc(), v)) { s.state = 'beam'; s.beamT = 0; droneSfx(d, 'ufo'); }
       break;
     }
   }
 }
 function layBomb(d, x, y) {
   const big = d.type === 'heavybomber', R = d.rank;
-  G.dbombs.push({ x, y, gy: y - 14, t: 0, fuse: big ? 1.6 : 1.2, r: ((big ? 62 : 32) + R * (big ? 8 : 5)) * lvlAbility(d), dmg: RK.dmg[R] + (big ? 1 : 0), drills: d.type === 'drillbomber', big, d, col: dronePal(d).accent });
+  G.dbombs.push({ x, y, gy: y - 14 * vsc(), t: 0, fuse: big ? 1.6 : 1.2, r: ((big ? 62 : 32) + R * (big ? 8 : 5)) * lvlAbility(d) * gsc(), dmg: RK.dmg[R] + (big ? 1 : 0), drills: d.type === 'drillbomber', big, d, col: dronePal(d).accent });
   droneSfx(d, 'drop');
 }
 function explodeDroneBomb(b) {
@@ -4261,8 +4262,8 @@ function drawDroneWorld() {
   for (const r of G.rocks) if (r.alienGem >= 0 && r.state === 'rock') { const p = 0.5 + 0.5 * Math.sin(G.time * 4 + r.seed); ctx.globalCompositeOperation = 'lighter'; const af = gsc(); ctx.globalAlpha = 0.25 + 0.2 * p; ctx.drawImage(soft('#7dff3a'), r.x - 30 * af, wy(r.y) - 30 * af, 60 * af, 60 * af); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; drawGem(gemArt(b.name, r.alienGem), r.x + 15 * af, wy(r.y) - 15 * af, 11 * Math.max(0.4, af), { glow: '#7dff3a', alpha: 0.85 }); }
   for (const g of G.rings) { const k = g.t / 0.45; ctx.globalAlpha = Math.max(0, 1 - k); ctx.strokeStyle = g.col; ctx.lineWidth = 3 * (1 - k) + 0.5; ctx.beginPath(); ctx.arc(g.x, wy(g.y), Math.max(1, g.r * ease(k)), 0, 6.283); ctx.stroke(); }
   ctx.globalAlpha = 1;
-  for (const bo of G.dbombs) { const blink = Math.sin(bo.t * (8 + bo.t * 14)) > 0; hangBomb(bo.x, wy(bo.y), bo.big ? 6.5 : 4, { dark: '#222', accent: blink ? '#ff3030' : bo.col }, G.time, bo.drills, false); }
-  for (const p of G.dproj) drill(p.x, wy(p.y), 9, 3, p.spin, null, Math.atan2(-p.dy, p.dx) - Math.PI / 2);
+  for (const bo of G.dbombs) { const blink = Math.sin(bo.t * (8 + bo.t * 14)) > 0; hangBomb(bo.x, wy(bo.y), (bo.big ? 6.5 : 4) * vsc(), { dark: '#222', accent: blink ? '#ff3030' : bo.col }, G.time, bo.drills, false); }
+  for (const p of G.dproj) drill(p.x, wy(p.y), 9 * vsc(), 3 * vsc(), p.spin, null, Math.atan2(-p.dy, p.dx) - Math.PI / 2);
   for (const d of deployed()) {
     const s = DRT.get(d.id); if (!s) continue;
     const ta = TICK_A, x = s.px === undefined ? s.x : s.px + (s.x - s.px) * ta, y = wy(s.py === undefined ? s.y : s.py + (s.y - s.py) * ta) + Math.sin((s.t + ta * DT) * 3 + s.spin) * 1.5, P = dronePal(d);
@@ -4292,7 +4293,7 @@ function drawDroneWorld() {
       if (s.gem !== undefined) { const f = clamp((s.beamT - 0.9) / 1.7, 0, 1), gx2 = r.x + (x - r.x) * ease(f), gy2 = wy(r.y) + (top - wy(r.y)) * ease(f); drawGem(gemArt(b.name, s.gem), gx2 + Math.sin(G.time * 6) * 2, gy2, 16 * (1 - f * 0.5), { glow: RCOL[b.minerals[s.gem][2]], rot: G.time * 3 }); if (f < 0.3) txt(b.minerals[s.gem] ? gemArt(b.name, s.gem).name : '', r.x, wy(r.y) + 30, 7, '#c8ff9a', { stroke: 2 }); }
     }
     if (gx('shadows')) { ctx.globalAlpha = 0.25; ctx.drawImage(soft('#000000'), x - 12, y + 22, 24, 6); ctx.globalAlpha = 1; }
-    drawDrone(d, x, y, { tilt: s.tilt, act: Math.max(s.act, s.hitT > 0 ? 1 : 0), t: s.t + ta * DT });
+    drawDrone(d, x, y, { tilt: s.tilt, act: Math.max(s.act, s.hitT > 0 ? 1 : 0), t: s.t + ta * DT, scale: vsc() });
     if (s.lvlFx > 0) {   // LEVEL UP: flash yellow
       const k = s.lvlFx / 1.4, pulse = Math.abs(Math.sin(s.lvlFx * 9));
       ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = k * (0.5 + 0.5 * pulse); ctx.drawImage(soft('#ffe14a'), x - 34, y - 34, 68, 68); ctx.drawImage(soft('#ffffff'), x - 14, y - 14, 28, 28);
