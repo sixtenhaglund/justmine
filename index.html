@@ -3107,8 +3107,8 @@ function renderHUD() {
   const nbi = nextBiome();
   if (nbi > 0) {
     setScreen();
-    const nbB = BIOMES[nbi], lab = 'Next biome: ' + (nbi + 1) + '. ' + nbB.name + ' - ' + fmt(nbB.req);
-    const cw2 = Math.min(250, W * 0.3), nx = W - 12 - cw2, ny = 62;
+    const nbB = BIOMES[nbi], narrow = W < 600, lab = (narrow ? 'Next: ' : 'Next biome: ' + (nbi + 1) + '. ') + nbB.name + ' - ' + fmt(nbB.req);
+    const cw2 = narrow ? W * 0.44 : Math.min(250, W * 0.3), nx = W - 12 - cw2, ny = 62;
     region('nextchip', nx, ny, cw2, 20, () => { AUDIO.sfx('click'); openMenu('biomes'); });
     ctx.fillStyle = UI.hot === 'nextchip' ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)'; rr(nx, ny, cw2, 20, 10); ctx.fill();
     ctx.fillStyle = rgba(nbB.accent, 0.35); rr(nx, ny, cw2 * clamp(G.creditz / nbB.req, 0, 1), 20, 10); ctx.fill();
@@ -4780,14 +4780,14 @@ function renderPassButton() {
   const P = G.pass; if (!P) return;
   const gridLeft = toScreen(-236, 0).x, room = gridLeft - 12, open = () => { AUDIO.sfx('click'); G.passPage = Math.min(4, Math.floor(P.lvl / 10)); openMenu('pass'); };
   if (room >= 70) {
-    const w = Math.min(118, room - 6), h = Math.round(w * 1.9), x = 10, y = Math.max(TOP + 6, H / 2 - h / 2 - 62), hot = UI.hot === 'passbig', u = h / 150;   // u = how much bigger than the old 150 px button
+    const SL = sideLayout(room), w = SL.w, h = SL.ph, x = 10, y = SL.py, hot = UI.hot === 'passbig', u = h / 150;   // u = how much bigger than the old 150 px button
     region('passbig', x, y, w, h, open);
     ctx.save();
     ctx.fillStyle = 'rgba(0,0,0,0.35)'; rr(x, y + 4, w, h, 14); ctx.fill();
     const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, hot ? '#5ad02a' : '#3a9a1a'); g.addColorStop(1, '#14400a'); ctx.fillStyle = g; rr(x, y, w, h, 14); ctx.fill();
     ctx.lineWidth = 2; ctx.strokeStyle = '#9aff4a'; ctx.stroke();
-    { const pw2 = Math.ceil(w), ph2 = Math.ceil(w * 0.75), pic = hudPic('passufo', pw2, ph2, () => drawDrone({ id: 9, type: 'alien', rank: 5, skin: null, hat: null }, 0, 0, { scale: w / 46, t: 1 })); ctx.drawImage(pic, x + w / 2 - pw2 / 2, y + 34 * u + Math.sin(G.time * 2) * 3 - ph2 / 2, pw2, ph2); }
-    txt('PASS', x + w / 2, y + 74 * u, Math.min(28, w / 3.6), '#ffffff', { stroke: 3.5 });
+    { const uw = Math.min(w, h / 1.9 * 1.05), pw2 = Math.ceil(uw), ph2 = Math.ceil(uw * 0.75), pic = hudPic('passufo', pw2, ph2, () => drawDrone({ id: 9, type: 'alien', rank: 5, skin: null, hat: null }, 0, 0, { scale: uw / 46, t: 1 })); ctx.drawImage(pic, x + w / 2 - pw2 / 2, y + 34 * u + Math.sin(G.time * 2) * 3 - ph2 / 2, pw2, ph2); }
+    txt('PASS', x + w / 2, y + 74 * u, Math.min(28, w / 3.6, 22 * u), '#ffffff', { stroke: 3.5 });
     txt('Lv ' + P.lvl, x + w / 2, y + 98 * u, Math.min(22, 15 * u), '#c8ff9a', { stroke: 3 });
     ctx.fillStyle = 'rgba(0,0,0,0.4)'; rr(x + 8, y + 112 * u, w - 16, 9, 4.5); ctx.fill(); ctx.fillStyle = '#9aff4a'; rr(x + 8, y + 112 * u, (w - 16) * (P.lvl >= PASS_MAX ? 1 : clamp(P.xp / xpNeed(P.lvl + 1), 0, 1)), 9, 4.5); ctx.fill();
     txt(seasonText(), x + w / 2, y + 136 * u, fitSize(seasonText(), Math.min(13, 10 * u), w - 8, FB), '#ffffff', { font: FB, weight: 900, shadow: false });
@@ -5044,10 +5044,17 @@ function renderWheel() {
   }
 }
 // the round button under the PASS button
+function sideLayout(room) {
+  const w = Math.min(118, room - 6), gap = 10; let ph = Math.round(w * 1.9), wh = Math.round(w * 0.95);
+  const top = TOP + 6, bottom = H - 100, need = ph + gap + wh;
+  if (need > bottom - top) { const f = Math.max(0.45, (bottom - top) / need); ph = Math.round(ph * f); wh = Math.round(wh * f); }
+  const py = Math.max(top, Math.min(H / 2 - (ph + gap + wh) / 2 - 10, bottom - ph - gap - wh));
+  return { w, ph, wh, py, wy: py + ph + gap };
+}
 function renderWheelButton() {
   const gridLeft = toScreen(-236, 0).x, room = gridLeft - 12, n = G.spins || 0, open = () => { AUDIO.sfx('click'); openMenu('wheel'); };
   let x, y, w, h;
-  if (room >= 70) { w = Math.min(118, room - 6); h = Math.round(w * 0.95); x = 10; const ph = Math.round(w * 1.9), py = Math.max(TOP + 6, H / 2 - ph / 2 - 62); y = py + ph + 12; if (y + h > H - 100) y = H - 100 - h; }
+  if (room >= 70) { const SL = sideLayout(room); w = SL.w; h = SL.wh; x = 10; y = SL.wy; }
   else { x = 12; y = 140; w = 164; h = 44; }
   const hot = UI.hot === 'wheelbtn';
   region('wheelbtn', x, y, w, h, open);
