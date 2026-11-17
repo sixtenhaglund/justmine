@@ -3622,8 +3622,8 @@ const CRATES = {
   common: { name: 'Common Crate', col: '#a4a4a4', price: 5e5, odds: { normal: 70, bomber: 20, heavy: 10 }, ranks: [100] },
   uncommon: { name: 'Uncommon Crate', col: '#4dff4d', price: 2e7, odds: { normal: 45, bomber: 30, heavy: 25 }, ranks: [100] },
   rare: { name: 'Rare Crate', col: '#2eb0ff', price: 1e9, odds: { normal: 30, bomber: 35, heavy: 35 }, ranks: [100] },
-  epic: { name: 'Epic Crate', col: '#ff4be6', price: 1e11, odds: { normal: 18, bomber: 39.5, heavy: 41, laser: 1.5 }, ranks: [100] },
-  legendary: { name: 'Legendary Crate', col: '#e8ff3a', price: 1e13, odds: { normal: 10, bomber: 37, heavy: 43, laser: 10 }, ranks: [100] },
+  epic: { name: 'Epic Crate', col: '#ff4be6', price: 1e11, odds: { normal: 14, bomber: 37.5, heavy: 39, bigdrill: 4, drillbomber: 4, laser: 1.5 }, ranks: [100] },
+  legendary: { name: 'Legendary Crate', col: '#e8ff3a', price: 1e13, odds: { normal: 6, bomber: 32, heavy: 34, bigdrill: 7, drillbomber: 7, heavybomber: 4, laser: 10 }, ranks: [100] },
   mythical: { name: 'Mythical Crate', col: '#b05cff', price: 1e15, odds: { bomber: 22, heavy: 28, bigdrill: 13, drillbomber: 13, heavybomber: 9, laser: 15 }, ranks: [100] },
   skin: { name: 'Skin Crate', col: '#ff8a3a', price: 1e8, skins: {
     rusty: 11, camo: 11, bubblegum: 11, midnight: 11, arctic: 11,            // Common
@@ -4435,7 +4435,7 @@ function renderDroneShop(w, h) {
     txt(C.name, x + cw / 2, y + 116, fitSize(C.name, 19, cw - 20), C.col, { stroke: 3 });
     let lines;
     if (k === 'skin') { const tot = Object.values(C.skins).reduce((a, b) => a + b, 0), by = {}; for (const [sk, v] of Object.entries(C.skins)) by[SKINS[sk].rar] = (by[SKINS[sk].rar] || 0) + v; lines = Object.entries(by).map(([r, v]) => r + ' skins ' + fmtPct(v / tot)); lines.unshift(Object.keys(C.skins).length + ' skins to collect'); }
-    else { const w = crateOdds(C), tot = Object.values(w).reduce((a, b) => a + b, 0); lines = Object.entries(w).map(([tp, v]) => DRONE_TYPES[tp].name + ' (' + DRONE_TYPES[tp].rar + ') ' + fmtPct(v / tot)); lines.push('Always rank I - merge for more'); }
+    else { const w = crateOdds(C), tot = Object.values(w).reduce((a, b) => a + b, 0); lines = Object.entries(w).map(([tp, v]) => DRONE_TYPES[tp].name + ' (' + DRONE_TYPES[tp].rar + ') ' + fmtPct(v / tot)); }
     const lh = lines.length > 5 ? 12.5 : 16, lf = lines.length > 5 ? 10.5 : 12;
     lines.forEach((l, j) => txt(l, x + cw / 2, y + 136 + j * lh, fitSize(l, lf, cw - 24, FB), l.startsWith('Laser') ? '#ff6a7a' : RCOL[l.split(' ')[0]] || '#c9cfdc', { font: FB, weight: 800, shadow: false }));
     btn('crate_' + k, x + 36, y + ch - 44, cw - 72, 34, have ? 'Open free (' + have + ')' : fmt(C.price), { col: have ? '#7a3aa8' : G.creditz >= C.price ? '#3aa04a' : '#6a3a3a', size: 17, fn: () => buyCrate(k) });
