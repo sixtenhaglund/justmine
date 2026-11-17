@@ -3682,8 +3682,9 @@ async function redeemCode(raw) {
   if (!(window.crypto && crypto.subtle)) return 'Codes only work on the real website (https)';
   const c = await codeHash(String(raw || '').trim().toLowerCase().replace(/\s+/g, ''));
   const C = CODES[c]; if (!C) return 'That code does not exist';
-  if (G.codes.includes(c)) return 'You already used this code';
-  G.codes.push(c);
+  const lost = G.codes.includes(c) && C.skin && !(G.skins[C.skin] > 0);   // used it before but the skin is gone: give it back
+  if (G.codes.includes(c) && !lost) return 'You already used this code';
+  if (!lost) G.codes.push(c);
   if (C.skin) G.skins[C.skin] = (G.skins[C.skin] || 0) + 1;
   AUDIO.sfx('glitch'); toast(C.text, '#00ff66'); save();
   return 'ok';
