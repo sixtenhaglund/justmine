@@ -827,7 +827,7 @@ function dropBomb(wx, wy) {
     smoke(x, y, 6 + L * 2, 30 + L * 10);
     for (let i = 0; i < 10 + L * 4; i++) {
       const aa = Math.random() * 6.283, v = 3 + Math.random() * (4 + L);
-      if (bombTier(L).name === 'black') G.parts.push({ kind: 'suck', x: x + Math.cos(aa) * 110, y: y + Math.sin(aa) * 110, tx: x, ty: y, vx: 0, vy: 0, life: 21, max: 21, col: '#b678ff', s: 2 });
+      if (bombTier(L).name === 'black') G.parts.push({ kind: 'suck', x: x + Math.cos(aa) * 110 * gsc(), y: y + Math.sin(aa) * 110 * gsc(), tx: x, ty: y, vx: 0, vy: 0, life: 21, max: 21, col: '#b678ff', s: 2 });
       else G.parts.push({ kind: 'spark', x, y, vx: Math.cos(aa) * v, vy: Math.sin(aa) * v, life: 14 + rnd(0, 10), max: 24, col: bombTier(L).spark, s: 2 });
     }
   }
@@ -1099,7 +1099,11 @@ function tick() {
       }
     }
     for (const bo of G.bombs) if (bo.speed < 0 && bombTier(bo.level).name === 'black') {   // the implosion's final pop
-      G.lights.push({ x: bo.x, y: bo.y, r: 90, col: '#e0c8ff', life: 0.35, max: 0.35 }); sparkle(bo.x, bo.y, '#e0c8ff', 16); G.shake = Math.max(G.shake, 8);
+      const R = bombRadius(bo);
+      G.lights.push({ x: bo.x, y: bo.y, r: R * 2.2 + 40, col: '#e0c8ff', life: 0.5, max: 0.5 }); sparkle(bo.x, bo.y, '#e0c8ff', 16); G.shake = Math.max(G.shake, 10);
+      G.rings.push({ x: bo.x, y: bo.y, t: 0, r: R * 1.9, col: '#ffffff' }, { x: bo.x, y: bo.y, t: -0.08, r: R * 1.5, col: '#b678ff' });
+      for (let i = 0; i < 26; i++) { const a = i / 26 * 6.283, v = (5 + Math.random() * 5) * vsc(); G.parts.push({ kind: 'spark', x: bo.x, y: bo.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 18 + rnd(0, 10), max: 28, col: i % 2 ? '#ffffff' : '#c890ff', s: 2 }); }
+      G.flash = Math.max(G.flash || 0, 0.25); G.flashCol = '#e0c8ff';
     }
     G.bombs = G.bombs.filter(bo => bo.speed >= 0);
     if ((G.saveT += DT) > 3) { G.saveT = 0; save(); checkAch(); }
@@ -1108,7 +1112,7 @@ function tick() {
   // effects
   for (const p of G.parts) {
     p.x += p.vx; p.y += p.vy; p.life--;
-    if (p.kind === 'chunk' && G.bombs.length) for (const bo of G.bombs) if (bo.t >= 0 && bombTier(bo.level).name === 'black') { p.vx += (bo.x - p.x) * 0.02; p.vy += (bo.y - p.y) * 0.02; }
+    if (p.kind === 'chunk' && G.bombs.length) for (const bo of G.bombs) if (bo.t >= 0 && bombTier(bo.level).name === 'black') { p.vx += (bo.x - p.x) * 0.02; p.vy += (bo.y - p.y) * 0.02; if (Math.hypot(bo.x - p.x, bo.y - p.y) < bombRadius(bo) * 0.3) p.life = 0; }   // swallowed
     if (p.kind === 'chunk') { p.vy -= 0.45; p.rot += p.vr; if (p.y < -105 && p.vy < 0 && !p.bounced) { p.vy *= -0.35; p.vx *= 0.6; p.bounced = true; } }
     else if (p.kind === 'ember') { p.vx = p.vx * 0.97 + Math.sin(G.time * 3 + p.ph) * 0.03; p.vy = p.vy * 0.99 + 0.01; }
     else if (p.kind === 'spark') { p.vx *= 0.92; p.vy = p.vy * 0.92 - 0.12; }
@@ -2863,15 +2867,45 @@ function renderWorld(shx, shy) {
   for (const bo of G.bombs) {
     if (bo.t < 0) continue;
     const art = bombArt(bo), tier = bombTier(bo.level), a = clamp(1 - bo.ghost / 100, 0, 1), px = art.size * bo.size / 100 * (1 + 0.15 * G.radiusLevel) * gsc(), bx = bo.x, by = wy(bo.y);
-    if (tier.name === 'black') {
-      const R = bombRadius(bo) * 1.2, life = clamp(bo.t / 0.7, 0, 1);
-      const g = ctx.createRadialGradient(bx, by, 0, bx, by, R * 1.6); g.addColorStop(0, 'rgba(0,0,0,0.95)'); g.addColorStop(0.5, 'rgba(10,0,25,0.55)'); g.addColorStop(1, 'rgba(10,0,25,0)');
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(bx, by, R * 1.6, 0, 6.283); ctx.fill();
-      const ring = R * (1 - ease(life));      // a dark ring that CONTRACTS
-      ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(182,120,255,' + (0.8 * (1 - life)) + ')'; ctx.beginPath(); ctx.arc(bx, by, Math.max(1, ring), 0, 6.283); ctx.stroke();
-      ctx.lineWidth = 9; ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.beginPath(); ctx.arc(bx, by, Math.max(1, ring * 0.8), 0, 6.283); ctx.stroke();
-      drawGem(art, bx, by, Math.max(4, art.size * 3 * (1 - life * 0.8)), { tint: tier.tint, rot: -bo.t * 8 });
-      ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5 * (1 - life); ctx.drawImage(soft('#6a2aaa'), bx - 30, by - 30, 60, 60); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+    if (tier.name === 'black') {   // BLACK HOLE: dark veil, light streaks spiralling in, a glowing accretion disk, a pitch-black core
+      const R = bombRadius(bo) * 1.2, life = clamp(bo.t / 0.7, 0, 1), T = bo.t, born = ease(Math.min(1, T / 0.15)), dying = Math.pow(life, 3);
+      // 1. the veil: space around it goes dark
+      const g = ctx.createRadialGradient(bx, by, 0, bx, by, R * 1.8); g.addColorStop(0, 'rgba(0,0,0,0.95)'); g.addColorStop(0.45, 'rgba(12,0,30,0.6)'); g.addColorStop(1, 'rgba(10,0,25,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(bx, by, R * 1.8, 0, 6.283); ctx.fill();
+      ctx.globalCompositeOperation = 'lighter';
+      // 2. light streaks spiralling in (each one curls tighter as it falls)
+      for (let k = 0; k < 22; k++) {
+        const f = ((T * 1.6 + k / 22 * 1.7) % 1), r0 = R * 1.5 * (1 - f) + R * 0.12, ang = k * 2.39 + T * 5 + f * 3.2;
+        ctx.globalAlpha = Math.sin(f * Math.PI) * 0.8 * born * (1 - dying); ctx.strokeStyle = k % 3 === 0 ? '#ffffff' : k % 3 === 1 ? '#c890ff' : '#ff7ad8'; ctx.lineWidth = (1 + 1.5 * f) * vsc();
+        ctx.beginPath(); ctx.arc(bx, by, r0, ang, ang + 0.5 + f * 0.6); ctx.stroke();
+      }
+      // 3. accretion disk: a tilted spinning ring; the back half goes behind the core, the front half in front
+      const dr = R * 0.62 * born * (1 - 0.55 * life), tilt = -0.35;
+      const disk = (from, to) => {
+        for (let k = 0; k < 4; k++) {
+          const rr3 = dr * (0.55 + k * 0.17);
+          ctx.globalAlpha = (0.85 - k * 0.17) * (1 - dying); ctx.lineWidth = (5 - k) * vsc() * 1.4; ctx.strokeStyle = ['#ffffff', '#ffb0f0', '#c060ff', '#6a2aff'][k];
+          ctx.setLineDash([dr * 0.5, dr * 0.18]); ctx.lineDashOffset = -T * dr * (14 - k * 2);
+          ctx.beginPath(); ctx.ellipse(bx, by, rr3, rr3 * 0.32, tilt, from, to); ctx.stroke();
+        }
+        ctx.setLineDash([]);
+      };
+      disk(Math.PI, Math.PI * 2);
+      // glow behind the core
+      ctx.globalAlpha = 0.7 * born * (1 - dying); ctx.drawImage(soft('#9a4aff'), bx - R * 0.8, by - R * 0.8, R * 1.6, R * 1.6);
+      ctx.globalCompositeOperation = 'source-over';
+      // 4. the event horizon: pure black, with a thin bright photon ring
+      const eh = Math.max(1.5, R * 0.27 * born * (1 - dying * 0.9) * (1 + 0.06 * Math.sin(T * 30)));
+      ctx.globalAlpha = 1; ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.arc(bx, by, eh, 0, 6.283); ctx.fill();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineWidth = 2 * vsc(); ctx.strokeStyle = 'rgba(240,220,255,' + (0.9 * (1 - dying)) + ')'; ctx.beginPath(); ctx.arc(bx, by, eh * 1.12, 0, 6.283); ctx.stroke();
+      disk(0, Math.PI);
+      // 5. gravity lens: a ring that rushes inwards
+      const ring = R * 1.3 * (1 - ease(life));
+      ctx.globalAlpha = 0.6 * (1 - life); ctx.lineWidth = 3 * vsc(); ctx.strokeStyle = '#b678ff'; ctx.beginPath(); ctx.arc(bx, by, Math.max(1, ring), 0, 6.283); ctx.stroke();
+      // 6. the last moment: everything collapses into a white-hot point
+      if (life > 0.8) { const p = (life - 0.8) / 0.2; ctx.globalAlpha = p; ctx.drawImage(soft('#ffffff'), bx - R * 0.3 * p, by - R * 0.3 * p, R * 0.6 * p, R * 0.6 * p); star4(bx, by, R * 0.35 * p, '#ffffff'); }
+      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
       continue;
     }
     ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; ctx.drawImage(soft(tier.glow), bx - px, by - px, px * 2, px * 2); ctx.globalCompositeOperation = 'source-over';
@@ -4260,7 +4294,7 @@ function drawDroneWorld() {
   const b = BIOMES[G.biome];
   // tagged rocks: the alien ship already knows what's inside
   for (const r of G.rocks) if (r.alienGem >= 0 && r.state === 'rock') { const p = 0.5 + 0.5 * Math.sin(G.time * 4 + r.seed); ctx.globalCompositeOperation = 'lighter'; const af = gsc(); ctx.globalAlpha = 0.25 + 0.2 * p; ctx.drawImage(soft('#7dff3a'), r.x - 30 * af, wy(r.y) - 30 * af, 60 * af, 60 * af); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; drawGem(gemArt(b.name, r.alienGem), r.x + 15 * af, wy(r.y) - 15 * af, 11 * Math.max(0.4, af), { glow: '#7dff3a', alpha: 0.85 }); }
-  for (const g of G.rings) { const k = g.t / 0.45; ctx.globalAlpha = Math.max(0, 1 - k); ctx.strokeStyle = g.col; ctx.lineWidth = 3 * (1 - k) + 0.5; ctx.beginPath(); ctx.arc(g.x, wy(g.y), Math.max(1, g.r * ease(k)), 0, 6.283); ctx.stroke(); }
+  for (const g of G.rings) { if (g.t < 0) continue; const k = g.t / 0.45; ctx.globalAlpha = Math.max(0, 1 - k); ctx.strokeStyle = g.col; ctx.lineWidth = 3 * (1 - k) + 0.5; ctx.beginPath(); ctx.arc(g.x, wy(g.y), Math.max(1, g.r * ease(k)), 0, 6.283); ctx.stroke(); }
   ctx.globalAlpha = 1;
   for (const bo of G.dbombs) { const blink = Math.sin(bo.t * (8 + bo.t * 14)) > 0; hangBomb(bo.x, wy(bo.y), (bo.big ? 6.5 : 4) * vsc(), { dark: '#222', accent: blink ? '#ff3030' : bo.col }, G.time, bo.drills, false); }
   for (const p of G.dproj) drill(p.x, wy(p.y), 9 * vsc(), 3 * vsc(), p.spin, null, Math.atan2(-p.dy, p.dx) - Math.PI / 2);
