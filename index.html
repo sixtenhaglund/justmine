@@ -701,7 +701,7 @@ function breakRock(rock, special) {
     const pure = Math.random() < PURE_CHANCE;
     gemKey = pure ? 'Pure' : 'Gold'; i = goldI(); gain = (pure ? PURE_VALUE : GOLD_VALUE) * bestValue(b) * totalMult(); rar = pure ? 'Admin' : 'Exotic';
     ach('golden'); if (pure) ach('pure');
-    if (canFlash(special) || pure) { G.flash = Math.max(G.flash, pure ? 0.7 : 0.45); G.flashCol = '#ffd84a'; } coins(rock.x, rock.y, pure ? 40 : 22);
+    coins(rock.x, rock.y, pure ? 40 : 22);
     G.lights.push({ x: rock.x, y: rock.y, r: pure ? 200 : 130, col: '#ffd84a', life: 1, max: 1 });
     if (pure) toast('PURE GOLD!  ' + ART.gems.Pure[i].name, '#fff2a8');
   }
@@ -733,7 +733,7 @@ function breakRock(rock, special) {
   G.floats.push({ x: rock.x, y: rock.y + 36, text: '+' + fmt(gain), col: '#ffd84a', t: 0, size: 15 + Math.min(8, rk) });
   sparkle(rock.x, rock.y, RCOL[rar], 8 + rk * 3);
   G.lights.push({ x: rock.x, y: rock.y, r: 50 + rk * 12, col: RCOL[rar], life: 0.6, max: 0.6 });
-  if (rk >= 5) { if (canFlash(special)) { G.flash = 0.25 + rk * 0.02; G.flashCol = RCOL[rar]; } G.shake = Math.max(G.shake, 3 + rk * 0.4); toast(rar.toUpperCase() + '!  ' + mineralName(gemKey, i), RCOL[rar]); }
+  if (rk >= 5) { G.shake = Math.max(G.shake, 3 + rk * 0.4); toast(rar.toUpperCase() + '!  ' + mineralName(gemKey, i), RCOL[rar]); }
   if (first) G.floats.push({ x: rock.x, y: rock.y + 52, text: 'NEW!', col: '#7dff7a', t: 0, size: 12 });
   AUDIO.sfx('find', rk);
   if (rk >= rank('Mythical')) ach('mythic');
@@ -758,7 +758,7 @@ function openChest(r) {
   if (G.stats.chests >= 10) ach('chest10'); if (G.stats.chests >= 50) ach('chest50');
   coins(r.x, r.y, [20, 26, 34][tier]); sparkle(r.x, r.y, glow, [18, 24, 30][tier]);
   G.lights.push({ x: r.x, y: r.y, r: [120, 150, 180][tier], col: glow, life: 1, max: 1 });
-  G.flash = Math.max(G.flash, [0.3, 0.38, 0.5][tier]); G.flashCol = golden ? '#ffd84a' : tier ? '#dfe8ff' : '#ffd84a'; G.shake = Math.max(G.shake, 4);
+  G.shake = Math.max(G.shake, 4);
   AUDIO.sfx('chest'); if (tier) AUDIO.sfx(golden ? 'goldhit' : 'ironhit');
   const roll = Math.random() * 100, w = [[40, 30, 20], [35, 30, 25], [30, 30, 30]][tier];
   const b = BIOMES[G.biome], name = ['Chest', 'Iron chest', 'Golden chest'][tier];
@@ -963,7 +963,7 @@ function dropBomb(wx, wy) {
   G.stats.bombs++;
   const tier = bombTier(L);
   G.shake = Math.max(G.shake, 5 + Math.min(L, 6) * 2.5);
-  G.flash = tier.name === 'black' ? 0.2 : 0.35; G.flashCol = tier.flash;
+  // (no screen flash for bombs: Sixten found it too flashy)
   AUDIO.sfx('bomb', tier.name === 'orange' ? Math.min(L, 6) : tier.name);
 }
 
@@ -979,7 +979,7 @@ function startEvent(type) {
   const E = EVENTS[type]; G.ev = { type, t: E.dur, dur: E.dur, k: 0 };
   if (type === 'comet') { const fromL = Math.random() < 0.5; G.ev.cx = fromL ? -300 : 300; G.ev.cy = 60 + Math.random() * 120; G.ev.vx = (fromL ? 1 : -1) * 600 / (E.dur * 30); G.ev.vy = -0.25; }
   if (type === 'phantom') { const live = G.rocks.filter(r => r.state === 'rock' && !r.chest && !r.golden); for (let k = 0; k < Math.min(7, live.length); k++) { const r = live.splice(Math.floor(Math.random() * live.length), 1)[0]; r.ghost = true; } }
-  toast(E.msg, E.col[1]); AUDIO.sfx(type === 'quake' ? 'impact' : 'rush'); G.flash = Math.max(G.flash, 0.25); G.flashCol = E.col[1];
+  toast(E.msg, E.col[1]); AUDIO.sfx(type === 'quake' ? 'impact' : 'rush');
 }
 function tickEvent() {
   const e = G.ev; if (!e) return;
@@ -993,7 +993,7 @@ function tickEvent() {
       e.caught = true; e.t = Math.min(e.t, 1.2);
       const b = BIOMES[G.biome], g = 8 * bestValue(b) * totalMult(); giveCreditz(g); addFound('Event', 2);
       G.floats.push({ x: e.cx, y: e.cy + 20, text: 'COMETITE! +' + fmt(g), col: '#bfe0ff', t: 0, size: 18 }); sparkle(e.cx, e.cy, '#bfe0ff', 24);
-      G.lights.push({ x: e.cx, y: e.cy, r: 200, col: '#9ad0ff', life: 0.8, max: 0.8 }); G.flash = 0.4; G.flashCol = '#d8ecff'; AUDIO.sfx('victory'); addXP(40);
+      G.lights.push({ x: e.cx, y: e.cy, r: 200, col: '#9ad0ff', life: 0.8, max: 0.8 }); G.flash = 0.25; G.flashCol = '#d8ecff'; AUDIO.sfx('victory'); addXP(40);
     }
   }
   if (e.t <= 0) { if (e.type === 'phantom') for (const r of G.rocks) r.ghost = false; if (e.type === 'comet' && !e.caught) toast('The comet got away...', '#9aa0aa'); G.ev = null; }
@@ -1055,7 +1055,7 @@ function hitMega(dmg) {
   G.mega = null; G.stats.mega = (G.stats.mega || 0) + 1; ach('mega'); addXP(150);
   const b = BIOMES[G.biome];
   for (let k = 0; k < 4; k++) chunks(m.x + rnd(-30, 30), m.y + rnd(-30, 30), m.col, 10);
-  dust(m.x, m.y, m.col, 16); G.shake = 14; G.flash = 0.6; G.flashCol = '#ffe2b0';
+  dust(m.x, m.y, m.col, 16); G.shake = 14; G.flash = 0.35; G.flashCol = '#ffe2b0';
   G.lights.push({ x: m.x, y: m.y, r: 220, col: '#ffd27a', life: 1, max: 1 });
   let total = 0;
   for (let k = 0; k < 8; k++) {   // eight guaranteed minerals
@@ -1223,7 +1223,7 @@ function tick() {
     if (G.stormLevel > 0 && BIOMES[G.biome].name === 'Storm Peaks' && (G.rodT = (G.rodT || 0) + DT) >= SHOPV.storm[G.stormLevel - 1]) {
       G.rodT = 0;
       const free = G.rocks.filter(r => r.state === 'rock' && r.spawnT <= 0);
-      if (free.length) { const r = free[Math.floor(Math.random() * free.length)]; G.bolt = { t: 0, pts: boltPts() }; G.flash = Math.max(G.flash, 0.4); G.flashCol = '#dfe8ff'; AUDIO.sfx('thunder'); r.costume = 4; breakRock(r, 'meteor'); }
+      if (free.length) { const r = free[Math.floor(Math.random() * free.length)]; G.bolt = { t: 0, pts: boltPts() }; G.flash = Math.max(G.flash, 0.22); G.flashCol = '#dfe8ff'; AUDIO.sfx('thunder'); r.costume = 4; breakRock(r, 'meteor'); }
     }
     // remember how fast Creditz come in (for offline mining)
     if ((G.rateT = (G.rateT || 0) + DT) >= 5) { const r = (G.earned || 0) / G.rateT; G.rate = G.rate ? G.rate * 0.85 + r * 0.15 : r; G.earned = 0; G.rateT = 0; }
@@ -1301,7 +1301,7 @@ function tick() {
       G.lights.push({ x: bo.x, y: bo.y, r: R * 2.2 + 40, col: '#e0c8ff', life: 0.5, max: 0.5 }); sparkle(bo.x, bo.y, '#e0c8ff', 16); G.shake = Math.max(G.shake, 10);
       G.rings.push({ x: bo.x, y: bo.y, t: 0, r: R * 1.9, col: '#ffffff' }, { x: bo.x, y: bo.y, t: -0.08, r: R * 1.5, col: '#b678ff' });
       for (let i = 0; i < 26; i++) { const a = i / 26 * 6.283, v = (5 + Math.random() * 5) * vsc(); G.parts.push({ kind: 'spark', x: bo.x, y: bo.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 18 + rnd(0, 10), max: 28, col: i % 2 ? '#ffffff' : '#c890ff', s: 2 }); }
-      G.flash = Math.max(G.flash || 0, 0.22); G.flashCol = '#e0c8ff'; G.shake = Math.max(G.shake, 9);
+      G.shake = Math.max(G.shake, 9);
       for (let i = 0; i < 30; i++) { const a = Math.random() * 6.283, v = (3 + Math.random() * 8) * vsc(); G.parts.push({ kind: 'ember', x: bo.x, y: bo.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 30 + rnd(0, 20), max: 50, s: 1.4, col: i % 3 ? '#b678ff' : '#ffffff', ph: Math.random() * 6 }); }
     }
     if (G.bhPops) { for (const p of G.bhPops) p.t += DT; G.bhPops = G.bhPops.filter(p => p.t < 1); }
@@ -1408,7 +1408,7 @@ function tickAmbient() {
   if (type === 'sparks' && R() < 0.012) G.arc = { t: 0, pts: arcPts() };
   if (G.arc) { G.arc.t += DT; if (G.arc.t > 0.25) G.arc = null; }
   // Storm Peaks: lightning
-  if (type === 'storm' && G.scene === 'play' && R() < 0.006) { G.bolt = { t: 0, pts: boltPts() }; G.flash = Math.max(G.flash, 0.5); G.flashCol = '#dfe8ff'; AUDIO.sfx('thunder'); }
+  if (type === 'storm' && G.scene === 'play' && R() < 0.006) { G.bolt = { t: 0, pts: boltPts() }; G.flash = Math.max(G.flash, 0.22); G.flashCol = '#dfe8ff'; AUDIO.sfx('thunder'); }
   if (G.bolt) { G.bolt.t += DT; if (G.bolt.t > 0.35) G.bolt = null; }
 }
 function boltPts() {
@@ -3880,7 +3880,7 @@ function renderBook() {
 function drawFlash() {   // a quick bright flash over the mine (gold, explosions...), softer while a menu is open
   if (!(G.flash > 0) || GFX.flashes === 0) return;
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
-  ctx.fillStyle = rgba(G.flashCol, Math.min(0.6, G.flash * 0.6) * (GFX.flashes === 1 ? 0.35 : 1) * (G.menu ? 0.3 : 1)); ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = rgba(G.flashCol, Math.min(0.35, G.flash * 0.35) * (GFX.flashes === 1 ? 0.35 : 1) * (G.menu ? 0.3 : 1)); ctx.fillRect(0, 0, W, H);
 }
 function renderOverlays() {
   setScreen();
