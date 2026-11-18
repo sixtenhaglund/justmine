@@ -1661,7 +1661,7 @@ function rr(x, y, w, h, r) {
 }
 // TEXT CACHE: drawing text is slow (the shadow + outline + fill = 3 text draws). Text that looks the same as last time
 // is drawn once into a small picture and then just stamped. Only for straight (not rotated) text, snapped to real pixels so it stays sharp.
-const TXC = new Map(); let TXT_CACHE = true;
+const TXC = new Map(), TXS = new Map(); let TXT_CACHE = true;
 function txt(s, x, y, size, col, o) {
   o = o || {};
   if (TXT_CACHE && ctx.getTransform && s !== '') {
@@ -1669,7 +1669,8 @@ function txt(s, x, y, size, col, o) {
     if (m && m.b === 0 && m.c === 0 && m.a > 0 && Math.abs(m.a - m.d) < 1e-6 && size >= 6) {
       const sc = m.a, key = s + '|' + size + '|' + col + '|' + (o.weight || '') + (o.font || '') + '|' + (o.align || 'c') + '|' + (o.shadow === false ? 0 : 1) + '|' + (o.stroke || 0) + (o.strokeCol || '') + '|' + sc.toFixed(3);
       let e = TXC.get(key);
-      if (!e) {
+      if (!e) { const seen = (TXS.get(key) || 0) + 1; if (TXS.size > 2000) TXS.clear(); TXS.set(key, seen); if (seen < 3) e = null; }   // animated text (changing size) is never the same twice: don't waste a picture on it
+      if (!e && (TXS.get(key) || 0) >= 3) {
         if (TXC.size > 900) TXC.clear();
         const font = (o.weight || '') + ' ' + size + 'px ' + (o.font || FH); ctx.font = font;
         const tw = ctx.measureText(s).width, pad = (o.stroke || 0) + Math.max(1.5, size * 0.08) + 2, w = tw + pad * 2, h = size * 1.5 + pad * 2;
@@ -1681,10 +1682,11 @@ function txt(s, x, y, size, col, o) {
         x2.fillStyle = col; x2.fillText(s, ox, oy);
         e = { c, w, h, ax: (o.align === 'left' ? 0 : o.align === 'right' ? tw : tw / 2) + pad, ay: oy }; TXC.set(key, e);
       }
+      if (e) {
       // snap the top-left corner to a whole device pixel so the stamp stays crisp
       const dx = Math.round((x - e.ax) * m.a + m.e) - m.e, dy = Math.round((y - e.ay) * m.d + m.f) - m.f;
       ctx.drawImage(e.c, dx / m.a, dy / m.d, e.c.width / sc, e.c.height / sc);
-      return;
+      return; }
     }
   }
   ctx.font = (o.weight || '') + ' ' + size + 'px ' + (o.font || FH);
@@ -1922,10 +1924,14 @@ function drawLighting(shx, shy) {
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1;
   ctx.drawImage(c, 0, 0, cv.width, cv.height);
   if (tint.length) {   // Full: coloured light spills onto the rocks around it
-    setScreen(); ctx.globalCompositeOperation = 'lighter';
+    // drawn into a small (quarter size) layer first, then stretched over the screen once: 1 big draw instead of ~20
+    if (!LIGHT.tc) LIGHT.tc = document.createElement('canvas');
+    const tc = LIGHT.tc; if (tc.width !== w || tc.height !== h) { tc.width = w; tc.height = h; }
+    const tx = tc.getContext('2d'); tx.globalCompositeOperation = 'source-over'; tx.globalAlpha = 1; tx.clearRect(0, 0, w, h); tx.globalCompositeOperation = 'lighter';
     const tk = 0.16 * Math.min(1, 8 / Math.max(1, tint.length));
-    for (const [sx, sy, r, a, col] of tint) { ctx.globalAlpha = a * tk; ctx.drawImage(soft(col), sx - r, sy - r, r * 2, r * 2); }
-    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+    for (const [sx, sy, r, a, col] of tint) { tx.globalAlpha = a * tk; tx.drawImage(soft(col), (sx - r) * q, (sy - r) * q, r * 2 * q, r * 2 * q); }
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1; ctx.drawImage(tc, 0, 0, cv.width, cv.height);
+    ctx.globalCompositeOperation = 'source-over'; setScreen();
   }
 }
 // BLOOM: bright things glow. Shrink the picture, keep only its bright parts
@@ -4686,7 +4692,7 @@ function drawDroneWorld() {
         ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; } }
     if (d.skin === 'glitch') {   // GL1TCH: afterimages, corrupted blocks orbiting, ERROR text now and then
       const k2 = vsc() * 1.4;
-      for (let q = 0; q < 2; q++) { const ox = Math.sin(G.time * 13 + q * 3) * 6 * k2, oy = Math.cos(G.time * 9 + q) * 2; ctx.globalAlpha = 0.18; ctx.globalCompositeOperation = 'lighter'; drawDrone(d, x + ox - (q ? 8 : -8) * k2, y + oy, { tilt: s.tilt, t: s.t - 0.1 * (q + 1), scale: k2 }); }
+      for (let q = 0; q < 2; q++) { const ox = Math.sin(G.time * 13 + q * 3) * 6 * k2, oy = Math.cos(G.time * 9 + q) * 2; ctx.globalAlpha = 0.18; ctx.globalCompositeOperation = 'lighter'; drawDrone(d, x + ox - (q ? 8 : -8) * k2, y + oy, { tilt: s.tilt, t: s.t + ta * DT, scale: k2 }); }
       ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
       for (let q = 0; q < 6; q++) { const a = G.time * 2.4 + q * 1.047, rr2 = (20 + 4 * Math.sin(G.time * 5 + q)) * k2; if (Math.random() < 0.15) continue; ctx.fillStyle = q % 2 ? '#00ff66' : '#ff00ff'; ctx.fillRect(x + Math.cos(a) * rr2 - 1.5, y + Math.sin(a) * rr2 * 0.5 - 1.5, 3 + (q % 3), 3); }
       if (Math.sin(G.time * 1.3 + d.id) > 0.96) txt(Math.random() < 0.5 ? 'ERR0R' : '0x1F', x + (Math.random() - 0.5) * 10, y - 26 * k2, 7, Math.random() < 0.5 ? '#00ff66' : '#ff00ff', { font: 'monospace', weight: 900, shadow: false });
