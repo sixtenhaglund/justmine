@@ -581,7 +581,9 @@ function spawnRock(x0, y0) {
   if (b.bright) rock.bright = rnd(b.bright[0], b.bright[1]);
   if (b.magnet && rnd(1, 2) === 2) rock.hue = 125;
   if (b.rainbow) { rock.hue = G.crystalHue; G.crystalHue = (G.crystalHue + 5) % 200; }
-  if (Math.random() < (G.rush > 0 ? 1 / 8 : goldenChance())) rock.golden = true;
+  rock.xpRock = G.biome >= 9 && Math.random() < 0.012 + 0.0015 * (G.biome - 9);   // alien rock: lots of pass XP
+  if (rock.xpRock) {}
+  else if (Math.random() < (G.rush > 0 ? 1 / 8 : goldenChance())) rock.golden = true;
   else if (Math.random() < chestChance()) { const cr = Math.random(); rock.chest = cr < 0.12 ? 'golden' : cr < 0.4 ? 'iron' : 'orange'; rock.hpMax = rock.hp = { golden: 22, iron: 16, orange: 12 }[rock.chest]; }
   else if (G.biome >= 1 && rnd(1, 5) === 1) {   // reinforced: extra armour layers to break first (higher tiers in later biomes)
     const maxT = Math.min(4, 1 + Math.floor(G.biome / 5));
@@ -690,6 +692,11 @@ function breakRock(rock, special) {
   const b = BIOMES[G.biome];
   G.stats.rocks++;
   quest('break', 1); addXP(1);
+  if (rock.xpRock) {   // alien rock broken: a big pile of pass XP
+    const xp = 60 + 12 * G.biome; addXP(xp); rock.xpRock = false;
+    G.floats.push({ x: rock.x, y: rock.y + 40, text: '+' + Math.round(xp * xpMult()) + ' PASS XP', col: '#7dff3a', t: 0, size: 16 });
+    sparkle(rock.x, rock.y, '#7dff3a', 16); G.lights.push({ x: rock.x, y: rock.y, r: 120, col: '#7dff3a', life: 0.6, max: 0.6 }); G.stats.xpRocks = (G.stats.xpRocks || 0) + 1;
+  }
   if (special === 'bomb') quest('bomb', 1);
   if (special === 'drone') quest('drone', 1);
   if (rock.golden) quest('gold', 1);
@@ -2492,7 +2499,7 @@ function drawRock(r, bname) {
   const jx = r.shake ? (Math.random() - 0.5) * r.shake * 0.7 : 0, jy = r.shake ? (Math.random() - 0.5) * r.shake * 0.7 : 0;
   const x = r.x + jx * 0.5, y = wy(r.y) + jy * 0.5, s = 23, q = s * 0.95;
   const fxB = BIOME_FX[bname];
-  if (!r.golden && !(r.flash > 0) && !(r.spawnT > 0) && !(fxB && (fxB.molten || fxB.liveSparks)) && r.slot >= 0) {   // plain rock: one direct draw (much cheaper)
+  if (!r.golden && !r.xpRock && !(r.flash > 0) && !(r.spawnT > 0) && !(fxB && (fxB.molten || fxB.liveSparks)) && r.slot >= 0) {   // plain rock: one direct draw (much cheaper)
     const wB = ROCK_BOX * grow * f; ctx.globalAlpha = born;
     ctx.drawImage(ATLAS.c, (r.slot % ATLAS.cols) * S, Math.floor(r.slot / ATLAS.cols) * S, S, S, x - wB / 2, y - wB / 2, wB, wB);
     ctx.globalAlpha = 1; return;
@@ -2519,6 +2526,14 @@ function drawRock(r, bname) {
   }
   if (r.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,' + r.flash * 0.45 + ')'; rr(-q, -q, q * 2, q * 2, 7); ctx.fill(); }
   if (r.spawnT > 0) { ctx.fillStyle = 'rgba(0,0,0,' + (r.spawnT / Math.max(0.01, r.spawnMax)) * 0.35 + ')'; rr(-q, -q, q * 2, q * 2, 7); ctx.fill(); }
+  if (r.xpRock) {
+    const p = 0.5 + 0.5 * Math.sin(G.time * 4 + r.seed);
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25 + 0.25 * p; ctx.drawImage(soft('#7dff3a'), -38, -38, 76, 76);
+    ctx.globalAlpha = 0.5 + 0.3 * p; ctx.strokeStyle = '#9aff6a'; ctx.lineWidth = 2; rr(-q + 1, -q + 1, q * 2 - 2, q * 2 - 2, 7); ctx.stroke();
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 0.9;
+    ctx.fillStyle = '#7dff3a'; ctx.beginPath(); ctx.ellipse(0, 0, 8, 10, 0, 0, 6.283); ctx.fill(); ctx.fillStyle = '#0a1a0a'; ctx.beginPath(); ctx.ellipse(-3, -1, 2, 3.4, -0.4, 0, 6.283); ctx.ellipse(3, -1, 2, 3.4, 0.4, 0, 6.283); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
   if (r.golden) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25 + 0.15 * Math.sin(G.time * 4 + r.seed); ctx.drawImage(soft('#ffcc33'), -40, -40, 80, 80); ctx.globalCompositeOperation = 'source-over'; }
   ctx.restore();
 }
@@ -4345,7 +4360,8 @@ const SEASON_END = Date.UTC(2026, 11, 1, 0, 0, 0);   // Season 1 (Alien) ends 1 
 const seasonLeft = () => SEASON_END - Date.now();
 function seasonText() { const ms = seasonLeft(); if (ms <= 0) return 'Season over'; const d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5); return d > 0 ? d + 'd ' + h + 'h left' : h + 'h ' + Math.floor(ms % 36e5 / 6e4) + 'm left'; }
 const xpNeed = l => Math.round(340 * Math.pow(1.06, l - 1) / 10) * 10;   // 2026-11-18: harder (about 1.9M XP for all 100 levels)   // XP to reach level l (level 1 = 280, level 100 = ~57K, about 1.07M XP in total)
-const xpMult = () => (1 + upv('xpboost', 0)) * (perk(16) ? 2 : 1);
+const depthXP = () => 1 + 0.06 * (G.biome || 0);   // +6% pass XP per biome (late game grinds faster)
+const xpMult = () => (1 + upv('xpboost', 0)) * (perk(16) ? 2 : 1) * depthXP();
 const PASS = (() => {
   const L = { 2: ['hat', 'helmet'], 4: ['spin', 1], 5: ['crate', 'common'], 8: ['spin', 2], 9: ['skin', 'alien'], 11: ['crate', 'uncommon'], 14: ['skin', 'saucer'], 15: ['hat', 'antenna'],
     17: ['crate', 'rare'], 18: ['spin', 2], 20: ['skin', 'chrome'], 22: ['crate', 'skin'], 23: ['crate', 'epic'], 25: ['drone', 'alien', 1], 27: ['hat', 'rings'], 28: ['spin', 3],
@@ -6151,7 +6167,7 @@ function renderPass() {
   btn('passL', 6, ty + 90, 32, 70, '<', { col: sa.target > 1 ? '#3a7a2a' : '#2a2e38', size: 20, r: 10, fn: () => { sa.vel = 0; sa.target = clamp(sa.target - step * 4, 0, sa.max); AUDIO.sfx('click'); } });
   btn('passR', w - 38, ty + 90, 32, 70, '>', { col: sa.target < sa.max - 1 ? '#3a7a2a' : '#2a2e38', size: 20, r: 10, fn: () => { sa.vel = 0; sa.target = clamp(sa.target + step * 4, 0, sa.max); AUDIO.sfx('click'); } });
   // ---- how to get XP (always visible, short) ----
-  const ways = [['Rock', '+1'], ['Quest', '+100-900'], ['Rebirth', '+500'], ['New biome', '+60'], ['Trophy', '+75'], ['Mega Rock', '+150'], ['Chest', '+25'], ['Crystal Rain', '+10 max']];
+  const ways = [['Rock', '+1'], ['Alien rock', '+' + (60 + 12 * G.biome)], ['Quest', '+100-900'], ['Rebirth', '+500'], ['Biome', '+60'], ['Trophy', '+75'], ['Mega', '+150'], ['Chest', '+25'], ['Depth', 'x' + depthXP().toFixed(2)]];
   txt('HOW TO GET XP', 44, ty + th + 22, 13, '#9aff4a', { align: 'left', font: FB, weight: 900 });
   ways.forEach(([a, b], i) => { const x = 160 + i * ((w - 200) / ways.length), y = ty + th + 10, pw = (w - 200) / ways.length - 8; ctx.fillStyle = 'rgba(255,255,255,0.06)'; rr(x, y, pw, 24, 12); ctx.fill(); txt(a + ' ' + b, x + pw / 2, y + 12.5, fitSize(a + ' ' + b, 11.5, pw - 10, FB), '#dfe4ee', { font: FB, weight: 900, shadow: false }); });
   if (xpMult() > 1) txt('Your Pass XP boost: x' + xpMult().toFixed(2), w - 44, ty + th + 52, 11, '#c8ff9a', { align: 'right', font: FB, weight: 900 });
