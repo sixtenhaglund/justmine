@@ -124,8 +124,13 @@ const BIOMES = [
     'Sandy Spires', 'Bone Basin', 'Jungle Depths', 'Sulfur Swamp', 'Mushroom Marsh', 'Toxic Tunnels', 'Sky Summit', 'Amber Abyss', 'Glacier Gorge', 'Clockwork Canyon',
     'Storm Peaks', 'Lava Lake', 'Heart Hollow', 'Prism Plateau', 'Neon Nexus', 'Void Valley', 'Starfall Rift', 'Aurora Abyss', 'Plasma Core', 'Celestial Throne'];
   const ev = b => b.minerals.reduce((a, m) => a + m[1] / m[0], 0);   // what a rock pays on average
-  const byName = {}; BIOMES.forEach((b, i) => { b.song = i; byName[b.name] = b; });
+  const byName = {}; BIOMES.forEach((b, i) => { b.song = i; b.orig = i; byName[b.name] = b; });
   const heart = byName['Heart Hollow'];
+  const GOLDN = { 'Starfall Rift': ['Stargold', 'Staraurum'], 'Aurora Abyss': ['Auroragold', 'Auroraurum'], 'Plasma Core': ['Plasmagold', 'Plasmaurum'], 'Celestial Throne': ['Thronegold', 'Thronaurum'] };
+  NEW.forEach((n, k) => {   // new biomes: their own gold + pure gold (shapes from other golds, new names)
+    n.orig = 22 + k;
+    for (const [key, pi] of [['Gold', 0], ['Pure', 1]]) { const src = ART.gems[key][[11, 3, 9, 20][k]]; ART.gems[key][n.orig] = Object.assign({}, src, { name: GOLDN[n.name][pi] }); }
+  });
   for (const n of NEW) {
     byName[n.name] = Object.assign({ minerals: heart.minerals.map(m => m.slice()) }, n);
     ART.backdrops[n.name] = n.back;
@@ -195,7 +200,8 @@ const PURE_CHANCE = 1 / 20, GOLD_VALUE = 5, PURE_VALUE = 25;
 const goldenChance = () => upv('golden', 1) / (perk(3) ? 125 : 250);
 // MUSEUM: every finished Book page is shown off in the museum and pays +5% Creditz forever (all gold minerals: +25%)
 const pagesDone = () => BIOMES.filter(b => b.minerals.every((m, i) => (G.found[b.name] || [])[i] > 0)).length;
-const allGoldFound = () => BIOMES.every((b, i) => (G.found.Gold || [])[i] > 0);
+const goldI = () => { const b = BIOMES[G.biome]; return b && b.orig !== undefined ? b.orig : G.biome; };   // which gold this biome has
+const allGoldFound = () => BIOMES.every((b, i) => (G.found.Gold || [])[b.orig] > 0);
 const museumMult = () => 1 + 0.05 * pagesDone() + (allGoldFound() ? 0.25 : 0);
 // Shop: his 4 upgrade lines (his levels first, then new higher levels) + 5 new lines.
 const TUNE = { costExp: 0.75, endMul: 1.08, endCost: 1.5 };   // economy knobs (the balance sim tunes these)
@@ -318,11 +324,12 @@ const BOMB_STRENGTH = [0, 0.6, 0.5, 0.4, 0.2, 0.1, 0.08, 0.065, 0.05, 0.04, 0.03
 const BOMB_EXTRA = [[0, 0], [0, 0], [10, 30], [30, 50], [50, 80], [80, 100], [100, 120], [120, 140], [140, 160], [160, 180], [180, 200]];
 // 2026-11-17: all cheaper, the early ones much cheaper (rebirth 1 is 1/4 of before, later ones about 3/4)
 const REBIRTH_COSTS = [2.5e9, 6e10, 9e13, 1.1e18, 1.8e19, 2.5e20, 7.5e20, 2.4e21, 1e22, 5e22, 2.4e23, 1.1e24];
-const PERKS = [
-  [1, 'Bomb cooldown 5 s -> 4 s'], [2, 'Start every rebirth with +10% Mining speed'], [3, 'Golden rocks twice as common + first 3 biomes stay visited'],
-  [4, '+1 free Auto miner, forever'], [5, 'Meteor showers twice as often'], [6, 'Start with x2 Creditz + first 6 biomes stay visited'],
-  [7, 'Every hit breaks 2 layers of reinforced armour'], [8, 'Bomb cooldown 3 s'], [9, 'Quest boosts last 3 minutes'],
-  [10, 'Start every rebirth with +25% Mining speed'], [11, '+1 more free Auto miner'], [12, 'Gold Rush lasts twice as long'],
+const PERKS = [   // 2026-11-18: much better rebirth rewards + 4 new ones (Sixten)
+  [1, 'Bomb cooldown 5 s -> 3.5 s'], [2, 'Start every rebirth with Mining speed level 2'], [3, 'Golden rocks twice as common + first 3 biomes stay unlocked'],
+  [4, '+2 free Auto miners, forever'], [5, 'Events happen twice as often'], [6, 'Start with Creditz level 2 + first 6 biomes stay unlocked'],
+  [7, 'Every hit breaks 3 layers of reinforced armour'], [8, 'Bomb cooldown 2 s'], [9, 'Quest boosts last 4 minutes'],
+  [10, 'Start every rebirth with Mining speed level 4'], [11, '+2 more free Auto miners'], [12, 'Gold Rush lasts 3 times as long'],
+  [13, 'All drones work 15% faster'], [14, 'First 10 biomes stay unlocked'], [15, 'Your clicks crack twice 25% of the time'], [16, 'Double Alien Pass XP'],
 ];
 let HEART_REBIRTHS = 10; const HEART_HP = 400;
 const AUTO_SLOW = 10;   // 2026-11-17: robots 3x weaker (drones are the strong helpers now)
@@ -383,9 +390,9 @@ const rebirthsDone = () => G.rebirths - 1;
 function costOf(kind, lvl) { const L = SHOP[kind].costs; const c = lvl < L.length ? L[lvl] : SHOP[kind].endless ? L[L.length - 1] * Math.pow(SHOP[kind].endCost || TUNE.endCost, lvl - L.length + 1) : undefined; if (c === undefined) return undefined; const v = c * Math.pow(G.rebirthMult, TUNE.costExp); if (v < 1000) return Math.round(v); const p = Math.pow(10, Math.floor(Math.log10(v)) - 1); return Math.round(v / p) * p; }
 const perk = n => rebirthsDone() >= n;
 const rebirthCost = () => { const i = G.rebirths - 1; return i < REBIRTH_COSTS.length ? REBIRTH_COSTS[i] : REBIRTH_COSTS[REBIRTH_COSTS.length - 1] * Math.pow(4, i - REBIRTH_COSTS.length + 1); };
-const bombCooldown = () => Math.max(1, (perk(8) ? 3 : perk(1) ? 4 : 5) - upv('fuse', 0));
+const bombCooldown = () => Math.max(1, (perk(8) ? 2 : perk(1) ? 3.5 : 5) - upv('fuse', 0));
 const ROBOT_MAX = 8;   // never more than 8 auto miners at once
-const drillCount = () => Math.min(ROBOT_MAX, G.autoLevel + G.factoryLevel + (perk(4) ? 1 : 0) + (perk(11) ? 1 : 0) + (buffOn('robots') ? 3 : 0));
+const drillCount = () => Math.min(ROBOT_MAX, G.autoLevel + G.factoryLevel + (perk(4) ? 2 : 0) + (perk(11) ? 2 : 0) + (buffOn('robots') ? 3 : 0));
 const boostMult = () => upv('quest', 2);
 const canLoad = () => G.loading <= 0;
 const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
@@ -635,7 +642,7 @@ function quest(type, amount) {
     q.p = Math.min(q.n, q.p + amount);
     if (q.p >= q.n) {
       q.done = 3;   // seconds until a new quest replaces it
-      G.boostT += (perk(9) ? 180 : 120) + 30 * G.questLevel; G.questsDone++;
+      G.boostT += (perk(9) ? 240 : 120) + 30 * G.questLevel; G.questsDone++;
       const xp = q.xp || 100; addXP(xp);
       toast('Quest done! x' + boostMult() + ' boost  +' + Math.round(xp * xpMult()) + ' XP', '#7dff7a'); AUDIO.sfx('quest');
       if (G.questsDone >= 10) ach('quest10');
@@ -690,7 +697,7 @@ function breakRock(rock, special) {
   if (rock.hard) { G.stats.hard++; quest('hard', 1); if (G.stats.hard >= 10) ach('hard'); }
   if (rock.golden) {
     const pure = Math.random() < PURE_CHANCE;
-    gemKey = pure ? 'Pure' : 'Gold'; i = G.biome; gain = (pure ? PURE_VALUE : GOLD_VALUE) * bestValue(b) * totalMult(); rar = pure ? 'Admin' : 'Exotic';
+    gemKey = pure ? 'Pure' : 'Gold'; i = goldI(); gain = (pure ? PURE_VALUE : GOLD_VALUE) * bestValue(b) * totalMult(); rar = pure ? 'Admin' : 'Exotic';
     ach('golden'); if (pure) ach('pure');
     if (canFlash(special) || pure) { G.flash = Math.max(G.flash, pure ? 0.7 : 0.45); G.flashCol = '#ffd84a'; } coins(rock.x, rock.y, pure ? 40 : 22);
     G.lights.push({ x: rock.x, y: rock.y, r: pure ? 200 : 130, col: '#ffd84a', life: 1, max: 1 });
@@ -768,7 +775,7 @@ function openChest(r) {
   } else {
     const pick = rnd(0, 2);
     if (pick === 0) {   // a gold mineral from this biome
-      const i = G.biome, gain = GOLD_VALUE * bestValue(b) * totalMult(); giveCreditz(gain); addFound('Gold', i); ach('golden'); checkAch();
+      const i = goldI(), gain = GOLD_VALUE * bestValue(b) * totalMult(); giveCreditz(gain); addFound('Gold', i); ach('golden'); checkAch();
       toast(name + ': ' + ART.gems.Gold[i].name + '! +' + fmt(gain), '#ffd84a');
     } else if (pick === 1) {   // a free bomb right here
       const keep = G.bombLevel, cd = G.bombCD; G.bombLevel = Math.max(3, keep); G.bombCD = 0; G.loading = 0; dropBomb(r.x, r.y); G.bombLevel = keep; G.bombCD = cd;
@@ -830,7 +837,7 @@ function hitRock(rock, by) {
   }
   if (rock.armor > 0) {   // reinforced: each hit breaks one layer of armour first
     const layer = armorLayer(rock);
-    rock.armor = Math.max(0, rock.armor - (perk(7) ? 2 : 1));
+    rock.armor = Math.max(0, rock.armor - (perk(7) ? 3 : 1));
     rock.cool = wait0 + DT; rock.coolMax = rock.cool; rock.shake = 6; rock.flash = 1;
     armorDebris(rock, layer);
     if (by === 'mouse') G.mouse.swing = 1;
@@ -1000,7 +1007,7 @@ function drawEventBack() {   // things the events add to the sky
 }
 function startShower() { G.shower = 15; G.meteorT = 0.5; toast('METEOR SHOWER!', '#ff9a3a'); AUDIO.sfx('alarm'); }
 function startRush() {
-  G.rush = perk(12) ? 40 : 20; toast('GOLD RUSH! Golden rocks everywhere!', '#ffd84a'); AUDIO.sfx('rush');
+  G.rush = perk(12) ? 60 : 20; toast('GOLD RUSH! Golden rocks everywhere!', '#ffd84a'); AUDIO.sfx('rush');
   for (const r of G.rocks) if (r.state === 'rock' && !r.hard && !r.chest && Math.random() < 0.15) { r.golden = true; recolor(r); }
 }
 // MEGA ROCK: one giant rock over 2x2 cells. You, the robots and bombs all chip at it before it crumbles.
@@ -1036,7 +1043,7 @@ function hitMega(dmg) {
     const g = b.minerals[i][1] * totalMult(); total += g; addFound(b.name, i);
     sparkle(m.x + rnd(-40, 40), m.y + rnd(-40, 40), RCOL[b.minerals[i][2]], 6);
   }
-  if (Math.random() < 0.15) { const g = PURE_VALUE * bestValue(b) * totalMult(); total += g; addFound('Pure', G.biome); toast('PURE GOLD from the Mega Rock!', '#fff2a8'); }
+  if (Math.random() < 0.15) { const g = PURE_VALUE * bestValue(b) * totalMult(); total += g; addFound('Pure', goldI()); toast('PURE GOLD from the Mega Rock!', '#fff2a8'); }
   giveCreditz(total); coins(m.x, m.y, 40);
   G.floats.push({ x: m.x, y: m.y + 40, text: '+' + fmt(total), col: '#ffd84a', t: 0, size: 22 });
   toast('Mega Rock broken! +' + fmt(total) + ' Creditz', '#ffd84a'); AUDIO.sfx('victory');
@@ -1110,7 +1117,7 @@ function checkAch() {
     if (b.minerals.every((m, i) => f[i] > 0)) ach('page'); else all = false;
   }
   const ev = G.found.Event || [], gold = G.found.Gold || [];
-  const allGold = BIOMES.every((b, i) => gold[i] > 0);
+  const allGold = BIOMES.every(b => gold[b.orig] > 0);
   if (allGold) ach('goldall');
   if (all && ev[0] > 0 && allGold) ach('all');
 }
@@ -1158,7 +1165,7 @@ function tick() {
       G.rush = Math.max(0, G.rush - DT);
       if (G.rush === 0) ach('rush');
     } else if (G.ev) { tickEvent();
-    } else if ((G.nextEvent -= DT * (perk(5) ? 1.5 : 1) * (1 + upv('meteor', 0))) <= 0) {
+    } else if ((G.nextEvent -= DT * (perk(5) ? 2 : 1) * (1 + upv('meteor', 0))) <= 0) {
       G.nextEvent = 180 + Math.random() * 150;
       const e = Math.random();
       if (e < 0.2) startShower(); else if (e < 0.37) startRush(); else if (e < 0.5 && startMega()) {} else if (e < 0.63) startRain();
@@ -1246,7 +1253,7 @@ function tick() {
       if (bomb) { by = 'bomb'; bomb.hits.add(rock); if (bomb.hits.size >= 15) ach('kaboom'); }
       else if (hover === rock && G.mouse.down) by = 'mouse';
       else { const d = G.drills.find(d => d.target === rock); if (d) { by = 'auto'; d.hitT = 0.15; } }
-      if (by) hitRock(rock, by);
+      if (by) { hitRock(rock, by); if (by === 'mouse' && perk(15) && rock.state === 'rock' && Math.random() < 0.25) { rock.cool = 0; hitRock(rock, by); } }
     }
     compact(G.rocks, r => r.state !== 'dead');
     // the Heart of the Mountain
@@ -1412,11 +1419,11 @@ const canVisit = i => i === 0 || !!(G.reached & (1 << (i - 1)));   // biomes unl
 function resetRun() {   // everything a rebirth takes away
   G.creditz = 0; G.shown = 0;
   Object.assign(G, LEVEL_DEFAULTS);
-  G.cmLevel = perk(6) ? 1 : 0;
-  G.spLevel = perk(10) ? 2 : perk(2) ? 1 : 0;
+  G.cmLevel = perk(6) ? 2 : 0;
+  G.spLevel = perk(10) ? 4 : perk(2) ? 2 : 0;
   G.bombs = []; G.bombCD = 0; G.meteors = []; G.shower = 0; G.rush = 0;
   G.drills = []; G.mouse.down = false; G.keys.Space = false;
-  const keep = perk(6) ? 6 : perk(3) ? 3 : 1;   // visited biomes reset too (perks keep the first few)
+  const keep = perk(14) ? 10 : perk(6) ? 6 : perk(3) ? 3 : 1;   // visited biomes reset too (perks keep the first few)
   G.reached = (1 << keep) - 1;
 }
 function tryRebirth() {
@@ -3343,7 +3350,7 @@ function renderHUD0() {
     if (G.rebirthMult > 1) txt('Rebirth x' + fmt(G.rebirthMult), W - 200, 46, 11, '#ffb36a', { align: 'right', font: FB, weight: 800 });
   }
   // event banners (bars drain to exactly 0)
-  const ev = G.shower > 0 ? ['METEOR SHOWER', G.shower / 15, '#ff8a3a', '#ffb04a'] : G.rush > 0 ? ['GOLD RUSH', G.rush / (perk(12) ? 40 : 20), '#ffc21a', '#ffe27a']
+  const ev = G.shower > 0 ? ['METEOR SHOWER', G.shower / 15, '#ff8a3a', '#ffb04a'] : G.rush > 0 ? ['GOLD RUSH', G.rush / (perk(12) ? 60 : 20), '#ffc21a', '#ffe27a']
     : G.mega ? ['MEGA ROCK', G.mega.t / MEGA_TIME, '#ff8a3a', '#ffb36a'] : G.rain > 0 ? ['CRYSTAL RAIN', G.rain / 15, '#6ab0ff', '#9ad8ff'] : G.ev ? [EVENTS[G.ev.type].name, Math.max(0, G.ev.t) / G.ev.dur, EVENTS[G.ev.type].col[0], EVENTS[G.ev.type].col[1]] : null;
   if (ev) {
     const y = TOP + 2; txt(ev[0], W / 2, y + 8, 18, ev[3], { stroke: 3 });
@@ -3747,20 +3754,32 @@ function renderBook() {
     const got = gold.filter(x => x > 0).length + pure.filter(x => x > 0).length;
     const head = 'Gold minerals  -  found ' + got + ' / ' + BIOMES.length * 2 + '  -  golden rocks: ' + fmtPct(gc) + ' of rocks';
     txt(head, 360, Y + 6, fitSize(head, 15, 680), '#ffe27a');
+    txt('Gold ' + fmtPct(gc * (1 - PURE_CHANCE)) + '   -   Pure gold ' + fmtPct(gc * PURE_CHANCE) + '  (of all rocks)', 360, Y + 24, 11, '#aeb6c6', { font: FB, weight: 800 });
+    const cw = 104, ch = 112, top = Y + 38, boxH = 660 - top - 20, rows = Math.ceil(BIOMES.length / 6);
+    const sa = scrollArea('cgold', 26, top, 668, boxH, 'y', rows * (ch + 8) + 4);
+    clipBox(26, top, 668, boxH);
     BIOMES.forEach((b, i) => {
-      for (const [row, key, list, ch, rar] of [[0, 'Gold', gold, gc * (1 - PURE_CHANCE), 'Exotic'], [1, 'Pure', pure, gc * PURE_CHANCE, 'Admin']]) {
-        const cw = 49, x = 30 + (i % 13) * (cw + 3), y = Y + 26 + Math.floor(i / 13) * 196 + row * 96, have = list[i] > 0, art = ART.gems[key][i];
-        ctx.fillStyle = have ? 'rgba(255,216,74,0.1)' : 'rgba(255,255,255,0.03)'; rr(x, y, cw, 90, 10); ctx.fill();
-        ctx.lineWidth = 1; ctx.strokeStyle = have ? 'rgba(255,216,74,0.55)' : 'rgba(255,255,255,0.08)'; ctx.stroke();
-        drawGem(art, x + cw / 2, y + 30, 32, have ? { glow: '#ffd84a', rank: row ? 8 : 5 } : { silhouette: true });
+      const x = 30 + (i % 6) * (cw + 8), y = top + 4 + Math.floor(i / 6) * (ch + 8) - sa.pos, gi = b.orig;
+      if (y > top + boxH || y + ch < top) return;
+      const hg = gold[gi] > 0, hp = pure[gi] > 0;
+      ctx.fillStyle = hg || hp ? 'rgba(255,216,74,0.08)' : 'rgba(255,255,255,0.03)'; rr(x, y, cw, ch, 10); ctx.fill();
+      ctx.lineWidth = 1; ctx.strokeStyle = hg && hp ? 'rgba(255,216,74,0.7)' : hg || hp ? 'rgba(255,216,74,0.35)' : 'rgba(255,255,255,0.08)'; ctx.stroke();
+      ctx.fillStyle = b.accent; ctx.beginPath(); ctx.arc(x + 11, y + 12, 4, 0, 6.283); ctx.fill();
+      txt((i + 1) + '. ' + b.name, x + cw / 2 + 5, y + 12.5, fitSize((i + 1) + '. ' + b.name, 10, cw - 22, FB), '#c9cfdc', { font: FB, weight: 900, shadow: false });
+      for (const [k, key, list] of [[0, 'Gold', gold], [1, 'Pure', pure]]) {
+        const art = ART.gems[key][gi], have = list[gi] > 0, cx = x + 27 + k * 50;
+        if (!art) continue;
+        ctx.save(); ctx.beginPath(); rr(x + 2 + k * 50, y + 20, 50, 70, 6); ctx.clip();
+        drawGem(art, cx, y + 46, 30, have ? { glow: k ? '#fff2a8' : '#ffd84a', rank: k ? 7 : 5 } : { silhouette: true });
+        ctx.restore();
         const nm = have ? art.name : '???';
-        txt(nm, x + cw / 2, y + 58, fitSize(nm, 11, cw - 4), have ? '#ffe27a' : '#6a7080');
-        txt(fmtPct(ch), x + cw / 2, y + 73, 9, '#aeb6c6', { font: FB, weight: 800 });
-        if (have) txt('x' + fmt(list[i]), x + cw / 2, y + 84, 9, '#7dff7a', { font: FB, weight: 900 });
+        txt(nm, cx, y + 78, fitSize(nm, 10, 48), have ? (k ? '#fff2a8' : '#ffe27a') : '#6a7080', { shadow: false });
+        txt(have ? 'x' + fmt(list[gi]) : k ? 'pure' : 'gold', cx, y + 94, 9, have ? '#7dff7a' : '#5a6070', { font: FB, weight: 900, shadow: false });
       }
     });
+    unclip();
   } else if (T === BOOK_QUESTS) {
-    txt('Quests  -  each one gives a x2 Creditz boost for ' + (perk(9) ? 3 : 2) + ' minutes', 360, Y + 6, 15, '#ffffff');
+    txt('Quests  -  each one gives a x2 Creditz boost for ' + (perk(9) ? 4 : 2) + ' minutes', 360, Y + 6, 15, '#ffffff');
     G.quests.forEach((q, i) => {
       const y = Y + 30 + i * 86;
       ctx.fillStyle = q.done ? 'rgba(125,255,122,0.1)' : 'rgba(255,255,255,0.04)'; rr(40, y, 640, 74, 12); ctx.fill();
@@ -3785,13 +3804,13 @@ function renderBook() {
   } else if (T === BOOK_QUESTS + 2) {
     txt('Rebirth perks  -  you have rebirthed ' + rebirthsDone() + ' times', 360, Y + 6, 16, '#ffffff');
     PERKS.forEach((p, i) => {
-      const y = Y + 22 + i * 30, got = perk(p[0]);
+      const y = Y + 22 + i * 27, got = perk(p[0]);
       ctx.fillStyle = got ? 'rgba(125,255,122,0.08)' : 'rgba(255,255,255,0.03)'; rr(60, y, 600, 26, 7); ctx.fill();
       if (got) drawIcon('check', 80, y + 13, 16, '#7dff7a'); else drawIcon('lock', 80, y + 13, 14, '#5a6070');
       txt('Rebirth ' + p[0], 100, y + 13, 13, got ? '#7dff7a' : '#7a8090', { align: 'left' });
       txt(p[1], 200, y + 13, 13, got ? '#ffffff' : '#8a90a0', { align: 'left', font: FB, weight: 800 });
     });
-    const gy = Y + 22 + PERKS.length * 30 + 8, goal = G.won ? 'You broke the Heart of the Mountain. You beat Just Mine!' : 'FINAL GOAL: rebirth ' + HEART_REBIRTHS + ' times, then break the Heart of the Mountain in ' + 'Heart Hollow' + '';
+    const gy = Y + 22 + PERKS.length * 27 + 8, goal = G.won ? 'You broke the Heart of the Mountain. You beat Just Mine!' : 'FINAL GOAL: rebirth ' + HEART_REBIRTHS + ' times, then break the Heart of the Mountain in ' + 'Heart Hollow' + '';
     ctx.fillStyle = 'rgba(255,120,40,0.1)'; rr(60, gy, 600, 44, 10); ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(255,140,60,0.6)'; ctx.stroke();
     drawIcon('heart', 84, gy + 22, 24, '#ff6a1a');
     txt(goal, 106, gy + 22, fitSize(goal, 13, 540, FB), G.won ? '#7dff7a' : '#ffb36a', { align: 'left', font: FB, weight: 900 });
@@ -4000,7 +4019,7 @@ const cleanMods = m => ({ cd: clamp((m && m.cd) | 0, 0, MOD_MAX), spd: clamp((m 
 const lvlCrit = d => 0.01 * (dLvl(d) - 1) + 0.04 * modOf(d, 'crit');
 const lvlAbility = d => 1 + 0.02 * (dLvl(d) - 1);
 const aiRank = d => Math.min(5, d.rank + (dLvl(d) >= 10 ? 1 : 0) + (dLvl(d) >= 20 ? 1 : 0));
-function droneCd(d) { return (d.type === 'mothership' ? MOTHER_CD : d.type === 'alien' ? ALIEN_CD[d.rank] : DRONE_TYPES[d.type].cd * RK.cd[d.rank]) * upv('dspeed', 1) * lvlCd(d) * DRONE_NERF * (d.skin === 'striker' ? 0.85 : 1) * (1 - 0.06 * modOf(d, 'cd')); }
+function droneCd(d) { return (d.type === 'mothership' ? MOTHER_CD : d.type === 'alien' ? ALIEN_CD[d.rank] : DRONE_TYPES[d.type].cd * RK.cd[d.rank]) * upv('dspeed', 1) * lvlCd(d) * DRONE_NERF * (d.skin === 'striker' ? 0.85 : 1) * (1 - 0.06 * modOf(d, 'cd')) * (perk(13) ? 0.85 : 1); }
 function droneXp(d, s) {
   if (dLvl(d) >= DRONE_MAX_LVL) return;
   d.xp = (d.xp || 0) + DT;
@@ -4193,7 +4212,7 @@ const SEASON_END = Date.UTC(2026, 11, 1, 0, 0, 0);   // Season 1 (Alien) ends 1 
 const seasonLeft = () => SEASON_END - Date.now();
 function seasonText() { const ms = seasonLeft(); if (ms <= 0) return 'Season over'; const d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5); return d > 0 ? d + 'd ' + h + 'h left' : h + 'h ' + Math.floor(ms % 36e5 / 6e4) + 'm left'; }
 const xpNeed = l => Math.round(340 * Math.pow(1.06, l - 1) / 10) * 10;   // 2026-11-18: harder (about 1.9M XP for all 100 levels)   // XP to reach level l (level 1 = 280, level 100 = ~57K, about 1.07M XP in total)
-const xpMult = () => 1 + upv('xpboost', 0);
+const xpMult = () => (1 + upv('xpboost', 0)) * (perk(16) ? 2 : 1);
 const PASS = (() => {
   const L = { 2: ['hat', 'helmet'], 4: ['spin', 1], 5: ['crate', 'common'], 8: ['spin', 2], 9: ['skin', 'alien'], 11: ['crate', 'uncommon'], 14: ['skin', 'saucer'], 15: ['hat', 'antenna'],
     17: ['crate', 'rare'], 18: ['spin', 2], 20: ['skin', 'chrome'], 22: ['crate', 'skin'], 23: ['crate', 'epic'], 25: ['drone', 'alien', 1], 27: ['hat', 'rings'], 28: ['spin', 3],
