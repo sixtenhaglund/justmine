@@ -5477,9 +5477,9 @@ function renderDroneShop(w, h, ORDER, sid) {
     txt(C.name, x + cw / 2, y + 116, fitSize(C.name, 19, cw - 20), C.col, { stroke: 3 });
     let lines;
     if (C.rw) { const tot = Object.values(C.skins).reduce((a, b) => a + b, 0), by = {}; for (const [sk, v] of Object.entries(C.skins)) by[SKINS[sk].rar] = (by[SKINS[sk].rar] || 0) + v; lines = Object.entries(by).map(([r, v]) => r + ' skins ' + fmtPct(v / tot)); lines.unshift(Object.keys(C.skins).length + ' skins to collect'); }
-    else { const w = crateOdds(C), tot = Object.values(w).reduce((a, b) => a + b, 0); lines = Object.entries(w).map(([tp, v]) => DRONE_TYPES[tp].name + ' (' + DRONE_TYPES[tp].rar + ') ' + fmtPct(v / tot)); }
+    else { const w = crateOdds(C), tot = Object.values(w).reduce((a, b) => a + b, 0); lines = Object.entries(w).map(([tp, v]) => DRONE_TYPES[tp].name + ' (' + DRONE_TYPES[tp].rar + ') ' + fmtPct(v / tot)); lines.cols = Object.keys(w).map(tp => RCOL[DRONE_TYPES[tp].rar]); }
     const lh = lines.length > 7 ? 10.6 : lines.length > 5 ? 12.5 : 16, lf = lines.length > 7 ? 10 : lines.length > 5 ? 10.5 : 12, ly = lines.length > 7 ? 131 : 136;   // long lists squeeze up so nothing hides behind the button
-    lines.forEach((l, j) => txt(l, x + cw / 2, y + ly + j * lh, fitSize(l, lf, cw - 24, FB), l.startsWith('Laser') ? '#ff6a7a' : RCOL[l.split(' ')[0]] || '#c9cfdc', { font: FB, weight: 800, shadow: false }));
+    lines.forEach((l, j) => txt(l, x + cw / 2, y + ly + j * lh, fitSize(l, lf, cw - 24, FB), (lines.cols && lines.cols[j]) || RCOL[l.split(' ')[0]] || '#c9cfdc', { font: FB, weight: 800, shadow: false }));
     btn('crate_' + k, x + 36, y + ch - 44, cw - 72, 34, have ? 'Open free (' + have + ')' : fmt(C.price), { col: have ? '#7a3aa8' : G.creditz >= C.price ? '#3aa04a' : '#6a3a3a', size: 17, fn: () => buyCrate(k) });
   });
   unclip();
