@@ -390,7 +390,7 @@ const rebirthsDone = () => G.rebirths - 1;
 function costOf(kind, lvl) { const L = SHOP[kind].costs; const c = lvl < L.length ? L[lvl] : SHOP[kind].endless ? L[L.length - 1] * Math.pow(SHOP[kind].endCost || TUNE.endCost, lvl - L.length + 1) : undefined; if (c === undefined) return undefined; const v = c * Math.pow(G.rebirthMult, TUNE.costExp); if (v < 1000) return Math.round(v); const p = Math.pow(10, Math.floor(Math.log10(v)) - 1); return Math.round(v / p) * p; }
 const perk = n => rebirthsDone() >= n;
 const rebirthCost = () => { const i = G.rebirths - 1; return i < REBIRTH_COSTS.length ? REBIRTH_COSTS[i] : REBIRTH_COSTS[REBIRTH_COSTS.length - 1] * Math.pow(4, i - REBIRTH_COSTS.length + 1); };
-const bombCooldown = () => Math.max(1, (perk(8) ? 2 : perk(1) ? 3.5 : 5) - upv('fuse', 0));
+const bombCooldown = () => Math.max(G.bombLevel >= MAX_BOMB ? 3 : 1.5, (perk(8) ? 2 : perk(1) ? 3.5 : 5) - upv('fuse', 0));
 const ROBOT_MAX = 8;   // never more than 8 auto miners at once
 const drillCount = () => Math.min(ROBOT_MAX, G.autoLevel + G.factoryLevel + (perk(4) ? 2 : 0) + (perk(11) ? 2 : 0) + (buffOn('robots') ? 3 : 0));
 const boostMult = () => upv('quest', 2);
@@ -435,7 +435,7 @@ function save() {
       found: G.found, ach: G.ach, reachedNames: BIOMES.filter((b, i) => G.reached & (1 << i)).map(b => b.name), visitedNames: BIOMES.filter((b, i) => G.visited & (1 << i)).map(b => b.name), stats: G.stats,
       heartHP: G.heartHP, won: G.won, settings: G.settings, quests: G.quests, questsDone: G.questsDone, boostT: G.boostT, rate: G.rate || 0, savedAt: Date.now(),
       owner: G.owner || null,
-      drones: G.drones, slots: G.slots, slotsOpen: G.slotsOpen, skins: G.skins, hats: G.hats, crates: G.crates, pass: G.pass, codes: G.codes, nextId: G.nextId, spins: G.spins || 0, tech: G.tech || 0, dseen: G.dseen || {},
+      drones: G.drones, slots: G.slots, slotsOpen: G.slotsOpen, skins: G.skins, hats: G.hats, crates: G.crates, pass: G.pass, codes: G.codes, nextId: G.nextId, spins: G.spins || 0, crateLog: (G.crateLog || []).slice(-15), tech: G.tech || 0, dseen: G.dseen || {},
     }));
   } catch (e) {}
 }
@@ -513,6 +513,7 @@ function loadDrones(s) {
   keepCodeSkins();
   G.spins = clamp(s.spins | 0, 0, 999);
   G.tech = clamp(num(+s.tech, 0), 0, 1e6);
+  G.crateLog = Array.isArray(s.crateLog) ? s.crateLog.filter(e => e && CRATES[e.k] && typeof e.w === 'string').slice(-15) : [];
   G.dseen = {}; if (s.dseen && typeof s.dseen === 'object') for (const k in s.dseen) if (DRONE_TYPES[k]) G.dseen[k] = 1; for (const d of G.drones) G.dseen[d.type] = 1;
 }
 function hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } }
@@ -4205,6 +4206,7 @@ function openCrate(kind) {
     const w = crateOdds(C), tot = Object.values(w).reduce((a, b) => a + b, 0), type = pickW(w);
     item = { drone: addDrone(type, 1), pct: w[type] / tot * 100 };
   }
+  G.crateLog = (G.crateLog || []).concat([{ k: kind, w: item.skin ? 's:' + item.skin : 'd:' + item.drone.type, at: Date.now() }]).slice(-15);
   G.crateFx = { kind, item, t: 0 }; AUDIO.sfx('crate'); addXP(15); save();
 }
 // Crate luck: every type except the plain Drone gets more weight
@@ -5192,6 +5194,27 @@ function renderDragGhost() {
   drawDrone(d, G.mouse.x, G.mouse.y - 4 * k, { scale: 2.2 * k, t: G.time });
   rankBadge(d, G.mouse.x + 34 * k, G.mouse.y - 34 * k, k);
 }
+const RAR7 = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythical', 'Celestial'];
+const droneLimited = d => d.type === 'alien' || d.type === 'mothership';   // Alien Pass ships
+const skinLimited = id => !SKINS[id] || SKINS[id].pass || SKINS[id].code;      // pass + code skins
+const droneScrapValue = d => (RAR7.indexOf(DRONE_TYPES[d.type].rar) + 1) * d.rank;
+const skinScrapValue = id => RAR7.indexOf(SKINS[id].rar) + 1;
+let SCRAP = { id: null, t: 0 };   // press once = "Sure?", press again within 2.5 s = scrap
+function armScrap(key) { if (SCRAP.id === key && G.time - SCRAP.t < 2.5) { SCRAP.id = null; return true; } SCRAP = { id: key, t: G.time }; AUDIO.sfx('click'); return false; }
+const scrapArmed = key => SCRAP.id === key && G.time - SCRAP.t < 2.5;
+function scrapDrone(d) {
+  if (!d || droneLimited(d)) return;
+  const v = droneScrapValue(d), k = slotOf(d);
+  if (k >= 0) G.slots[k] = null; DRT.delete(d.id);
+  G.drones = G.drones.filter(q => q !== d); G.droneSel = null; G.tech = (G.tech || 0) + v;
+  AUDIO.sfx('clank'); toast('Scrapped ' + droneName(d) + ': +' + v + ' Tech parts', '#9ae8ff'); save();
+}
+function scrapSkin(id) {
+  if (skinLimited(id) || skinFree(id) <= 0) return;
+  G.skins[id]--; if (G.skins[id] <= 0) delete G.skins[id];
+  const v = skinScrapValue(id); G.tech = (G.tech || 0) + v;
+  AUDIO.sfx('clank'); toast('Scrapped a ' + SKINS[id].name + ' skin: +' + v + ' Tech parts', '#9ae8ff'); save();
+}
 function cardDrone(d, x, y, w, h, id, opts) {
   opts = opts || {};
   const sel = G.droneSel === d.id, merging = G.mergeSel !== null && G.mergeSel !== undefined, A = merging && droneById(G.mergeSel);
@@ -5221,7 +5244,7 @@ function rankBadge(d, rx, ry, k) {
   txt(t, x + bw / 2, ry + bh / 2 + 0.5, 11 * k, RANK_COL[d.rank], { font: FH, shadow: false });
 }
 function clickDrone(d) {
-  AUDIO.sfx('click');
+  AUDIO.sfx('click'); G.invBig = false;
   if (G.mergeSel !== null && G.mergeSel !== undefined) {
     const A = droneById(G.mergeSel);
     if (A && A !== d) { if (mergeResult(A, d)) doMerge(A, d); else { toast(mergeWhy(A, d), '#ff8a8a'); AUDIO.sfx('deny'); } return; }
@@ -5235,10 +5258,11 @@ function renderDrones() {
   panel(0, 0, w, h, 'DRONES', '#2a8aa8');
   closeBtn(w - 46, 12);
   if (G.droneTab === undefined) G.droneTab = 0;
-  ['My Drones', 'Drone Shop', 'Skin Shop'].forEach((n, i) => btn('dtab' + i, 30 + i * 200, 28, 190, 34, n, { col: G.droneTab === i ? (i === 2 ? '#c05a2a' : '#2a8aa8') : '#343c50', size: 16, r: 9, icon: i === 2 ? 'gem' : i ? 'shop' : 'drone', fn: () => { G.droneTab = i; G.mergeSel = null; G.skinList = false; AUDIO.sfx('click'); } }));
+  ['My Drones', 'Drone Shop', 'Skin Shop', 'Collection'].forEach((n, i) => btn('dtab' + i, 30 + i * 176, 28, 168, 34, n, { col: G.droneTab === i ? (i === 2 ? '#c05a2a' : i === 3 ? '#7a4ad0' : '#2a8aa8') : '#343c50', size: 15, r: 9, icon: i === 3 ? 'star' : i === 2 ? 'gem' : i ? 'shop' : 'drone', fn: () => { G.droneTab = i; G.mergeSel = null; G.skinList = false; AUDIO.sfx('click'); } }));
   ctx.globalAlpha *= tabFade('drones', G.droneTab);
   if (G.droneTab === 1) { renderDroneShop(w, h, CRATE_ORDER, 'dshop'); return; }
   if (G.droneTab === 2) { renderDroneShop(w, h, SKIN_CRATES, 'sshop'); return; }
+  if (G.droneTab === 3) { renderCollection(w, h); return; }
   // --- the 10 slots ---
   txt('SLOTS  (' + droneSlotsUsed() + ' / ' + G.slotsOpen + ' in use)', 30, 80, 13, '#9ad8ff', { align: 'left', font: FB, weight: 900 });
   for (let k = 0; k < 10; k++) {
@@ -5264,14 +5288,16 @@ function renderDrones() {
   // --- your drones (not in a slot) ---
   const inv = G.drones.filter(d => slotOf(d) < 0 || slotOf(d) >= G.slotsOpen).sort((a, c) => c.rank - a.rank || a.type.localeCompare(c.type));
   txt('YOUR DRONES  (' + inv.length + ')', 30, 204, 13, '#9ad8ff', { align: 'left', font: FB, weight: 900 });
-  if (inv.length > 16) txt('scroll for more', w - 30, 204, 11, '#8a90a0', { align: 'right', font: FB, weight: 800 });
-  const isa = scrollArea('dinv', 20, 214, w - 40, 192, 'y', Math.ceil(inv.length / 8) * 94);
-  { const fr = UI.frame; DDROP.inv = { x: fr.x + 20 * fr.s, y: fr.y + 214 * fr.s, w: (w - 40) * fr.s, h: 192 * fr.s }; DDROP.s = fr.s; }
+  const big = !!G.invBig, IH = big ? h - 236 : 192, PER = 10, CW = (w - 52 - (PER - 1) * 6) / PER, CH = 82;
+  if (inv.length > PER * 2 || big) btn('invbig', w - 150, 192, 120, 22, big ? 'Show less' : 'Show more', { col: '#343c50', size: 11, r: 7, fn: () => { G.invBig = !G.invBig; AUDIO.sfx('click'); } });
+  const isa = scrollArea('dinv', 20, 214, w - 40, IH, 'y', Math.ceil(inv.length / PER) * (CH + 6) + 6);
+  { const fr = UI.frame; DDROP.inv = { x: fr.x + 20 * fr.s, y: fr.y + 214 * fr.s, w: (w - 40) * fr.s, h: IH * fr.s }; DDROP.s = fr.s; }
   if (DDRAG && DDRAG.on) { const dd = droneById(DDRAG.id), fromSlot = dd && slotOf(dd) >= 0 && slotOf(dd) < G.slotsOpen, I = DDROP.inv, over = G.mouse.x >= I.x && G.mouse.x <= I.x + I.w && G.mouse.y >= I.y && G.mouse.y <= I.y + I.h;
     if (fromSlot) { ctx.setLineDash([7, 5]); ctx.lineWidth = 2; ctx.strokeStyle = over ? '#ffd84a' : 'rgba(255,216,74,0.45)'; rr(22, 216, w - 44, 188, 12); ctx.stroke(); ctx.setLineDash([]); if (over) { ctx.fillStyle = 'rgba(255,216,74,0.08)'; ctx.fill(); } } }
-  clipBox(20, 214, w - 40, 192);
-  inv.forEach((d, i) => { const yy = 218 + Math.floor(i / 8) * 94 - isa.pos; if (yy > 120 && yy < 410) cardDrone(d, 26 + (i % 8) * 102, yy, 96, 88, 'inv' + d.id); });
+  clipBox(20, 214, w - 40, IH);
+  inv.forEach((d, i) => { const yy = 218 + Math.floor(i / PER) * (CH + 6) - isa.pos; if (yy > 120 && yy < 214 + IH) cardDrone(d, 26 + (i % PER) * (CW + 6), yy, CW, CH, 'inv' + d.id); });
   unclip();
+  if (big) return;   // tall list: no room for the drone panel (tap a drone to see it again)
   if (!inv.length) txt(G.drones.length ? 'All your drones are working in slots!' : 'No drones yet. Buy a crate in the Drone Shop!', w / 2, 290, 15, '#8a90a0', { font: FB, weight: 800 });
   // --- selected drone ---
   const y0 = 412;
@@ -5312,12 +5338,14 @@ function renderDrones() {
     });
   }
   const k = slotOf(d), inSlot = k >= 0 && k < G.slotsOpen;
-  btn('dslot', 222, y0 + 112, 150, 34, inSlot ? 'Take out' : 'Put in slot', { col: inSlot ? '#6a5a3a' : '#3a7a9a', size: 15, fn: () => {
+  btn('dslot', 222, y0 + 112, 118, 34, inSlot ? 'Take out' : 'Put in slot', { col: inSlot ? '#6a5a3a' : '#3a7a9a', size: 15, fn: () => {
     AUDIO.sfx('click');
     if (inSlot) { G.slots[k] = null; DRT.delete(d.id); }
     else { let e = -1; for (let q = 0; q < G.slotsOpen; q++) if (!G.slots[q] || !droneById(G.slots[q])) { e = q; break; } if (e < 0) { toast('All your slots are full', '#ff8a8a'); AUDIO.sfx('deny'); return; } G.slots[e] = d.id; }
     save(); } });
-  if (!DRONE_TYPES[d.type].noRank) btn('dmerge', 382, y0 + 112, 150, 34, 'Merge...', { col: '#3a8a4a', size: 15, fn: () => { G.mergeSel = d.id; AUDIO.sfx('click'); } });
+  if (!droneLimited(d)) { const armed = scrapArmed('d' + d.id);
+    btn('dscrap', 474, y0 + 112, 82, 34, armed ? 'Sure?' : 'Scrap', { col: armed ? '#c0392b' : '#6a3a3a', size: 14, fn: () => { if (armScrap('d' + d.id)) scrapDrone(d); else toast('Press again to scrap it for +' + droneScrapValue(d) + ' Tech parts', '#ffb27a'); } }); }
+  if (!DRONE_TYPES[d.type].noRank) btn('dmerge', 348, y0 + 112, 118, 34, 'Merge...', { col: '#3a8a4a', size: 15, fn: () => { G.mergeSel = d.id; AUDIO.sfx('click'); } });
   // skins + hats: white boxes showing how THIS drone would look (one owned copy = one drone at a time)
   const noHat = d.type === 'mothership', hats = G.dressTab === 1 && !noHat, list = [null].concat(hats ? Object.keys(HATS).filter(id => G.hats[id] > 0) : Object.keys(SKINS).filter(id => G.skins[id] > 0));
   btn('dress0', 560, y0 + 10, 84, 26, 'Skins', { col: hats ? '#343c50' : '#4a5ad0', size: 13, r: 7, fn: () => { G.dressTab = 0; if (SCR.dress) SCR.dress.target = SCR.dress.pos = 0; AUDIO.sfx('click'); } });
@@ -5352,6 +5380,61 @@ function drawCrate(x, y, s, col, t, shake) {
   rr(-4, -15, 8, 30, 1.5); ctx.fillStyle = '#c8d0dc'; ctx.fill(); ctx.lineWidth = 1; ctx.stroke();
   ctx.fillStyle = '#ffd84a'; rr(-3, -3, 6, 6, 1); ctx.fill(); ctx.stroke();
   ctx.restore();
+}
+function renderCollection(w, h) {
+  const hats = G.colHats === true, RO = ['Celestial', 'Admin', 'Mythical', 'Legendary', 'Epic', 'Rare', 'Uncommon', 'Common'];
+  const src = hats ? HATS : SKINS, owned = hats ? G.hats : G.skins;
+  const ids = Object.keys(owned).filter(id => owned[id] > 0 && src[id]).sort((a, b) => RO.indexOf(src[a].rar) - RO.indexOf(src[b].rar) || src[a].name.localeCompare(src[b].name));
+  const total = ids.reduce((a, id) => a + owned[id], 0);
+  btn('colsk', 30, 72, 100, 26, 'Skins', { col: hats ? '#343c50' : '#7a4ad0', size: 13, r: 7, fn: () => { G.colHats = false; G.colSel = null; AUDIO.sfx('click'); } });
+  btn('colht', 136, 72, 100, 26, 'Hats', { col: hats ? '#7a4ad0' : '#343c50', size: 13, r: 7, fn: () => { G.colHats = true; G.colSel = null; AUDIO.sfx('click'); } });
+  txt('You own ' + ids.length + ' kinds, ' + total + ' in total', w - 30, 86, 12, '#c9cfdc', { align: 'right', font: FB, weight: 900 });
+  const top = 106, boxH = 300, PER = 8, tw = (w - 52 - (PER - 1) * 8) / PER, th = 116, rows = Math.ceil(ids.length / PER);
+  const sa = scrollArea('colgrid', 20, top, w - 40, boxH, 'y', rows * (th + 8) + 6);
+  clipBox(20, top, w - 40, boxH);
+  if (!ids.length) txt(hats ? 'No hats yet: they come from the Alien Pass' : 'No skins yet: Skin Shop, Lucky Wheel, Alien Pass', w / 2, top + 120, 15, '#8a90a0', { font: FB, weight: 800 });
+  ids.forEach((id, i) => {
+    const x = 26 + (i % PER) * (tw + 8), y = top + 4 + Math.floor(i / PER) * (th + 8) - sa.pos; if (y > top + boxH || y + th < top) return;
+    const S = src[id], rc = RCOL[S.rar] || '#ffffff', sel = G.colSel === id, rid = 'col' + id, used = hats ? G.drones.filter(d => d.hat === id).length : G.drones.filter(d => d.skin === id).length;
+    region(rid, x, y, tw, th, () => { G.colSel = id; AUDIO.sfx('click'); });
+    ctx.fillStyle = sel ? rgba(rc, 0.25) : UI.hot === rid ? 'rgba(255,255,255,0.1)' : rgba(rc, 0.08); rr(x, y, tw, th, 10); ctx.fill(); ctx.lineWidth = sel ? 2.5 : 1.2; ctx.strokeStyle = rgba(rc, sel ? 1 : 0.6); ctx.stroke();
+    ctx.fillStyle = '#eef1f6'; rr(x + 6, y + 6, tw - 12, 64, 8); ctx.fill();
+    drawDrone({ id: 300 + i, type: 'normal', rank: 1, skin: hats ? null : id, hat: hats ? id : null }, x + tw / 2, y + 40, { scale: 1.35, t: G.time + i, box: [x + 6, y + 6, tw - 12, 64] });
+    const lab = 'x' + owned[id]; rr(x + tw - 10 - lab.length * 6, y + 9, 6 + lab.length * 6, 15, 7); ctx.fillStyle = '#2a3446'; ctx.fill(); txt(lab, x + tw - 7 - lab.length * 3, y + 17, 10, '#ffffff', { font: FB, weight: 900, shadow: false });
+    txt(S.name, x + tw / 2, y + 84, fitSize(S.name, 13, tw - 8), '#ffffff', { stroke: 2.5 });
+    txt(S.rar + (used ? '  -  ' + used + ' in use' : ''), x + tw / 2, y + 102, fitSize(S.rar + '  -  9 in use', 10, tw - 8, FB), rc, { font: FB, weight: 900, shadow: false });
+  });
+  unclip();
+  // selected item
+  const y0 = 416;
+  ctx.fillStyle = 'rgba(255,255,255,0.04)'; rr(20, y0, 440, h - y0 - 18, 12); ctx.fill();
+  const id = G.colSel && owned[G.colSel] > 0 ? G.colSel : null;
+  if (!id) txt('Tap a ' + (hats ? 'hat' : 'skin') + ' to see it', 240, y0 + 100, 14, '#8a90a0', { font: FB, weight: 800 });
+  else {
+    const S = src[id], rc = RCOL[S.rar] || '#ffffff', used = hats ? G.drones.filter(d => d.hat === id).length : G.drones.filter(d => d.skin === id).length, free = owned[id] - used;
+    ctx.fillStyle = '#eef1f6'; rr(32, y0 + 12, 150, 180, 12); ctx.fill();
+    drawDrone({ id: 299, type: 'normal', rank: 1, skin: hats ? null : id, hat: hats ? id : null }, 107, y0 + 96, { scale: 2.6, t: G.time, box: [32, y0 + 12, 150, 180] });
+    txt(S.name, 196, y0 + 30, fitSize(S.name, 22, 250), rc, { align: 'left', stroke: 3 });
+    txt(S.rar + (S.pass ? '  -  Alien Pass' : S.code ? '  -  code' : ''), 196, y0 + 56, 12, rc, { align: 'left', font: FB, weight: 900 });
+    txt('Owned ' + owned[id] + '   on drones ' + used + '   free ' + free, 196, y0 + 82, 12, '#c9cfdc', { align: 'left', font: FB, weight: 900 });
+    if (hats || skinLimited(id)) txt('Limited: can\'t be scrapped', 196, y0 + 120, 12, '#ffb27a', { align: 'left', font: FB, weight: 900 });
+    else if (free <= 0) txt('All of them are on drones', 196, y0 + 120, 12, '#8a90a0', { align: 'left', font: FB, weight: 900 });
+    else { const armed = scrapArmed('s' + id);
+      btn('sscrap', 196, y0 + 106, 230, 34, armed ? 'Sure? Press again' : 'Scrap 1 (+' + skinScrapValue(id) + ' Tech)', { col: armed ? '#c0392b' : '#6a3a3a', size: 14, fn: () => { if (armScrap('s' + id)) scrapSkin(id); } }); }
+    txt('Tech parts: ' + Math.floor(G.tech || 0) + '  (Engineers turn them into upgrades)', 196, y0 + 160, 11, '#9ae8ff', { align: 'left', font: FB, weight: 800, shadow: false });
+  }
+  // last crates
+  ctx.fillStyle = 'rgba(255,255,255,0.04)'; rr(470, y0, w - 490, h - y0 - 18, 12); ctx.fill();
+  txt('YOUR LAST CRATES', 486, y0 + 18, 12, '#9ad8ff', { align: 'left', font: FB, weight: 900 });
+  const log = (G.crateLog || []).slice(-9).reverse();
+  if (!log.length) txt('Nothing opened yet', 486, y0 + 44, 11, '#8a90a0', { align: 'left', font: FB, weight: 800 });
+  log.forEach((e, i) => {
+    const [kind, what] = e.w.split(':'), nm = kind === 's' ? (SKINS[what] ? SKINS[what].name + ' skin' : what) : (DRONE_TYPES[what] ? DRONE_TYPES[what].name : what);
+    const rar = kind === 's' ? (SKINS[what] || {}).rar : (DRONE_TYPES[what] || {}).rar, ago = Math.max(0, Math.round((Date.now() - e.at) / 1000));
+    const agoT = ago < 60 ? ago + 's ago' : ago < 3600 ? Math.round(ago / 60) + 'm ago' : Math.round(ago / 3600) + 'h ago';
+    txt(nm, 486, y0 + 42 + i * 19, 11.5, RCOL[rar] || '#ffffff', { align: 'left', font: FB, weight: 900, shadow: false });
+    txt(CRATES[e.k].name.replace(' Crate', '') + '  ' + agoT, w - 34, y0 + 42 + i * 19, 10, '#8a90a0', { align: 'right', font: FB, weight: 800, shadow: false });
+  });
 }
 function renderSkinList(w, h) {
   const ck = typeof G.skinList === 'string' && CRATES[G.skinList] ? G.skinList : 'skin', C = CRATES[ck], tot = Object.values(C.skins).reduce((a, b) => a + b, 0), RORD = ['Celestial', 'Mythical', 'Legendary', 'Epic', 'Rare', 'Uncommon', 'Common'];
