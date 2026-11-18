@@ -4026,7 +4026,7 @@ function droneXp(d, s) {
   if (d.xp >= dXpNeed(dLvl(d))) {
     d.xp -= dXpNeed(dLvl(d)); d.lvl = dLvl(d) + 1;
     s.lvlFx = 1.4;   // yellow flash
-    G.floats.push({ x: s.x, y: s.y + 26, text: 'LEVEL UP! Lv ' + d.lvl, col: '#ffe14a', t: 0, size: 13 });
+    G.floats.push({ x: s.x, y: s.y + 26, text: 'LEVEL UP! Level ' + d.lvl, col: '#ffe14a', t: 0, size: 13 });
     G.lights.push({ x: s.x, y: s.y, r: 70, col: '#ffe14a', life: 0.6, max: 0.6 });
     sparkle(s.x, s.y, '#ffe14a', 10);
     droneSfx(d, 'dlevel');
@@ -5114,7 +5114,7 @@ function cardDrone(d, x, y, w, h, id, opts) {
   ctx.save(); if (merging && !canM && A !== d) ctx.globalAlpha *= 0.35;
   drawDrone(d, x + w / 2, y + h * 0.42, { scale: Math.min(w, h) / 31, t: G.time + d.id, box: [x + 1, y + 1, w - 2, h - 2] });
   rankBadge(d, x + w - 4, y + 4, Math.min(1, w / 76));
-  { const k = Math.min(1, w / 76), lt = 'Lv' + dLvl(d); rr(x + 4, y + 4, (8 + lt.length * 6.2) * k, 15 * k, 4 * k); ctx.fillStyle = 'rgba(8,10,16,0.85)'; ctx.fill(); txt(lt, x + 4 + (4 + lt.length * 3.1) * k, y + 4 + 8 * k, 10 * k, '#ffe14a', { font: FB, weight: 900, shadow: false });
+  { const k = Math.min(1, w / 76), lt = 'Lvl ' + dLvl(d); rr(x + 4, y + 4, (8 + lt.length * 6.2) * k, 15 * k, 4 * k); ctx.fillStyle = 'rgba(8,10,16,0.85)'; ctx.fill(); txt(lt, x + 4 + (4 + lt.length * 3.1) * k, y + 4 + 8 * k, 10 * k, '#ffe14a', { font: FB, weight: 900, shadow: false });
     const f = dLvl(d) >= DRONE_MAX_LVL ? 1 : clamp((d.xp || 0) / dXpNeed(dLvl(d)), 0, 1); ctx.fillStyle = 'rgba(0,0,0,0.5)'; rr(x + 6, y + h - 30, w - 12, 4, 2); ctx.fill(); ctx.fillStyle = '#ffe14a'; rr(x + 6, y + h - 30, (w - 12) * f, 4, 2); ctx.fill(); }
   txt(DRONE_TYPES[d.type].name, x + w / 2, y + h - 18, fitSize(DRONE_TYPES[d.type].name, 11, w - 8, FB), '#ffffff', { font: FB, weight: 900, shadow: false });
   txt(DRONE_TYPES[d.type].rar, x + w / 2, y + h - 7, fitSize(DRONE_TYPES[d.type].rar, 9, w - 6, FB), RCOL[DRONE_TYPES[d.type].rar], { font: FB, weight: 900, shadow: false });
