@@ -228,9 +228,9 @@ const SHOP = {
   radius: { title: 'Bomb radius', name: l => 'Bomb radius +' + (l + 1) * 15 + '%', icon: 'bomb', col: '#ff9a3a', isNew: true,
     costs: [20000, 2e5, 2e6, 2e7, 2e8, 6e9, 6e10, 6e11, 6e12, 6e13, 6e14, 6e15],
     desc: l => 'Bigger explosions' },
-  cluster: { title: 'Cluster bombs', name: l => 'Cluster bombs +' + (l + 1), icon: 'cluster', col: '#ff5a5a', isNew: true,
+  cluster: { title: 'Aftershock', name: l => 'Aftershock ' + (l + 1), icon: 'bomb', col: '#ff5a5a', isNew: true,   // was Cluster bombs (Sixten didn't like it); same key so levels carry over
     costs: [2e5, 4e6, 8e7, 1.6e9, 3.2e10, 6.4e11, 1.3e13, 2.6e14],
-    desc: l => 'Every bomb drops ' + (l + 1) + ' extra bomb' + (l ? 's' : '') },
+    desc: l => 'Rocks hit by a bomb get cracked AGAIN: ' + Math.round(AFTER_P * (l + 1) * 100) + '% chance' },
   robo: { title: 'Robot speed', name: l => 'Robot speed ' + (l + 1), icon: 'gear', col: '#9ae05a', isNew: true,
     costs: [8000, 6e4, 6e5, 7e6, 8e7, 1e9, 1.2e10, 1.5e11, 2e12, 3e13, 5e14, 1e16],
     desc: l => 'Robots crack at ' + Math.round(100 / SHOPV.robo[l]) + '% of your speed' },
@@ -915,7 +915,7 @@ function drawBlackHoles(shx, shy) {   // part 2: the black core, the photon ring
   }
   ctx.globalAlpha = 1;
 }
-const BOMB_NERF = 0.88;   // 2026-11-18: bombs a bit weaker (Sixten)
+const BOMB_NERF = 0.88, AFTER_P = 0.12;   // Aftershock: +12% second-crack chance per level   // 2026-11-18: bombs a bit weaker (Sixten)
 function bombRadius(bo) { return BOMB_NERF * 0.42 * bombArt(bo).size * 1.15 * bo.size / 100 * (1 + 0.15 * G.radiusLevel) * gsc(); }
 function bombTouches(bo, rock) {
   const rad = bombRadius(bo);
@@ -927,7 +927,7 @@ function dropBomb(wx, wy) {
   if (G.bombLevel <= 0) { if (!G.toasts.some(t => t.text.startsWith('Buy a Bomb'))) toast('Buy a Bomb in the Shop first!'); return; }
   G.bombCD = bombCooldown();
   const L = G.bombLevel, ex = BOMB_EXTRA[L];
-  for (let k = 0; k <= G.clusterLevel; k++) {
+  for (let k = 0; k <= 0; k++) {   // one bomb (cluster bombs are gone)
     const a = Math.random() * 6.283, d = k ? (50 + Math.random() * 70) * gsc() : 0;
     const x = clamp(wx + Math.cos(a) * d, -230, 230), y = clamp(wy + Math.sin(a) * d, -100, 165);
     G.bombs.push({ x, y, size: 1 + rnd(ex[0], ex[1]), speed: 100, ghost: k ? -20 * k : 0, dir: 90 + rnd(0, 180), level: L, hits: new Set(), t: k ? -0.08 * k : 0 });
@@ -1253,7 +1253,7 @@ function tick() {
       if (bomb) { by = 'bomb'; bomb.hits.add(rock); if (bomb.hits.size >= 15) ach('kaboom'); }
       else if (hover === rock && G.mouse.down) by = 'mouse';
       else { const d = G.drills.find(d => d.target === rock); if (d) { by = 'auto'; d.hitT = 0.15; } }
-      if (by) { hitRock(rock, by); if (by === 'mouse' && perk(15) && rock.state === 'rock' && Math.random() < 0.25) { rock.cool = 0; hitRock(rock, by); } }
+      if (by) { hitRock(rock, by); if (by === 'bomb' && G.clusterLevel > 0 && rock.state === 'rock' && Math.random() < AFTER_P * G.clusterLevel) { rock.cool = 0; hitRock(rock, 'bomb'); G.rings.push({ x: rock.x, y: rock.y, t: 0, r: 26, col: '#ffb04a' }); } if (by === 'mouse' && perk(15) && rock.state === 'rock' && Math.random() < 0.25) { rock.cool = 0; hitRock(rock, by); } }
     }
     compact(G.rocks, r => r.state !== 'dead');
     // the Heart of the Mountain
