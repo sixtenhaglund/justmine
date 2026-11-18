@@ -5198,6 +5198,9 @@ const RAR7 = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythical', 'Ce
 const droneLimited = d => d.type === 'alien' || d.type === 'mothership';   // Alien Pass ships
 const skinLimited = id => !SKINS[id] || SKINS[id].pass || SKINS[id].code;      // pass + code skins
 const droneScrapValue = d => (RAR7.indexOf(DRONE_TYPES[d.type].rar) + 1) * d.rank;
+// Creditz for scrapping: rarer types and higher ranks pay much more (about 1/10 of a crate that usually gives it); x2 per rank because a rank = 2 drones merged
+const SCRAP_CR = { Common: 5e4, Uncommon: 1e6, Rare: 5e7, Epic: 5e9, Legendary: 5e11, Mythical: 5e13, Celestial: 5e14 };
+const droneScrapCreditz = d => (SCRAP_CR[DRONE_TYPES[d.type].rar] || 5e4) * Math.pow(2, d.rank - 1) * (1 + 0.04 * (dLvl(d) - 1));
 const skinScrapValue = id => RAR7.indexOf(SKINS[id].rar) + 1;
 let SCRAP = { id: null, t: 0 };   // press once = "Sure?", press again within 2.5 s = scrap
 function armScrap(key) { if (SCRAP.id === key && G.time - SCRAP.t < 2.5) { SCRAP.id = null; return true; } SCRAP = { id: key, t: G.time }; AUDIO.sfx('click'); return false; }
@@ -5206,8 +5209,9 @@ function scrapDrone(d) {
   if (!d || droneLimited(d)) return;
   const v = droneScrapValue(d), k = slotOf(d);
   if (k >= 0) G.slots[k] = null; DRT.delete(d.id);
-  G.drones = G.drones.filter(q => q !== d); G.droneSel = null; G.tech = (G.tech || 0) + v;
-  AUDIO.sfx('clank'); toast('Scrapped ' + droneName(d) + ': +' + v + ' Tech parts', '#9ae8ff'); save();
+  const c = droneScrapCreditz(d);
+  G.drones = G.drones.filter(q => q !== d); G.droneSel = null; G.tech = (G.tech || 0) + v; giveCreditz(c, true); G.hudPulse = 1;
+  AUDIO.sfx('clank'); AUDIO.sfx('buy'); toast('Scrapped ' + droneName(d) + ': +' + fmt(c) + ' Creditz, +' + v + ' Tech parts', '#ffd84a'); save();
 }
 function scrapSkin(id) {
   if (skinLimited(id) || skinFree(id) <= 0) return;
@@ -5344,7 +5348,7 @@ function renderDrones() {
     else { let e = -1; for (let q = 0; q < G.slotsOpen; q++) if (!G.slots[q] || !droneById(G.slots[q])) { e = q; break; } if (e < 0) { toast('All your slots are full', '#ff8a8a'); AUDIO.sfx('deny'); return; } G.slots[e] = d.id; }
     save(); } });
   if (!droneLimited(d)) { const armed = scrapArmed('d' + d.id);
-    btn('dscrap', 474, y0 + 112, 82, 34, armed ? 'Sure?' : 'Scrap', { col: armed ? '#c0392b' : '#6a3a3a', size: 14, fn: () => { if (armScrap('d' + d.id)) scrapDrone(d); else toast('Press again to scrap it for +' + droneScrapValue(d) + ' Tech parts', '#ffb27a'); } }); }
+    btn('dscrap', 474, y0 + 112, 82, 34, armed ? 'Sure?' : 'Scrap', { col: armed ? '#c0392b' : '#6a3a3a', size: 14, fn: () => { if (armScrap('d' + d.id)) scrapDrone(d); else toast('Press again to scrap it for +' + fmt(droneScrapCreditz(d)) + ' Creditz and +' + droneScrapValue(d) + ' Tech parts', '#ffb27a'); } }); }
   if (!DRONE_TYPES[d.type].noRank) btn('dmerge', 348, y0 + 112, 118, 34, 'Merge...', { col: '#3a8a4a', size: 15, fn: () => { G.mergeSel = d.id; AUDIO.sfx('click'); } });
   // skins + hats: white boxes showing how THIS drone would look (one owned copy = one drone at a time)
   const noHat = d.type === 'mothership', hats = G.dressTab === 1 && !noHat, list = [null].concat(hats ? Object.keys(HATS).filter(id => G.hats[id] > 0) : Object.keys(SKINS).filter(id => G.skins[id] > 0));
