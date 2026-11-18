@@ -3204,6 +3204,13 @@ function renderWorld(shx, shy) {
   if (G.heart) drawHeart(G.heart);
   for (const r of G.rocks) if (r.state === 'rock' || r.state === 'open') drawRock(r, b.name);
   drawEventWorld();
+  if (gx('bg') >= 1) {   // a slow sheen of light sweeps across the wall now and then (like light over wet stone)
+    const ph = (G.time % 9) / 9;
+    if (ph < 0.4) { const f = ph / 0.4, x0 = -330 + f * 660;
+      ctx.save(); ctx.beginPath(); ctx.rect(-218, -122, 436, 244); ctx.clip(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(x0, 0); ctx.rotate(0.35);
+      const g = ctx.createLinearGradient(-70, 0, 70, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, 'rgba(255,250,235,' + (0.09 * Math.sin(f * Math.PI)) + ')'); g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g; ctx.fillRect(-70, -300, 140, 600); ctx.restore(); }
+  }
   // hover outline + crack timer
   if (hover && hover !== G.heart) {
     ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,' + (0.5 + 0.3 * Math.sin(G.time * 8)) + ')'; const hf = gsc(); rr(hover.x - 26 * hf, wy(hover.y) - 26 * hf, 52 * hf, 52 * hf, 9 * hf); ctx.stroke();
@@ -4163,6 +4170,20 @@ const SKINS = {
   void: { name: 'Void', rar: 'Mythical', body: '#0a0610', dark: '#000000', light: '#2a1a3a', accent: '#b678ff', fx: 'void' },
   rainbow: { name: 'Rainbow', rar: 'Celestial', body: '#ffffff', dark: '#b0b0c0', light: '#ffffff', accent: '#ff4aa0', fx: 'rainbow' },
   angel: { name: 'Angel', rar: 'Celestial', body: '#fff8e8', dark: '#c8b890', light: '#ffffff', accent: '#ffe27a', fx: 'gold', wings: '#ffffff', halo: true },
+  // --- 2026-11-18 (later): 13 more ---
+  mint: { name: 'Mint', rar: 'Common', body: '#7affc8', dark: '#2a9a6a', light: '#d0fff0', accent: '#ffffff', fx: 'stripes' },
+  cherry: { name: 'Cherry', rar: 'Common', body: '#e0283a', dark: '#7a0a14', light: '#ff8a8a', accent: '#5aff5a', fx: null },
+  lemon: { name: 'Lemon', rar: 'Uncommon', body: '#ffe83a', dark: '#a89a00', light: '#fffaa0', accent: '#ffffff', fx: 'drip' },
+  coral: { name: 'Coral', rar: 'Uncommon', body: '#ff7a6a', dark: '#9a2a2a', light: '#ffc0b0', accent: '#bff6ff', fx: 'bubbles' },
+  lightning: { name: 'Lightning', rar: 'Rare', body: '#2a2a3a', dark: '#0a0a14', light: '#5a5a7a', accent: '#ffe83a', fx: 'zap' },
+  frostbite: { name: 'Frostbite', rar: 'Rare', body: '#8ad0ff', dark: '#2a6a9a', light: '#e0f6ff', accent: '#ffffff', fx: 'frost' },
+  matrix: { name: 'Matrix', rar: 'Epic', body: '#04140a', dark: '#000000', light: '#0a3a1a', accent: '#3aff6a', fx: 'matrix' },
+  disco: { name: 'Disco', rar: 'Epic', body: '#c8ccd8', dark: '#5a5e6a', light: '#ffffff', accent: '#ff4ad8', fx: 'disco' },
+  lavalamp: { name: 'Lava Lamp', rar: 'Epic', body: '#3a0a5a', dark: '#14021f', light: '#7a2aa8', accent: '#ff7ad8', fx: 'lava' },
+  dragon: { name: 'Dragon', rar: 'Legendary', body: '#a01a14', dark: '#3a0402', light: '#e05a3a', accent: '#ffb02a', fx: 'fire', wings: '#c0281a' },
+  thunder: { name: 'Thunder God', rar: 'Legendary', body: '#2a3a8a', dark: '#0a1440', light: '#6a8aff', accent: '#ffe83a', fx: 'zap', halo: true },
+  aurora: { name: 'Aurora', rar: 'Mythical', body: '#0a2a3a', dark: '#021018', light: '#2a6a7a', accent: '#5affc8', fx: 'aurora' },
+  sun: { name: 'Sun', rar: 'Celestial', body: '#ffb02a', dark: '#c85a00', light: '#fff2a0', accent: '#ffffff', fx: 'sun', halo: true },
   // --- pass skins (season 1, levels 51-100) ---
   saucer: { name: 'Saucer', rar: 'Rare', body: '#b8c4d4', dark: '#4a5466', light: '#ffffff', accent: '#7dff3a', fx: 'chrome', pass: true },
   martian: { name: 'Martian', rar: 'Epic', body: '#c84a2a', dark: '#5a1a0a', light: '#ff9a6a', accent: '#ffd08a', fx: 'drip', pass: true },
@@ -4481,6 +4502,15 @@ const TRAILS = {   // skin -> what comes out behind it while it works (rates are
   supernova: [0.8, (x, y) => ({ kind: 'ember', x: x + (Math.random() - 0.5) * 14, y, vx: (Math.random() - 0.5) * 1.2, vy: (Math.random() - 0.5) * 1.2, life: 28, max: 28, s: 1.2, col: pk(['#ffffff', '#ffd08a', '#ff6a1a']), ph: Math.random() * 6 })],
   emperor: [0.6, (x, y) => ({ kind: 'star', x: x + (Math.random() - 0.5) * 18, y, vx: 0, vy: 0.2, life: 30, max: 30, col: pk(['#ffd84a', '#9aff4a', '#ffffff']), s: 1.5 })],
   martian: [0.3, (x, y) => ({ kind: 'dust', x, y: y - 4, vx: (Math.random() - 0.5) * 0.6, vy: -0.2, life: 26, max: 26, s: 2, grow: 0.25, col: '#c84a2a' })],
+  matrix: [0.5, (x, y) => ({ kind: 'pix', x: x + (Math.random() - 0.5) * 14, y, vx: 0, vy: -0.6, life: 22, max: 22, s: 2, col: Math.random() < 0.3 ? '#d0ffd8' : '#3aff6a' })],
+  disco: [0.5, (x, y) => ({ kind: 'star', x: x + (Math.random() - 0.5) * 16, y, vx: 0, vy: 0, life: 20, max: 20, col: pk(['#ff4ad8', '#4ad0ff', '#ffe83a', '#5aff7a']), s: 1.2 })],
+  lavalamp: [0.35, (x, y) => ({ kind: 'ember', x, y, vx: 0, vy: 0.5, life: 30, max: 30, s: 1.1, col: pk(['#ff7ad8', '#c84aff']), ph: Math.random() * 6 })],
+  dragon: [0.7, (x, y) => Math.random() < 0.7 ? { kind: 'ember', x: x + (Math.random() - 0.5) * 14, y, vx: (Math.random() - 0.5) * 0.8, vy: 0.5 + Math.random() * 0.6, life: 30, max: 30, s: 1.2, col: pk(['#ffb02a', '#ff3a1a']), ph: Math.random() * 6 } : { kind: 'smoke', x, y: y + 6, vx: 0, vy: 0.3, life: 36, max: 36, s: 3, grow: 0.3, col: '#2a0a04' }],
+  thunder: [0.45, (x, y) => { const a = Math.random() * 6.283; return { kind: 'spark', x, y, vx: Math.cos(a) * 3, vy: Math.sin(a) * 3, life: 10, max: 10, col: pk(['#ffe83a', '#ffffff']), s: 1.3 }; }],
+  aurora: [0.6, (x, y) => ({ kind: 'ember', x: x + (Math.random() - 0.5) * 14, y, vx: 0, vy: 0.2, life: 30, max: 30, s: 1, col: pk(['#5affc8', '#ff7ad8', '#8ab0ff']), ph: Math.random() * 6 })],
+  sun: [0.7, (x, y) => ({ kind: 'ember', x: x + (Math.random() - 0.5) * 16, y: y + (Math.random() - 0.5) * 8, vx: (Math.random() - 0.5) * 0.8, vy: (Math.random() - 0.5) * 0.8, life: 26, max: 26, s: 1.3, col: pk(['#ffffff', '#ffe27a', '#ffb02a']), ph: Math.random() * 6 })],
+  lightning: [0.3, (x, y) => { const a = Math.random() * 6.283; return { kind: 'spark', x, y, vx: Math.cos(a) * 2.5, vy: Math.sin(a) * 2.5, life: 9, max: 9, col: '#ffe83a', s: 1.1 }; }],
+  frostbite: [0.25, (x, y) => ({ kind: 'star', x: x + (Math.random() - 0.5) * 12, y, vx: 0, vy: -0.3, life: 22, max: 22, col: '#e0f6ff', s: 1 })],
   moneybags: [0.4, (x, y) => Math.random() < 0.6 ? { kind: 'coin', x: x + (Math.random() - 0.5) * 12, y: y - 6, vx: (Math.random() - 0.5) * 1.2, vy: 1 + Math.random(), rot: Math.random() * 6, life: 40, max: 40, s: 2.6 } : { kind: 'star', x, y, vx: 0, vy: 0, life: 20, max: 20, col: '#7aff8a', s: 1.1 }],
   striker: [0.5, (x, y) => ({ kind: 'dust', x, y: y - 8, vx: (Math.random() - 0.5) * 0.4, vy: 0, life: 18, max: 18, s: 1.5, grow: 0.3, col: '#ffffff' })],
   abductor: [0.5, (x, y) => ({ kind: 'spark', x: x + (Math.random() - 0.5) * 10, y: y - 6, vx: 0, vy: -2.5, life: 12, max: 12, col: '#7dff3a', s: 1.2 })],
@@ -4854,6 +4884,9 @@ function droneStatic(d, P) {
     ctx.beginPath(); ctx.moveTo(-4, B[1]); ctx.lineTo(0, B[1] + 3); ctx.lineTo(4, B[1]); ctx.closePath(); ctx.fill();
     ctx.font = '900 ' + Math.round(B[3] * 0.6) + 'px ' + FH; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 1; ctx.strokeStyle = '#7a0a10'; ctx.strokeText('10', 0, B[1] + B[3] * 0.6); ctx.fillText('10', 0, B[1] + B[3] * 0.6);
   }
+  if (P.fx === 'disco') {   // mirror tiles
+    const R = seeded(typeSeed(d) + 31); for (let gx2 = B[0]; gx2 < B[0] + B[2]; gx2 += 3.2) for (let gy2 = B[1]; gy2 < B[1] + B[3]; gy2 += 3.2) { const v = R(); ctx.fillStyle = v < 0.2 ? '#ffffff' : v < 0.6 ? '#b8bcc8' : '#8a8e9a'; ctx.fillRect(gx2 + 0.3, gy2 + 0.3, 2.6, 2.6); }
+  }
   if (P.fx === 'money') {
     ctx.strokeStyle = 'rgba(220,255,200,0.55)'; ctx.lineWidth = 0.7; rr(B[0] + 2, B[1] + 2, B[2] - 4, B[3] - 4, 3); ctx.stroke();
     ctx.strokeStyle = 'rgba(20,80,30,0.5)'; ctx.lineWidth = 0.5; for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.moveTo(B[0] + 3, B[1] + 4 + k * (B[3] - 8) / 4); ctx.lineTo(B[0] + 7, B[1] + 4 + k * (B[3] - 8) / 4); ctx.moveTo(B[0] + B[2] - 7, B[1] + 4 + k * (B[3] - 8) / 4); ctx.lineTo(B[0] + B[2] - 3, B[1] + 4 + k * (B[3] - 8) / 4); ctx.stroke(); }
@@ -4995,6 +5028,27 @@ function droneMoving(d, P, t, act) {
     if (ri >= 0 && P.fx !== 'chrome' && P.fx !== 'gold') { const sx = ((t * 34) % 80) - 40; if (Math.abs(sx) < B2[2] / 2 + 4) { ctx.save(); rr(B2[0], B2[1], B2[2], B2[3], 5); ctx.clip(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.45; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(sx - 2, B2[1]); ctx.lineTo(sx + 3, B2[1]); ctx.lineTo(sx - 1, B2[1] + B2[3]); ctx.lineTo(sx - 6, B2[1] + B2[3]); ctx.fill(); ctx.restore(); } }
     if (ri >= 1) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.4 + 0.35 * Math.sin(t * 4); ctx.lineWidth = 1.4; ctx.strokeStyle = P.accent; rr(B2[0] - 0.8, B2[1] - 0.8, B2[2] + 1.6, B2[3] + 1.6, 6); ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; }
     if (ri >= 2) { ctx.globalCompositeOperation = 'lighter'; for (let k = 0; k < 4; k++) { const a = t * 1.8 + k * 1.571; ctx.globalAlpha = 0.6 + 0.4 * Math.sin(t * 7 + k); star4(Math.cos(a) * (B2[2] * 0.75), cyB + Math.sin(a) * B2[3] * 0.8, 1.6, k % 2 ? '#ffffff' : P.accent); } ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; } }
+  if (P.fx === 'matrix') {   // green code raining down the body
+    ctx.save(); rr(B2[0], B2[1], B2[2], B2[3], 4); ctx.clip(); ctx.font = '900 4px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (let c = 0; c < 5; c++) { const x = B2[0] + 2.5 + c * (B2[2] - 5) / 4, off = (t * (8 + c * 3) + c * 7) % (B2[3] + 10); for (let r2 = 0; r2 < 4; r2++) { const y = B2[1] - 5 + off - r2 * 4; ctx.fillStyle = r2 ? 'rgba(58,255,106,' + (0.8 - r2 * 0.2) + ')' : '#d0ffd8'; ctx.fillText(((c * 7 + r2 * 3 + Math.floor(t * 6)) % 2) ? '1' : '0', x, y); } }
+    ctx.restore();
+  }
+  if (P.fx === 'disco') {   // coloured light spots spinning around it
+    ctx.globalCompositeOperation = 'lighter';
+    for (let k = 0; k < 5; k++) { const a = t * 1.6 + k * 1.257, x = Math.cos(a) * B2[2] * 0.8, y = cyB + Math.sin(a) * B2[3] * 0.7; ctx.globalAlpha = 0.55; ctx.drawImage(soft(['#ff4ad8', '#4ad0ff', '#ffe83a', '#5aff7a', '#ff6a3a'][k]), x - 5, y - 5, 10, 10); }
+    if (Math.sin(t * 9) > 0.6) { ctx.globalAlpha = 0.9; star4(B2[0] + B2[2] * 0.3, B2[1] + 2, 2, '#ffffff'); }
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  }
+  if (P.fx === 'aurora') {   // waving green/teal/pink bands across the body
+    ctx.save(); rr(B2[0], B2[1], B2[2], B2[3], 4); ctx.clip(); ctx.globalCompositeOperation = 'lighter';
+    for (let k = 0; k < 3; k++) { ctx.globalAlpha = 0.45; ctx.strokeStyle = ['#5affc8', '#ff7ad8', '#8ab0ff'][k]; ctx.lineWidth = 2.4; ctx.beginPath(); for (let x = B2[0]; x <= B2[0] + B2[2]; x += 2) { const y = B2[1] + 4 + k * 4 + Math.sin(x * 0.35 + t * (2 + k) + k) * 2; x === B2[0] ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } ctx.stroke(); }
+    ctx.restore(); ctx.globalAlpha = 1;
+  }
+  if (P.fx === 'sun') {   // turning sun rays + a hot glow
+    ctx.save(); ctx.translate(0, cyB); ctx.rotate(t * 0.8); ctx.globalCompositeOperation = 'lighter';
+    for (let k = 0; k < 10; k++) { ctx.rotate(0.628); ctx.globalAlpha = 0.35 + 0.15 * Math.sin(t * 4 + k); ctx.fillStyle = k % 2 ? '#ffe27a' : '#ffffff'; ctx.beginPath(); ctx.moveTo(-1.6, B2[2] * 0.55); ctx.lineTo(0, B2[2] * 0.95); ctx.lineTo(1.6, B2[2] * 0.55); ctx.closePath(); ctx.fill(); }
+    ctx.restore(); ctx.globalAlpha = 0.4; ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(soft('#ffb02a'), -B2[2], cyB - B2[2], B2[2] * 2, B2[2] * 2); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  }
   if (P.fx === 'money') {
     const a = t * 2.4, cx2 = Math.cos(a) * (B2[2] * 0.7), cy2 = cyB + Math.sin(a) * 4, sq = Math.abs(Math.cos(t * 6));
     ctx.save(); ctx.translate(cx2, cy2); ctx.scale(0.25 + sq * 0.75, 1); ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.arc(0, 0, 3, 0, 6.283); ctx.fill(); ctx.lineWidth = 0.6; ctx.strokeStyle = '#8a5a00'; ctx.stroke(); ctx.restore();
@@ -5130,7 +5184,7 @@ function drawDrone(d, x, y, o) {
   const P = dronePal(d), t = o.t !== undefined ? o.t : G.time, act = o.act || 0, sc = o.scale || 1;
   ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc); if (o.tilt) ctx.rotate(o.tilt);
   if (d.rank >= 5 || d.type === 'alien') { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25 + 0.12 * Math.sin(t * 3); ctx.drawImage(soft(d.type === 'alien' ? '#7dff3a' : RANK_COL[5]), -30, -26, 60, 52); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
-  const m = ctx.getTransform && ctx.getTransform(), res = m && m.a !== undefined ? Math.hypot(m.a, m.b) : K * DPR * sc;   // pixels per unit right now
+  const m = o.world ? null : ctx.getTransform && ctx.getTransform(), res = o.world ? K * DPR * sc : m && m.a !== undefined ? Math.hypot(m.a, m.b) : K * DPR * sc;   // world drones: we already know the size (getTransform is slow)   // pixels per unit right now
   if (P.fx === 'pixel') { ctx.imageSmoothingEnabled = false; ctx.drawImage(pixelSprite(d, P, t, act), -34, -36, 68, 62); ctx.imageSmoothingEnabled = true; }
   else if (P.fx === 'glitch') {
     const pix = false, r2 = Math.min(3, Math.max(1, Math.round(res * 2) / 2)), Wd = Math.ceil(68 * r2), Hd = Math.ceil(62 * r2);
@@ -5181,11 +5235,12 @@ function drawDroneWorld() {
       if (s.state === 'charge') { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = s.act; ctx.drawImage(soft(P.accent), x - 14, y - 2, 28, 28); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
       else if (s.ends) {
         ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
-        for (const e of s.ends) {
-          const sx = e.ox, sy = wy(e.oy), ex = sx + Math.cos(a) * e.len, ey = sy - Math.sin(a) * e.len, fl = 0.8 + Math.random() * 0.4;
-          for (const [w, al, c] of [[(10 + R * 5) * fl * HW, 0.25, P.accent], [(4 + R * 2) * fl * HW, 0.6, P.accent], [(1.5 + R * 0.6) * HW, 1, '#ffffff']]) { ctx.globalAlpha = al; ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke(); }
-          ctx.globalAlpha = 0.9; ctx.drawImage(soft(P.accent), ex - 14, ey - 14, 28, 28); ctx.drawImage(soft('#ffffff'), ex - 6, ey - 6, 12, 12);
-        }
+        // ONE big beam: as wide as all its hit lanes together (higher rank = wider), ends glow where each lane hits a rock
+        const E = s.ends, n = E.length, cx0 = E.reduce((q, e) => q + e.ox, 0) / n, cy0 = E.reduce((q, e) => q + e.oy, 0) / n, L = Math.max(...E.map(e => e.len));
+        const spread = (n - 1) * 44 * gsc(), sx = cx0, sy = wy(cy0), ex = sx + Math.cos(a) * L, ey = sy - Math.sin(a) * L, fl = 0.85 + Math.random() * 0.3;
+        for (const [w, al, c] of [[((10 + R * 5) * HW + spread * 1.1) * fl, 0.25, P.accent], [((4 + R * 2) * HW + spread * 0.8) * fl, 0.55, P.accent], [((1.5 + R * 0.6) * HW + spread * 0.35), 1, '#ffffff']]) { ctx.globalAlpha = al; ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke(); }
+        ctx.globalAlpha = 0.6; const gw = 30 + spread; ctx.drawImage(soft(P.accent), sx - gw / 2, sy - gw / 2, gw, gw);
+        for (const e of E) { const hx = e.ox + Math.cos(a) * e.len, hy = wy(e.oy) - Math.sin(a) * e.len; ctx.globalAlpha = 0.9; ctx.drawImage(soft(P.accent), hx - 14, hy - 14, 28, 28); ctx.drawImage(soft('#ffffff'), hx - 6, hy - 6, 12, 12); }
         ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
       }
     }
@@ -5433,7 +5488,7 @@ function renderDrones() {
   txt(DRONE_TYPES[d.type].rar, 545, y0 + 27, 13, RCOL[DRONE_TYPES[d.type].rar], { align: 'right', font: FB, weight: 900 });
   txt(DRONE_TYPES[d.type].desc, 222, y0 + 52, fitSize(DRONE_TYPES[d.type].desc, 12, 330, FB), '#c9cfdc', { align: 'left', font: FB, weight: 800 });
   const stats = d.type === 'laserdriller' ? 'Shoots every ' + droneCd(d).toFixed(2) + 's   45% chance to crack   aim turns slowly' : d.type === 'engineer' ? 'Drills every ' + droneCd(d).toFixed(1) + 's   Tech: 1 part every ' + Math.round(techTime(d)) + 's (in a slot)' : d.type === 'mothership' ? 'Every ' + Math.round(droneCd(d)) + 's: 5 minerals   Fleet: 3 ships, 15s, every ' + Math.round(MOTHER_FLEET_CD * lvlCd(d)) + 's' : d.type === 'alien' ? 'Every ' + Math.round(droneCd(d)) + 's   Takes up to: ' + (d.rank >= 5 ? 'any mineral' : 'the ' + (d.rank + 1) + ' cheapest of a biome')
-    : 'Every ' + droneCd(d).toFixed(1) + 's   ' + (d.type === 'heavylaser' ? 2 : RK.dmg[d.rank]) + ' crack' + (d.type === 'heavylaser' || RK.dmg[d.rank] > 1 ? 's' : '') + ' per hit   Speed x' + RK.spd[d.rank] + (d.type === 'laser' ? '   ' + laserLanes(d.rank).length + ' beam' + (laserLanes(d.rank).length > 1 ? 's' : '') : '');
+    : 'Every ' + droneCd(d).toFixed(1) + 's   ' + (d.type === 'heavylaser' ? 2 : RK.dmg[d.rank]) + ' crack' + (d.type === 'heavylaser' || RK.dmg[d.rank] > 1 ? 's' : '') + ' per hit   Speed x' + RK.spd[d.rank] + (d.type === 'laser' || d.type === 'heavylaser' ? '   beam ' + laserLanes(d.rank).length + ' rock' + (laserLanes(d.rank).length > 1 ? 's' : '') + ' wide' : '');
   txt(stats, 222, y0 + 74, fitSize(stats, 12, 330, FB), '#ffd84a', { align: 'left', font: FB, weight: 900 });
   if (dLvl(d) > 1 || modOf(d, 'cd') || modOf(d, 'spd') || modOf(d, 'crit')) txt('Bonus: -' + Math.round((1 - lvlCd(d)) * 100) + '% cooldown, +' + Math.round((lvlSpd(d) - 1) * 100) + '% speed, +' + Math.round(lvlCrit(d) * 100) + '% extra crack' + (aiRank(d) > d.rank ? ', smarter brain' : ''), 222, y0 + 152, fitSize('Level bonus: -00% cooldown, +00% speed, +00% extra crack, smarter brain', 11, 330, FB), '#ffe14a', { align: 'left', font: FB, weight: 900 });
   txt(['', 'Brain: picks random rocks', 'Brain: never goes to the same rock as another drone', 'Brain: finishes cracked rocks first, loves golden rocks + chests', 'Brain: picks the best nearby spot', 'Brain: picks the best spot on the whole wall'][aiRank(d)], 222, y0 + 94, 11, '#9ad8ff', { align: 'left', font: FB, weight: 800 });
