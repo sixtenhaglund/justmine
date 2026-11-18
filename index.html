@@ -2422,6 +2422,10 @@ function rockBody(r, bname) {
   }
   // Soft shadows: light from the top, a little darkness collecting at the bottom (his colours stay the same in the middle)
   if (sh === 2) { const ao = ctx.createLinearGradient(0, -s, 0, s); ao.addColorStop(0, 'rgba(255,255,255,0.12)'); ao.addColorStop(0.3, 'rgba(255,255,255,0)'); ao.addColorStop(0.7, 'rgba(0,0,0,0)'); ao.addColorStop(1, 'rgba(0,0,0,0.3)'); ctx.fillStyle = ao; ctx.fillRect(-s, -s, s * 2, s * 2); }
+  // bevel: bright top-left rim + dark bottom-right rim = looks carved out of stone; a soft gloss near the top
+  { const bv = ctx.createLinearGradient(-s, -s, s, s); bv.addColorStop(0, 'rgba(255,255,255,0.42)'); bv.addColorStop(0.45, 'rgba(255,255,255,0.04)'); bv.addColorStop(0.6, 'rgba(0,0,0,0.04)'); bv.addColorStop(1, 'rgba(0,0,0,0.38)');
+    ctx.lineWidth = 2.4; ctx.strokeStyle = bv; rr(-s + 1.5, -s + 1.5, s * 2 - 3, s * 2 - 3, 6); ctx.stroke();
+    const gl = ctx.createRadialGradient(-s * 0.35, -s * 0.5, 0, -s * 0.35, -s * 0.5, s * 0.7); gl.addColorStop(0, 'rgba(255,255,255,0.16)'); gl.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = gl; ctx.fillRect(-s, -s, s * 2, s * 2); }
   // speckles
   for (let k = 0; k < 6; k++) { ctx.fillStyle = rgba(R() < 0.5 ? darken(col, 0.4) : lighten(col, 0.3), 0.5); ctx.beginPath(); ctx.arc(-s + R() * s * 2, -s + R() * s * 2, 0.8 + R() * 2, 0, 6.283); ctx.fill(); }
   // cracks (his for his biomes, new sets for the new ones)
@@ -2761,7 +2765,7 @@ function drawGem(art, x, y, px, o) {
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = o.alpha === undefined ? 1 : o.alpha;
   }
-  const m = ctx.getTransform ? ctx.getTransform() : null, dev = m && m.a !== undefined ? Math.hypot(m.a, m.b) : DPR * 2;
+  const m = o.dev || !ctx.getTransform ? null : ctx.getTransform(), dev = o.dev || (m && m.a !== undefined ? Math.hypot(m.a, m.b) : DPR * 2);
   if (!o.tint && !o.nocache && px * dev < 400) {
     const S = Math.max(8, Math.ceil(px * 1.25 * dev / 4) * 4), key = art.name + '|' + (o.silhouette ? 1 : 0) + '|' + S;
     let c = gemCache.get(key);
@@ -3253,7 +3257,7 @@ function renderWorld(shx, shy) {
       ctx.save(); ctx.translate(x, y); ctx.rotate(G.time * 0.8 + r.seed); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.55 * fa * pop; ctx.drawImage(ra, -rs, -rs, rs * 2, rs * 2); ctx.rotate(-G.time * 1.9); ctx.globalAlpha = 0.3 * fa * pop; ctx.drawImage(ra, -rs * 0.7, -rs * 0.7, rs * 1.4, rs * 1.4); ctx.restore();
     }
     if (gx('shadows') && r.gemT < 2) { ctx.globalAlpha = 0.45 * pop; ctx.drawImage(soft('#000000'), r.x - 13 * gf, wy(r.y) + 7 * gf, 26 * gf, 8 * gf); ctx.globalAlpha = 1; }
-    drawGem(art, x, y, sz, { glow: RCOL[r.rarity], rank: rk, alpha, small: r.gemT < 2, rot: Math.sin(G.time * 2 + r.seed) * 0.08 });
+    drawGem(art, x, y, sz, { glow: RCOL[r.rarity], rank: rk, alpha, small: r.gemT < 2, rot: Math.sin(G.time * 2 + r.seed) * 0.08, dev: K * DPR });
     if (r.gemKey === 'Gold' || r.gemKey === 'Pure') {   // gold shine: rotating glints around it
       ctx.globalCompositeOperation = 'lighter';
       for (let k = 0; k < (r.gemKey === 'Pure' ? 5 : 3); k++) { const a2 = G.time * 2 + k * 2.1, tw = Math.max(0, Math.sin(G.time * 6 + k * 1.7)); ctx.globalAlpha = alpha * tw; star4(x + Math.cos(a2) * sz * 0.6, y + Math.sin(a2) * sz * 0.6, 2 + tw * 3, '#fff6c0'); }
@@ -3271,7 +3275,7 @@ function renderWorld(shx, shy) {
   drawDroneWorld();
   drawLanterns();
   if (G.mega) drawMega(G.mega, b.name);
-  for (const d of G.drops) drawGem(gemArt(b.name, d.i), d.x, wy(d.y), 22 * vsc(), { glow: RCOL[b.minerals[d.i][2]], rank: 3, rot: Math.sin(G.time * 3 + d.ph) * 0.3 });
+  for (const d of G.drops) drawGem(gemArt(b.name, d.i), d.x, wy(d.y), 22 * vsc(), { dev: K * DPR, glow: RCOL[b.minerals[d.i][2]], rank: 3, rot: Math.sin(G.time * 3 + d.ph) * 0.3 });
   // meteors
   for (const m of G.meteors) {
     const t = m.t / m.dur, x = m.sx + (m.target.x - m.sx) * t, y = m.sy + (m.target.y - m.sy) * t;
