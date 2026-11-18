@@ -1756,9 +1756,8 @@ function setGfx(key, v) {
   else if (key in GFX_PRESETS[0]) GFX.preset = 4;   // you changed one thing yourself: now it's Custom
   QUALITY.drop = 0; QUALITY.show = !!GFX.fps;
   if (key === 'musicVol') AUDIO.applyVolume();
-  if (key === 'hud') resize();
   try { localStorage.setItem(GFX_KEY, JSON.stringify(GFX)); } catch (e) {}
-  resize();
+  QUALITY.needResize = true;   // resized at the start of the next frame (no blank flash)
 }
 // quality: if the game keeps running slow, Auto quality "drops" 1 or 2 steps and turns the heavy stuff down
 const QUALITY = { drop: 0, show: !!GFX.fps, fps: 60, ms: 16, slowT: 0, fastT: 0 };
@@ -6422,6 +6421,7 @@ function frame(t) {
   const fm = FPS_MAX[GFX.fpsMax === undefined ? 6 : GFX.fpsMax], cap = fm ? 1000 / fm : 0;
   if (cap && t < lastDraw + cap - 1) return;
   const ddt = Math.min(0.25, (t - lastDraw) / 1000); lastDraw = cap ? Math.max(lastDraw + cap, t - cap) : t;   // keeps an even pace (e.g. exactly 60 on a 144 Hz screen)
+  if (QUALITY.needResize) { QUALITY.needResize = false; resize(); }   // resize BEFORE drawing, so the new frame is complete
   const r0 = performance.now(); render(); const rms = performance.now() - r0;
   watchQuality(ddt, rms);
   if (QUALITY.show) drawFps(rms);
@@ -6430,11 +6430,12 @@ function frame(t) {
 function watchQuality(dt, rms) {
   if (dt <= 0) return;
   QUALITY.ms = QUALITY.ms * 0.95 + dt * 1000 * 0.05; QUALITY.fps = 1000 / QUALITY.ms; QUALITY.rms = (QUALITY.rms || rms) * 0.95 + rms * 0.05;
-  if (!GFX.auto) { if (QUALITY.drop) { QUALITY.drop = 0; resize(); } return; }
-  if (G.scene !== 'play' || G.menu === 'settings') return;
+  // (changing the canvas size wipes it: doing that in the middle of a frame showed a blank 'flash'. Now it waits for the next frame.)
+  if (!GFX.auto) { if (QUALITY.drop) { QUALITY.drop = 0; QUALITY.needResize = true; } return; }
+  if (G.scene !== 'play' || G.menu) { QUALITY.slowT = 0; QUALITY.fastT = 0; return; }   // never change quality while a menu is open
   const goal = FPS_MAX[GFX.fpsMax] === 30 ? 1000 / 30 : 1000 / 60;   // the frame time we are aiming for
-  if (QUALITY.drop < 2 && QUALITY.ms > goal * 1.6) { if ((QUALITY.slowT += dt) > 3) { QUALITY.drop++; QUALITY.slowT = 0; resize(); toast('Auto quality: graphics turned down a bit', '#9aa0aa'); } } else QUALITY.slowT = 0;
-  if (QUALITY.drop > 0 && QUALITY.ms < goal * 0.8) { if ((QUALITY.fastT += dt) > 20) { QUALITY.drop--; QUALITY.fastT = 0; resize(); } } else QUALITY.fastT = 0;
+  if (QUALITY.drop < 2 && QUALITY.ms > goal * 1.6) { if ((QUALITY.slowT += dt) > 4) { QUALITY.drop++; QUALITY.slowT = 0; QUALITY.fastT = -40; QUALITY.needResize = true; toast('Auto quality: graphics turned down a bit', '#9aa0aa'); } } else QUALITY.slowT = 0;
+  if (QUALITY.drop > 0 && QUALITY.ms < goal * 0.8) { if ((QUALITY.fastT += dt) > 30) { QUALITY.drop--; QUALITY.fastT = 0; QUALITY.needResize = true; } } else QUALITY.fastT = Math.min(0, QUALITY.fastT);
 }
 function drawFps(rms) {
   setScreen();
