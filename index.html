@@ -908,7 +908,8 @@ function drawBlackHoles(shx, shy) {   // part 2: the black core, the photon ring
   }
   ctx.globalAlpha = 1;
 }
-function bombRadius(bo) { return 0.42 * bombArt(bo).size * 1.15 * bo.size / 100 * (1 + 0.15 * G.radiusLevel) * gsc(); }
+const BOMB_NERF = 0.88;   // 2026-11-18: bombs a bit weaker (Sixten)
+function bombRadius(bo) { return BOMB_NERF * 0.42 * bombArt(bo).size * 1.15 * bo.size / 100 * (1 + 0.15 * G.radiusLevel) * gsc(); }
 function bombTouches(bo, rock) {
   const rad = bombRadius(bo);
   const half = 25.6 * gsc(), dx = Math.max(Math.abs(bo.x - rock.x) - half, 0), dy = Math.max(Math.abs(bo.y - rock.y) - half, 0);
@@ -1686,6 +1687,7 @@ const GFX_ROWS = [
   ['fpsMax', 'Max FPS', ['30', '60', '90', '120', '144', '240', 'Uncapped']],
   ['auto', 'Auto quality', ['Off', 'On']],
   ['fps', 'Show FPS', ['Off', 'On']],
+  ['hud', 'UI size', ['Auto', 'Tiny', 'Small', 'Normal', 'Big', 'Huge']],
   ['ui', 'Menu size', ['Auto', 'Small', 'Normal', 'Big']],
   ['musicVol', 'Music volume', ['Quiet', 'Medium', 'Loud']],
   ['floats', 'Floating numbers', ['Off', 'On']],
@@ -1701,7 +1703,7 @@ const GFX_PRESETS = [   // Low, Medium, High, Ultra
   { res: 4, light: 2, bloom: 2, shadows: 2, bg: 2, parts: 3, amb: 2, grade: 1, grain: 1, trail: 1 },
 ];
 const GFX_KEY = 'justmine.gfx.v1';
-function gfxDefaults() { const p = TOUCH ? 1 : 2; return Object.assign({ preset: p, shake: 2, fpsMax: 6, auto: 1, fps: 0, ui: 0, musicVol: 2, floats: 1, gemNames: 1, pickSize: 1, splash: 1 }, GFX_PRESETS[p]); }
+function gfxDefaults() { const p = TOUCH ? 1 : 2; return Object.assign({ preset: p, shake: 2, fpsMax: 6, hud: 0, auto: 1, fps: 0, ui: 0, musicVol: 2, floats: 1, gemNames: 1, pickSize: 1, splash: 1 }, GFX_PRESETS[p]); }
 const GFX = gfxDefaults();
 try { const s = JSON.parse(localStorage.getItem(GFX_KEY) || 'null'); if (s) for (const [k, , opts] of GFX_ROWS) if (typeof s[k] === 'number' && s[k] >= 0 && s[k] < opts.length) GFX[k] = s[k] | 0; if (s && s.fpsMax === undefined && (s.fpsCap === 0 || s.fpsCap === 1)) GFX.fpsMax = s.fpsCap; } catch (e) {}   // the old 30/60 limit carries over
 function setGfx(key, v) {
@@ -1710,6 +1712,7 @@ function setGfx(key, v) {
   else if (key in GFX_PRESETS[0]) GFX.preset = 4;   // you changed one thing yourself: now it's Custom
   QUALITY.drop = 0; QUALITY.show = !!GFX.fps;
   if (key === 'musicVol') AUDIO.applyVolume();
+  if (key === 'hud') resize();
   try { localStorage.setItem(GFX_KEY, JSON.stringify(GFX)); } catch (e) {}
   resize();
 }
@@ -1763,6 +1766,15 @@ function soft(col) {
   }
   return c;
 }
+// UI SIZE: every button/bar of the HUD is drawn bigger or smaller as one layer.
+// Auto: phones get smaller buttons (they were huge), big monitors get bigger ones (they were tiny).
+let HUDS = 1, HUD_ON = false;
+function hudScale() {
+  if (GFX.hud > 0) return [1, 0.65, 0.8, 1, 1.2, 1.45][GFX.hud];
+  const phone = TOUCH || G.touch || Math.min(W, H) < 520;
+  if (phone) return W > H ? clamp(H / 560, 0.6, 1) : clamp(W / 520, 0.62, 1);
+  return clamp(Math.min(W / 1280, H / 720), 1, 1.8);
+}
 function resize() {
   // DPR = how many real screen pixels we draw per CSS pixel. Fewer = blurrier but much faster.
   const dev = window.devicePixelRatio || 1;
@@ -1770,15 +1782,16 @@ function resize() {
   W = window.innerWidth; H = window.innerHeight;
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
   cv.style.width = W + 'px'; cv.style.height = H + 'px';   // phones: 100vh can be taller than the real screen
-  K = Math.min((W - 24) / 470, (H - TOP - BOT - 10) / 262);
+  HUDS = hudScale();
+  K = Math.min((W - 24) / 470, (H - (TOP + BOT) * HUDS - 10) / 262);
   K = Math.max(0.5, K);
-  CX = W / 2; CY = TOP + (H - TOP - BOT) / 2;
+  CX = W / 2; CY = TOP * HUDS + (H - (TOP + BOT) * HUDS) / 2;
   bgKey = '';
 }
 // world: Scratch coordinates (y up). Grid centre (0,32) sits in the middle of the play area.
 const toScreen = (x, y) => ({ x: CX + x * K, y: CY - (y - 32) * K });
 const toWorld = (sx, sy) => ({ x: (sx - CX) / K, y: 32 - (sy - CY) / K });
-function setScreen() { ctx.setTransform(DPR, 0, 0, DPR, 0, 0); UI.frame = { x: 0, y: 0, s: 1 }; }
+function setScreen() { const sc = HUD_ON ? HUDS : 1; ctx.setTransform(DPR * sc, 0, 0, DPR * sc, 0, 0); UI.frame = { x: 0, y: 0, s: sc }; }
 function setWorld(shx, shy) { ctx.setTransform(DPR * K, 0, 0, DPR * K, DPR * (CX + shx), DPR * (CY + shy)); }   // world units, y DOWN, origin = (0,32)
 const wy = y => -(y - 32);
 
@@ -3255,7 +3268,11 @@ function renderWorld(shx, shy) {
 }
 
 // ---------------- HUD + dock ----------------
-function renderHUD() {
+function renderHUD() {   // draws the HUD in a scaled space: W and H are "HUD units" while it runs
+  const W0 = W, H0 = H; HUD_ON = true; W = W0 / HUDS; H = H0 / HUDS;
+  try { renderHUD0(); } finally { W = W0; H = H0; HUD_ON = false; setScreen(); }
+}
+function renderHUD0() {
   setScreen();
   const b = BIOMES[G.biome];
   // top + bottom shading strips
@@ -3466,7 +3483,7 @@ const SET_TABS = [
   ['Effects', 'Particles, weather and screen effects', ['parts', 'amb', 'grade', 'grain', 'trail', 'shake']],
   ['Speed', 'Make the game run smoother', ['fpsMax', 'auto', 'fps']],
   ['Sound', 'Volume and music', ['vol', 'music', 'musicVol']],
-  ['Game', 'Menus, text and the pickaxe', ['ui', 'floats', 'gemNames', 'pickSize', 'splash']],
+  ['Game', 'Buttons, menus, text and the pickaxe', ['hud', 'ui', 'floats', 'gemNames', 'pickSize', 'splash']],
 ];
 function renderSettings() {
   const w = 600, h = 500;
@@ -5343,7 +5360,7 @@ function renderDroneFx() {
 // the big PASS button on the left side (or a smaller one under the quest chip when there's no room)
 function renderPassButton() {
   const P = G.pass; if (!P) return;
-  const gridLeft = toScreen(-236, 0).x, room = gridLeft - 12, open = () => { AUDIO.sfx('click'); G.passPage = Math.min(4, Math.floor(P.lvl / 10)); openMenu('pass'); };
+  const gridLeft = toScreen(-236, 0).x / HUDS, room = gridLeft - 12, open = () => { AUDIO.sfx('click'); G.passPage = Math.min(4, Math.floor(P.lvl / 10)); openMenu('pass'); };
   if (room >= 70) {
     const SL = sideLayout(room), w = SL.w, h = SL.ph, x = 10, y = SL.py, hot = UI.hot === 'passbig', u = h / 150;   // u = how much bigger than the old 150 px button
     region('passbig', x, y, w, h, open);
@@ -5368,7 +5385,22 @@ function renderPassButton() {
   }
 }
 function renderDroneColumn() {
-  const gridRight = toScreen(236, 0).x, room = W - gridRight - 12, open = (id) => { AUDIO.sfx('click'); G.droneTab = 0; G.mergeSel = null; if (id) G.droneSel = id; openMenu('drones'); };
+  const gridRight = toScreen(236, 0).x / HUDS, room = W - gridRight - 12, open = (id) => { AUDIO.sfx('click'); G.droneTab = 0; G.mergeSel = null; if (id) G.droneSel = id; openMenu('drones'); };
+  if (room < 70 && H > W * 1.25) {   // tall phone: slots in the empty space under the wall
+    const gb = toScreen(0, -112).y / HUDS + 18, cols = 5, size = Math.min(64, (W - 24 - (cols - 1) * 8) / cols), sx0 = (W - (cols * size + (cols - 1) * 8)) / 2;
+    txt('DRONES  ' + droneSlotsUsed() + ' / ' + G.slotsOpen + '   (tap to manage)', W / 2, gb + 2, 13, '#9ad8ff', { font: FB, weight: 900 });
+    for (let k = 0; k < 10; k++) {
+      const sx = sx0 + (k % cols) * (size + 8), y = gb + 14 + Math.floor(k / cols) * (size + 8), id = 'dslotrow' + k;
+      if (k >= G.slotsOpen) { ctx.fillStyle = 'rgba(0,0,0,0.5)'; rr(sx, y, size, size, 9); ctx.fill(); txt('R' + (k - 2), sx + size / 2, y + size / 2 + 1, 11, '#5a6070', { font: FB, weight: 900, shadow: false }); region(id, sx, y, size, size, () => open()); continue; }
+      const d = G.slots[k] && droneById(G.slots[k]);
+      region(id, sx, y, size, size, () => open(d && d.id));
+      ctx.fillStyle = UI.hot === id ? 'rgba(255,255,255,0.18)' : 'rgba(10,14,22,0.75)'; rr(sx, y, size, size, 9); ctx.fill();
+      ctx.lineWidth = 1.4; ctx.strokeStyle = d ? rgba(RCOL[DRONE_TYPES[d.type].rar], 0.85) : 'rgba(255,255,255,0.18)'; ctx.stroke();
+      if (d) { const pic = hudPic('slot' + d.type + (d.skin || '') + (d.hat || '') + d.rank, Math.round(size), Math.round(size), () => drawDrone(d, 0, size * 0.04, { scale: size / 34, t: 1, box: [-size / 2, -size / 2, size, size] })); ctx.drawImage(pic, sx, y, size, size); rankBadge(d, sx + size - 1, y + 1, 0.75); }
+      else txt('+', sx + size / 2, y + size / 2 + 1, size * 0.45, 'rgba(255,255,255,0.3)', { shadow: false });
+    }
+    return;
+  }
   if (room < 70) {   // no room at the side (phones): a compact button under the next-biome chip
     const w = 150, x = W - 12 - w, y = 88, h = 38;
     region('dronebig', x, y, w, h, () => open());
@@ -5632,7 +5664,7 @@ function attention(x, y, w, h, col) {
 }
 const wiggle = () => { const ph = G.time % 3; return ph < 0.5 ? Math.sin(ph * 40) * 0.06 * (1 - ph * 2) : 0; };
 // side buttons grow on big screens (they looked tiny next to the huge rocks on 1920x1080)
-const HS = () => clamp(Math.min(W / 1280, H / 680), 1, 1.9);
+const HS = () => 1;
 function sideLayout(room) {
   const w = Math.min(118 * HS(), room - 6), gap = 10 * HS(); let ph = Math.round(w * 1.9), wh = Math.round(w * 0.95);
   const top = TOP + 6, bottom = H - 100, need = ph + gap + wh;
@@ -5641,7 +5673,7 @@ function sideLayout(room) {
   return { w, ph, wh, py, wy: py + ph + gap };
 }
 function renderWheelButton() {
-  const gridLeft = toScreen(-236, 0).x, room = gridLeft - 12, n = G.spins || 0, open = () => { AUDIO.sfx('click'); openMenu('wheel'); };
+  const gridLeft = toScreen(-236, 0).x / HUDS, room = gridLeft - 12, n = G.spins || 0, open = () => { AUDIO.sfx('click'); openMenu('wheel'); };
   let x, y, w, h;
   if (room >= 70) { const SL = sideLayout(room); w = SL.w; h = SL.wh; x = 10; y = SL.wy; }
   else { x = 12; y = 140; w = 164; h = 44; }
