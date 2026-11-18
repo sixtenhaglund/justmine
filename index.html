@@ -421,7 +421,7 @@ function save() {
       found: G.found, ach: G.ach, reachedNames: BIOMES.filter((b, i) => G.reached & (1 << i)).map(b => b.name), visitedNames: BIOMES.filter((b, i) => G.visited & (1 << i)).map(b => b.name), stats: G.stats,
       heartHP: G.heartHP, won: G.won, settings: G.settings, quests: G.quests, questsDone: G.questsDone, boostT: G.boostT, rate: G.rate || 0, savedAt: Date.now(),
       owner: G.owner || null,
-      drones: G.drones, slots: G.slots, slotsOpen: G.slotsOpen, skins: G.skins, hats: G.hats, crates: G.crates, pass: G.pass, codes: G.codes, nextId: G.nextId, spins: G.spins || 0,
+      drones: G.drones, slots: G.slots, slotsOpen: G.slotsOpen, skins: G.skins, hats: G.hats, crates: G.crates, pass: G.pass, codes: G.codes, nextId: G.nextId, spins: G.spins || 0, tech: G.tech || 0, dseen: G.dseen || {},
     }));
   } catch (e) {}
 }
@@ -477,10 +477,12 @@ function loadSave() {
 }
 function loadDrones(s) {
   const okType = t => !!DRONE_TYPES[t];
-  G.drones = Array.isArray(s.drones) ? s.drones.filter(d => d && okType(d.type)).map(d => ({ id: d.id | 0, type: d.type, rank: clamp(d.rank | 0, 1, 5), skin: SKINS[d.skin] ? d.skin : null, hat: HATS[d.hat] ? d.hat : null, lvl: clamp(d.lvl | 0 || 1, 1, DRONE_MAX_LVL), xp: num(+d.xp, 0) })) : [];
+  G.drones = Array.isArray(s.drones) ? s.drones.filter(d => d && okType(d.type)).map(d => ({ id: d.id | 0, type: d.type, rank: clamp(d.rank | 0, 1, 5), skin: SKINS[d.skin] ? d.skin : null, hat: HATS[d.hat] ? d.hat : null, lvl: clamp(d.lvl | 0 || 1, 1, DRONE_MAX_LVL), xp: num(+d.xp, 0), mods: cleanMods(d.mods) })) : [];
   G.drones.forEach(d => { if (d.type === 'mothership') d.hat = null; });   // the mothership can't wear cosmetics
   G.nextId = Math.max(s.nextId | 0, 1, ...G.drones.map(d => d.id + 1));
-  G.slotsOpen = clamp(s.slotsOpen | 0 || 3, 3, 10);
+  { const had = clamp(s.slotsOpen | 0 || 3, 3, 10), now = slotsFor();   // slots you BOUGHT before this change: the Creditz come back
+    if (had > now) { let back = 0; for (let k = now; k < had; k++) back += SLOT_PRICES[k] || 0; if (back > 0) { G.creditz += back; G.slotRefund = back; } }
+    G.slotsOpen = now; }
   G.slots = Array.from({ length: 10 }, (_, k) => Array.isArray(s.slots) && G.drones.some(d => d.id === s.slots[k]) ? s.slots[k] : null);
   const counts = (o, ok) => { const r = {}; if (o && typeof o === 'object') for (const k in o) if (ok(k)) r[k] = clamp(o[k] | 0, 0, 999); return r; };
   G.skins = counts(s.skins, k => !!SKINS[k]); G.hats = counts(s.hats, k => !!HATS[k]); G.crates = counts(s.crates, k => !!CRATES[k]);
@@ -490,6 +492,8 @@ function loadDrones(s) {
   G.codes = Array.isArray(s.codes) ? s.codes.filter(c => typeof c === 'string').slice(0, 20) : [];
   keepCodeSkins();
   G.spins = clamp(s.spins | 0, 0, 999);
+  G.tech = clamp(num(+s.tech, 0), 0, 1e6);
+  G.dseen = {}; if (s.dseen && typeof s.dseen === 'object') for (const k in s.dseen) if (DRONE_TYPES[k]) G.dseen[k] = 1; for (const d of G.drones) G.dseen[d.type] = 1;
 }
 function hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } }
 function wipeSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
@@ -857,7 +861,7 @@ function bhState(bo) {
 }
 function bhDisk(bx, by, H2, from, to) {   // the accretion disk: hot gas spinning around the hole, white-hot inside, orange outside
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
-  const cols = ['#ffffff', '#ffe6a8', '#ffb347', '#ff6a1a', '#a02a0a'];
+  const cols = ['#ffffff', '#e8d4ff', '#b678ff', '#7a2aff', '#2a0a5a'];   // purple + black (Sixten)
   for (let k = 0; k < 5; k++) {
     const r = H2.eh * 1.25 + (H2.dr - H2.eh * 1.25) * (k / 4);
     if (r <= 0) continue;
@@ -876,12 +880,12 @@ function drawBlackHoles(shx, shy) {   // part 2: the black core, the photon ring
     ctx.globalAlpha = 1; ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.arc(bx, by, eh, 0, 6.283); ctx.fill();
     ctx.globalCompositeOperation = 'lighter';
     // light bent OVER the top and UNDER the bottom of the hole (gravity bends the back of the disk into view)
-    ctx.globalAlpha = 0.9 * fade; ctx.lineWidth = Math.max(1.5, eh * 0.22); ctx.strokeStyle = '#ffb347';
+    ctx.globalAlpha = 0.9 * fade; ctx.lineWidth = Math.max(1.5, eh * 0.22); ctx.strokeStyle = '#b678ff';
     ctx.beginPath(); ctx.ellipse(bx, by - eh * 0.12, eh * 1.42, eh * 1.3, -0.18, Math.PI * 1.03, Math.PI * 1.97); ctx.stroke();
-    ctx.globalAlpha = 0.55 * fade; ctx.lineWidth = Math.max(1, eh * 0.12); ctx.strokeStyle = '#ffe6a8';
+    ctx.globalAlpha = 0.55 * fade; ctx.lineWidth = Math.max(1, eh * 0.12); ctx.strokeStyle = '#e0c8ff';
     ctx.beginPath(); ctx.ellipse(bx, by + eh * 0.08, eh * 1.25, eh * 1.15, -0.18, Math.PI * 0.05, Math.PI * 0.95); ctx.stroke();
     // photon ring: a razor-thin bright circle right at the edge
-    ctx.globalAlpha = 0.95 * fade; ctx.lineWidth = Math.max(1, eh * 0.07); ctx.strokeStyle = '#fff4dc'; ctx.beginPath(); ctx.arc(bx, by, eh * 1.06, 0, 6.283); ctx.stroke();
+    ctx.globalAlpha = 0.95 * fade; ctx.lineWidth = Math.max(1, eh * 0.07); ctx.strokeStyle = '#f4e8ff'; ctx.beginPath(); ctx.arc(bx, by, eh * 1.06, 0, 6.283); ctx.stroke();
     ctx.globalCompositeOperation = 'source-over';
     bhDisk(bx, by, H2, 0, Math.PI);   // the front of the disk crosses in front of the hole
     // the end: everything collapses into one white-hot point
@@ -1181,6 +1185,7 @@ function tick() {
     }
     for (const bo of G.bombs) if (bo.speed < 0 && bombTier(bo.level).name === 'black') {   // the implosion's final pop
       const R = bombRadius(bo);
+      AUDIO.sfx('bhpop');
       G.lights.push({ x: bo.x, y: bo.y, r: R * 2.2 + 40, col: '#e0c8ff', life: 0.5, max: 0.5 }); sparkle(bo.x, bo.y, '#e0c8ff', 16); G.shake = Math.max(G.shake, 10);
       G.rings.push({ x: bo.x, y: bo.y, t: 0, r: R * 1.9, col: '#ffffff' }, { x: bo.x, y: bo.y, t: -0.08, r: R * 1.5, col: '#b678ff' });
       for (let i = 0; i < 26; i++) { const a = i / 26 * 6.283, v = (5 + Math.random() * 5) * vsc(); G.parts.push({ kind: 'spark', x: bo.x, y: bo.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 18 + rnd(0, 10), max: 28, col: i % 2 ? '#ffffff' : '#c890ff', s: 2 }); }
@@ -1349,6 +1354,9 @@ function tryRebirth() {
     G.boostT = (G.boostT || 0) + 300;
     toast('Rebirth gifts: ' + CRATES[ck].name + ', ' + (2 + Math.floor(n / 3)) + ' wheel spins' + (n % 3 === 0 ? ', a Rare Skin Crate' : '') + ' + x2 Creditz for 5 min', '#ffd84a'); } toast('Rebirth: +' + Math.round(rxp * xpMult()) + ' Alien Pass XP', '#7dff3a');
   resetRun();
+  G.slots = G.slots.map(() => null); DRT.clear(); G.minis = [];   // rebirth: all drones are taken out of their slots
+  G.slotsOpen = slotsFor();
+  if (G.slotsOpen <= 10 && 3 + rebirthsDone() <= 10) toast('Drone slot ' + G.slotsOpen + ' unlocked! Put your drones back in their slots', '#9ad8ff');
   const unlocked = PERKS.find(p => p[0] === rebirthsDone());
   loadBiome(0, true); fixQuests();
   G.tpName = 'REBIRTH ' + rebirthsDone();
@@ -1524,7 +1532,7 @@ const AUDIO = (() => {
         pop('pop2', 1 + x * 0.1, 0.5);
         break;
       }
-      case 'bomb': if (x === 'blue' || x === 'white' || x === 'black') { sfx(x === 'black' ? 'implode' : x === 'blue' ? 'bombBlue' : 'bombWhite'); break; } noise(t, 1.1 + x * 0.15, 0.9, o, { f: 3000, fTo: 80 }); note(80, t, 0.9, 'sine', 0.8, o, { slide: 28 }); noise(t, 0.08, 0.6, o, { type: 'highpass', f: 2500 }); break;
+      case 'bomb': if (x === 'blue' || x === 'white' || x === 'black') { sfx(x === 'black' ? 'bhole' : x === 'blue' ? 'bombBlue' : 'bombWhite'); break; } noise(t, 1.1 + x * 0.15, 0.9, o, { f: 3000, fTo: 80 }); note(80, t, 0.9, 'sine', 0.8, o, { slide: 28 }); noise(t, 0.08, 0.6, o, { type: 'highpass', f: 2500 }); break;
       case 'impact': noise(t, 0.6, 0.6, o, { f: 2000, fTo: 90 }); note(70, t, 0.5, 'sine', 0.6, o, { slide: 30 }); break;
       case 'whistle': note(1800, t, 0.7, 'sine', 0.05, o, { slide: 500 }); break;
       case 'alarm': for (let k = 0; k < 3; k++) note(660, t + k * 0.22, 0.16, 'square', 0.08, o, { lp: 2000 }); break;
@@ -1537,6 +1545,8 @@ const AUDIO = (() => {
       case 'ach': for (const [k, d] of [[72, 0], [76, 0.1], [79, 0.2], [84, 0.32]]) note(mtof(k), t + d, 0.4, 'square', 0.07, o, { lp: 3000 }); break;
       case 'bombBlue': noise(t, 0.9, 0.7, o, { f: 5000, fTo: 200 }); note(110, t, 0.7, 'sine', 0.7, o, { slide: 35 }); for (let k = 0; k < 6; k++) noise(t + 0.05 + k * 0.06, 0.06, 0.25, o, { type: 'bandpass', f: 3000 + k * 400, q: 3 }); break;
       case 'bombWhite': noise(t, 1.2, 0.8, o, { type: 'highpass', f: 1200, fTo: 400 }); note(70, t, 1, 'sine', 0.8, o, { slide: 28 }); for (const k of [0, 7, 12, 19]) note(mtof(84 + k), t + 0.02, 1.2, 'sine', 0.06, o, { att: 0.01 }); break;
+      case 'bhole': note(58, t, 1.1, 'sine', 1, o, { slide: 26 }); note(116, t, 1, 'sawtooth', 0.06, o, { slide: 34, lp: 380 }); noise(t, 0.9, 0.55, o, { type: 'bandpass', f: 3500, fTo: 120, q: 3 }); note(900, t + 0.05, 0.7, 'sine', 0.05, o, { slide: 90 }); break;
+      case 'bhpop': note(44, t, 1, 'sine', 1, o, { slide: 18 }); noise(t, 0.7, 0.8, o, { f: 900, fTo: 50 }); note(1400, t, 0.3, 'triangle', 0.09, o, { slide: 260 }); break;
       case 'implode': noise(t, 0.7, 0.5, o, { type: 'bandpass', f: 200, fTo: 3000, q: 2 }); note(900, t, 0.7, 'sawtooth', 0.08, o, { slide: 60, lp: 2000 }); note(48, t + 0.68, 1.2, 'sine', 1, o, { slide: 22 }); noise(t + 0.68, 0.5, 0.6, o, { f: 400, fTo: 60 }); break;
       case 'clank': note(1700, t, 0.12, 'square', 0.06, o, { lp: 5000 }); note(2500, t, 0.18, 'sine', 0.08, o); noise(t, 0.05, 0.2, o, { type: 'highpass', f: 4000 }); break;
       case 'quest': for (const [k, d] of [[67, 0], [72, 0.08], [76, 0.16], [79, 0.24], [84, 0.34]]) note(mtof(k), t + d, 0.35, 'triangle', 0.12, o); break;
@@ -1584,6 +1594,7 @@ let ctx = cv.getContext('2d');   // "let" so sprites can be drawn with the same 
 // Every option is just a number: which button in its row is picked. A preset fills in all of them at once.
 // TOUCH = a phone or tablet (a "coarse pointer" is a finger instead of a mouse)
 const TOUCH = !!((window.matchMedia && matchMedia('(pointer: coarse)').matches) || ('ontouchstart' in window));
+const FPS_MAX = [30, 60, 90, 120, 144, 240, 0];   // 0 = uncapped
 const GFX_ROWS = [
   ['preset', 'Preset', ['Low', 'Medium', 'High', 'Ultra', 'Custom']],
   ['res', 'Resolution', ['50%', '75%', '100%', 'Sharp', 'Max']],
@@ -1597,7 +1608,7 @@ const GFX_ROWS = [
   ['grain', 'Film grain', ['Off', 'On']],
   ['trail', 'Pickaxe FX', ['Off', 'On']],
   ['shake', 'Screen shake', ['Off', 'Low', 'Full']],
-  ['fpsCap', 'FPS limit', ['30', '60', 'None']],
+  ['fpsMax', 'Max FPS', ['30', '60', '90', '120', '144', '240', 'Uncapped']],
   ['auto', 'Auto quality', ['Off', 'On']],
   ['fps', 'Show FPS', ['Off', 'On']],
   ['ui', 'Menu size', ['Auto', 'Small', 'Normal', 'Big']],
@@ -1615,9 +1626,9 @@ const GFX_PRESETS = [   // Low, Medium, High, Ultra
   { res: 4, light: 2, bloom: 2, shadows: 2, bg: 2, parts: 3, amb: 2, grade: 1, grain: 1, trail: 1 },
 ];
 const GFX_KEY = 'justmine.gfx.v1';
-function gfxDefaults() { const p = TOUCH ? 1 : 2; return Object.assign({ preset: p, shake: 2, fpsCap: 2, auto: 1, fps: 0, ui: 0, musicVol: 2, floats: 1, gemNames: 1, pickSize: 1, splash: 1 }, GFX_PRESETS[p]); }
+function gfxDefaults() { const p = TOUCH ? 1 : 2; return Object.assign({ preset: p, shake: 2, fpsMax: 6, auto: 1, fps: 0, ui: 0, musicVol: 2, floats: 1, gemNames: 1, pickSize: 1, splash: 1 }, GFX_PRESETS[p]); }
 const GFX = gfxDefaults();
-try { const s = JSON.parse(localStorage.getItem(GFX_KEY) || 'null'); if (s) for (const [k, , opts] of GFX_ROWS) if (typeof s[k] === 'number' && s[k] >= 0 && s[k] < opts.length) GFX[k] = s[k] | 0; } catch (e) {}
+try { const s = JSON.parse(localStorage.getItem(GFX_KEY) || 'null'); if (s) for (const [k, , opts] of GFX_ROWS) if (typeof s[k] === 'number' && s[k] >= 0 && s[k] < opts.length) GFX[k] = s[k] | 0; if (s && s.fpsMax === undefined && (s.fpsCap === 0 || s.fpsCap === 1)) GFX.fpsMax = s.fpsCap; } catch (e) {}   // the old 30/60 limit carries over
 function setGfx(key, v) {
   GFX[key] = v;
   if (key === 'preset') { if (v < 4) Object.assign(GFX, GFX_PRESETS[v]); }
@@ -3092,7 +3103,7 @@ function renderWorld(shx, shy) {
       ctx.globalCompositeOperation = 'lighter';
       for (let k = 0; k < 20; k++) {   // streaks of light curling in
         const f = ((H2.T * 1.5 + k / 20 * 1.7) % 1), r0 = R * 1.6 * (1 - f) + H2.eh, ang = k * 2.39 + H2.T * 5 + f * 3.4;
-        ctx.globalAlpha = Math.sin(f * Math.PI) * 0.7 * H2.born * (1 - H2.dying); ctx.strokeStyle = k % 3 ? '#ffd9a0' : '#ffffff'; ctx.lineWidth = (0.8 + 1.4 * f) * vsc();
+        ctx.globalAlpha = Math.sin(f * Math.PI) * 0.7 * H2.born * (1 - H2.dying); ctx.strokeStyle = k % 3 ? (k % 2 ? '#c89aff' : '#7a2aff') : '#ffffff'; ctx.lineWidth = (0.8 + 1.4 * f) * vsc();
         ctx.beginPath(); ctx.arc(bx, by, r0, ang, ang + 0.4 + f * 0.7); ctx.stroke();
       }
       ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
@@ -3189,6 +3200,13 @@ function renderHUD() {
   setScreen();
   if (G.settings.vol < 3) { ctx.fillStyle = '#ffffff'; for (let k = 0; k < 3 - G.settings.vol; k++) ctx.fillRect(W - 24 + k * 4, 38 - k * 4, 3, 4 + k * 4); } else txt('x', W - 22, 36, 13, '#ff8a8a', { font: FB, weight: 900 });
   if (ONLINE_UI && W >= 600) btn('lbbtn', W - 190, 12, 40, 36, '', { icon: 'trophy', col: G.menu === 'leaders' ? '#8a6a1a' : '#5a4a1a', r: 10, fn: () => { AUDIO.sfx('click'); openLeaders(); } });
+  if (G.touch && fsOk() && !isFs() && G.scene === 'play') {
+    const fx = W - 190, fy = 12;
+    btn('fsbtn', fx, fy, 40, 36, '', { col: '#2a7a4a', r: 10, fn: () => { AUDIO.sfx('click'); toggleFullscreen(); } });
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.6; ctx.lineCap = 'round'; const c0 = 9, L0 = 6;
+    for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const cx = fx + 20 + sx * c0, cy = fy + 17 + sy * (c0 - 2); ctx.beginPath(); ctx.moveTo(cx, cy - sy * L0); ctx.lineTo(cx, cy); ctx.lineTo(cx - sx * L0, cy); ctx.stroke(); }
+    ctx.lineCap = 'butt';
+  }
   btn('gear', W - 144, 12, 40, 36, '', { icon: 'gear', col: G.menu === 'settings' ? '#5a6a8a' : '#3a4a6a', r: 10, fn: () => { AUDIO.sfx('click'); openSettings(); } });
   btn('music', W - 98, 12, 40, 36, '', { icon: 'note', col: G.settings.music ? '#3a4a6a' : '#7a3030', r: 10, fn: () => { G.settings.music = !G.settings.music; AUDIO.applyVolume(); AUDIO.sfx('click'); save(); } });
   // next biome chip (right side, under the best score)
@@ -3215,7 +3233,7 @@ function renderHUD() {
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; rr(W / 2 - 70, y + 20, 140, 6, 3); ctx.fill(); ctx.fillStyle = ev[2]; rr(W / 2 - 70, y + 20, 140 * clamp(ev[1], 0, 1), 6, 3); ctx.fill();
   }
   // dock
-  const dock = [['biomes', 'Biomes', 'globe', '#2f8f6a'], ['book', 'Book', 'book', '#8a5a2e'], ['rebirth', 'Rebirth', 'rebirth', '#c48a12'], ['shop', 'Shop', 'shop', '#3a5fd0']];
+  const dock = [['biomes', 'Biomes', 'globe', '#2f8f6a'], ['book', 'Codex', 'book', '#8a5a2e'], ['rebirth', 'Rebirth', 'rebirth', '#c48a12'], ['shop', 'Shop', 'shop', '#3a5fd0']];
   renderPassBar(); renderPassButton(); renderWheelButton(); renderDroneColumn(); setScreen();
   const narrow = W < 560, gap = narrow ? 6 : 10;   // narrow screens: the bomb button sits above the dock instead of beside it
   const leftPad = narrow ? 8 : G.bombLevel > 0 ? 90 : 20;
@@ -3346,7 +3364,7 @@ const SOUND_ROWS = [
 const SET_TABS = [
   ['Graphics', 'How sharp and fancy the picture is', ['preset', 'res', 'light', 'bloom', 'shadows', 'bg']],
   ['Effects', 'Particles, weather and screen effects', ['parts', 'amb', 'grade', 'grain', 'trail', 'shake']],
-  ['Speed', 'Make the game run smoother', ['fpsCap', 'auto', 'fps']],
+  ['Speed', 'Make the game run smoother', ['fpsMax', 'auto', 'fps']],
   ['Sound', 'Volume and music', ['vol', 'music', 'musicVol']],
   ['Game', 'Menus, text and the pickaxe', ['ui', 'floats', 'gemNames', 'pickSize', 'splash']],
 ];
@@ -3508,29 +3526,86 @@ function renderRebirth() {
   btn('confirm', 150, 330, 200, 54, 'Confirm', { col: ok ? '#d49a1a' : '#5a5040', disabled: !ok, clickDisabled: true, size: 24, fn: () => tryRebirth() });
   ctx.globalAlpha = 1;
 }
+function renderDroneCodex(W0, H0) {
+  const types = Object.keys(DRONE_TYPES), seen = G.dseen || {};
+  const n = types.filter(t => seen[t]).length;
+  txt('Drones  -  discovered ' + n + ' / ' + types.length, W0 / 2, 92, 16, '#ffffff');
+  const cw = 324, ch = 124, top = 108, boxH = H0 - top - 20, rows = Math.ceil(types.length / 2);
+  const sa = scrollArea('cdrones', 26, top, W0 - 52, boxH, 'y', rows * (ch + 10) + 4);
+  clipBox(26, top, W0 - 52, boxH);
+  const RO = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythical', 'Celestial'];
+  types.slice().sort((a, b) => RO.indexOf(DRONE_TYPES[a].rar) - RO.indexOf(DRONE_TYPES[b].rar)).forEach((t, i) => {
+    const T2 = DRONE_TYPES[t], x = 30 + (i % 2) * (cw + 12), y = top + 4 + Math.floor(i / 2) * (ch + 10) - sa.pos;
+    if (y > top + boxH || y + ch < top) return;
+    const got = !!seen[t], owned = G.drones.filter(d => d.type === t).length, rc = RCOL[T2.rar] || '#ffffff';
+    ctx.fillStyle = got ? rgba(rc, 0.08) : 'rgba(255,255,255,0.03)'; rr(x, y, cw, ch, 12); ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = got ? rgba(rc, 0.55) : 'rgba(255,255,255,0.08)'; ctx.stroke();
+    ctx.fillStyle = got ? '#eef1f6' : '#1a1e28'; rr(x + 10, y + 10, 104, 104, 10); ctx.fill();
+    ctx.save(); if (!got) { ctx.globalAlpha *= 0.18; ctx.filter = 'brightness(0)'; }
+    drawDrone({ id: 500 + i, type: t, rank: 1, skin: null, hat: null }, x + 62, y + 64, { scale: t === 'mothership' ? 1.9 : 2.2, t: G.time + i, box: [x + 10, y + 10, 104, 104] });
+    ctx.restore(); ctx.filter = 'none';
+    txt(got ? T2.name : '???', x + 126, y + 22, fitSize(got ? T2.name : '???', 17, cw - 136), got ? '#ffffff' : '#7a8090', { align: 'left', stroke: 3 });
+    txt(T2.rar, x + 126, y + 41, 11, rc, { align: 'left', font: FB, weight: 900 });
+    if (got) txt(T2.desc, x + 126, y + 60, fitSize(T2.desc, 11, cw - 136, FB), '#c9cfdc', { align: 'left', font: FB, weight: 800, shadow: false });
+    const get = 'Get it: ' + DRONE_GET[t];
+    txt(get, x + 126, y + 80, fitSize(get, 10.5, cw - 136, FB), '#ffd84a', { align: 'left', font: FB, weight: 900, shadow: false });
+    txt(owned ? 'You own ' + owned : got ? 'Seen before' : 'Not found yet', x + 126, y + 100, 10.5, owned ? '#7dff7a' : '#8a90a0', { align: 'left', font: FB, weight: 900, shadow: false });
+  });
+  unclip();
+}
 const BOOK_TABS = () => BIOMES.map(b => b.name).concat(['Events', 'Gold', 'Quests', 'Trophies', 'Perks']);
 const BOOK_QUESTS = BIOMES.length + 2;
+const CODEX_SECS = [['Minerals', 'gem', '#4ad0ff'], ['Gold', 'gem', '#ffd84a'], ['Events', 'star', '#ff9a3a'], ['Drones', 'drone', '#7dff3a'], ['Quests', 'scroll', '#c9cfdc'], ['Trophies', 'trophy', '#ffb02a'], ['Perks', 'rebirth', '#ff7ad8']];
+const DRONE_GET = { normal: 'Common + Uncommon + Rare crates', bomber: 'Drone crates', heavy: 'Drone crates', bigdrill: 'Merge Drone + Heavy, or Epic+ crates', drillbomber: 'Merge Drone + Bomblayer, or Epic+ crates',
+  heavybomber: 'Merge Heavy + Bomblayer, or Legendary+ crates', laser: 'Epic+ crates (very rare)', engineer: 'Rare+ crates', alien: 'The Alien Pass', mothership: 'Alien Pass level 100' };
 function renderBook() {
-  const f = modalFrame('book', 720, 640); if (!f) return;
-  panel(0, 0, 720, 640, 'BOOK', '#8a5a2e');
-  closeBtn(674, 12);
-  const tabs = BOOK_TABS();
-  if (G.bookTab >= tabs.length || G.bookTab < 0) G.bookTab = 0;
-  tabs.forEach((name, i) => {
-    const half = Math.ceil(BIOMES.length / 2), row = i < half ? 0 : i < BIOMES.length ? 1 : 2, perRow = row === 2 ? tabs.length - BIOMES.length : row === 0 ? half : BIOMES.length - half;
-    const tw = 660 / perRow, x = 30 + (row === 2 ? i - BIOMES.length : row === 1 ? i - half : i) * tw, y = 32 + row * 38, on = G.bookTab === i, col = i < BIOMES.length ? BIOMES[i].accent : '#ffd84a';
-    region('tab' + i, x, y, tw - 4, 34, () => { G.bookTab = i; AUDIO.sfx('click'); });
-    ctx.fillStyle = on ? rgba(col, 0.35) : (UI.hot === 'tab' + i ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.04)'); rr(x, y, tw - 4, 34, 8); ctx.fill();
-    if (on) { ctx.lineWidth = 1.5; ctx.strokeStyle = col; ctx.stroke(); }
-    const done = i < BIOMES.length && BIOMES[i].minerals.every((m, k) => (G.found[name] || [])[k] > 0);
-    ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x + tw / 2 - 2, y + 10, 4, 0, 6.283); ctx.fill();
-    if (done) { ctx.strokeStyle = '#7dff7a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x + tw / 2 - 2, y + 10, 6, 0, 6.283); ctx.stroke(); }
-    const short = i < BIOMES.length ? name.split(' ')[0] : name;
-    txt(short, x + tw / 2 - 2, y + 24, fitSize(short, 11, tw - 8, FB), on ? '#ffffff' : '#aeb6c6', { font: FB, weight: 900, shadow: false });
+  const W0 = 720, H0 = 660;
+  const f = modalFrame('book', W0, H0); if (!f) return;
+  panel(0, 0, W0, H0, 'CODEX', '#3a6aa8');
+  closeBtn(W0 - 46, 12);
+  if (G.codexSec === undefined) G.codexSec = 0;
+  if (G.bookTab >= BIOMES.length || G.bookTab < 0 || G.bookTab === undefined) G.bookTab = G.biome || 0;
+  // section tabs
+  CODEX_SECS.forEach(([nm, ic, col], i) => {
+    const tw = (W0 - 60) / CODEX_SECS.length, x = 30 + i * tw, y = 30, on = G.codexSec === i, id = 'csec' + i;
+    region(id, x, y, tw - 6, 38, () => { G.codexSec = i; AUDIO.sfx('click'); });
+    ctx.fillStyle = on ? rgba(col, 0.22) : UI.hot === id ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.04)'; rr(x, y, tw - 6, 38, 10); ctx.fill();
+    if (on) { ctx.fillStyle = col; rr(x + 10, y + 34, tw - 26, 3, 1.5); ctx.fill(); }
+    drawIcon(ic, x + 16, y + 18, 15, on ? col : '#8a90a0');
+    txt(nm, x + (tw - 6) / 2 + 8, y + 18.5, fitSize(nm, 12.5, tw - 36, FB), on ? '#ffffff' : '#aeb6c6', { font: FB, weight: 900, shadow: false });
   });
-  const T = G.bookTab, Y = 160;
-  ctx.globalAlpha *= tabFade('book', T);
-  if (T <= BIOMES.length) {
+  const sec = G.codexSec;
+  ctx.globalAlpha *= tabFade('codex', sec);
+  let T, Y = 112;
+  if (sec === 0) {   // biome strip
+    const cw = 98, sx = 52, sw = W0 - 104, sa = scrollArea('cbiome', sx, 78, sw, 52, 'x', BIOMES.length * (cw + 6));
+    if (G.menu === 'book' && !G.codexWas) { sa.target = sa.pos = clamp(G.bookTab * (cw + 6) - sw / 2 + cw / 2, 0, sa.max); }
+    G.codexWas = G.menu === 'book';
+    clipBox(sx, 78, sw, 52);
+    BIOMES.forEach((b, i) => {
+      const x = sx + i * (cw + 6) - sa.pos; if (x < sx - cw || x > sx + sw) return;
+      const on = G.bookTab === i, id = 'cb' + i, found = G.found[b.name] || [], n = found.filter(v => v > 0).length, done = n >= b.minerals.length;
+      region(id, x, 80, cw, 48, () => { G.bookTab = i; AUDIO.sfx('click'); });
+      ctx.fillStyle = on ? rgba(b.accent, 0.3) : UI.hot === id ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.04)'; rr(x, 80, cw, 48, 10); ctx.fill();
+      ctx.lineWidth = on ? 2 : 1; ctx.strokeStyle = on ? b.accent : 'rgba(255,255,255,0.08)'; ctx.stroke();
+      ctx.fillStyle = b.accent; ctx.beginPath(); ctx.arc(x + 14, 96, 6, 0, 6.283); ctx.fill();
+      if (done) { ctx.strokeStyle = '#7dff7a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x + 14, 96, 8.5, 0, 6.283); ctx.stroke(); }
+      txt(String(i + 1), x + 14, 96.5, 8, '#0b0c12', { font: FB, weight: 900, shadow: false });
+      txt(b.name, x + cw / 2 + 9, 96, fitSize(b.name, 11, cw - 30, FB), on ? '#ffffff' : '#c9cfdc', { font: FB, weight: 900, shadow: false });
+      txt(n + '/' + b.minerals.length, x + cw / 2 + 9, 114, 10, done ? '#7dff7a' : '#8a90a0', { font: FB, weight: 900, shadow: false });
+    });
+    unclip();
+    btn('cbL', 22, 82, 26, 44, '<', { col: '#343c50', size: 16, r: 8, fn: () => { sa.vel = 0; sa.target = clamp(sa.target - (cw + 6) * 5, 0, sa.max); AUDIO.sfx('click'); } });
+    btn('cbR', W0 - 48, 82, 26, 44, '>', { col: '#343c50', size: 16, r: 8, fn: () => { sa.vel = 0; sa.target = clamp(sa.target + (cw + 6) * 5, 0, sa.max); AUDIO.sfx('click'); } });
+    T = G.bookTab; Y = 168;
+  } else if (sec === 1) T = BIOMES.length + 1;
+  else if (sec === 2) T = BIOMES.length;
+  else if (sec === 4) T = BOOK_QUESTS;
+  else if (sec === 5) T = BOOK_QUESTS + 1;
+  else if (sec === 6) T = BOOK_QUESTS + 2;
+  else T = -1;
+  if (sec === 3) { renderDroneCodex(W0, H0); ctx.globalAlpha = 1; return; }
+
+  if (T >= 0 && T <= BIOMES.length) {
     const isEv = T === BIOMES.length, b = BIOMES[T];
     const key = isEv ? 'Event' : b.name, list = isEv ? EVENT_MINERALS.map(e => [0, 0, e[1], e[0], e[2]]) : b.minerals;
     const found = G.found[key] || [];
@@ -3539,7 +3614,7 @@ function renderBook() {
     if (!isEv) txt(done ? 'In the museum: +5% Creditz forever' : 'Finish this page for +5% Creditz forever', 360, Y - 12, 11, done ? '#7dff7a' : '#9aa0aa', { font: FB, weight: 900 });
     txt(head, 360, Y + 6, fitSize(head, 16, 680), '#ffffff');
     list.forEach((m, i) => {
-      const cw = 212, ch = 190, x = 30 + (i % 3) * (cw + 12), y = Y + 26 + Math.floor(i / 3) * (ch + 10), got = found[i] > 0, art = gemArt(key, i), rar = m[2];
+      const cw = 212, ch = 196, x = 30 + (i % 3) * (cw + 12), y = Y + 26 + Math.floor(i / 3) * (ch + 10), got = found[i] > 0, art = gemArt(key, i), rar = m[2];
       ctx.fillStyle = got ? rgba(RCOL[rar], 0.08) : 'rgba(255,255,255,0.03)'; rr(x, y, cw, ch, 12); ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = got ? rgba(RCOL[rar], 0.5) : 'rgba(255,255,255,0.1)'; ctx.stroke();
       drawGem(art, x + cw / 2, y + 64, 66, got ? { glow: RCOL[rar], rank: rank(rar) } : { silhouette: true });
       const nm = got ? art.name : '???';
@@ -3557,7 +3632,7 @@ function renderBook() {
     txt(head, 360, Y + 6, fitSize(head, 15, 680), '#ffe27a');
     BIOMES.forEach((b, i) => {
       for (const [row, key, list, ch, rar] of [[0, 'Gold', gold, gc * (1 - PURE_CHANCE), 'Exotic'], [1, 'Pure', pure, gc * PURE_CHANCE, 'Admin']]) {
-        const cw = 57, x = 28 + (i % 11) * (cw + 3), y = Y + 26 + Math.floor(i / 11) * 196 + row * 96, have = list[i] > 0, art = ART.gems[key][i];
+        const cw = 49, x = 30 + (i % 13) * (cw + 3), y = Y + 26 + Math.floor(i / 13) * 196 + row * 96, have = list[i] > 0, art = ART.gems[key][i];
         ctx.fillStyle = have ? 'rgba(255,216,74,0.1)' : 'rgba(255,255,255,0.03)'; rr(x, y, cw, 90, 10); ctx.fill();
         ctx.lineWidth = 1; ctx.strokeStyle = have ? 'rgba(255,216,74,0.55)' : 'rgba(255,255,255,0.08)'; ctx.stroke();
         drawGem(art, x + cw / 2, y + 30, 32, have ? { glow: '#ffd84a', rank: row ? 8 : 5 } : { silhouette: true });
@@ -3749,6 +3824,7 @@ const DRONE_TYPES = {
   drillbomber: { name: 'Drillbomber', rar: 'Epic', col: '#ff5ab0', ai: 'bomb', cd: 7, desc: 'Its bombs shoot small drills in 4 directions' },
   bigdrill: { name: 'Big Drill', rar: 'Epic', col: '#5affb0', ai: 'drill', cd: 4.5, desc: 'Drills in a + shape (5 rocks at once)' },
   heavybomber: { name: 'Heavy Bomber', rar: 'Legendary', col: '#ff5a2a', ai: 'bomb', cd: 9, desc: 'Drops one really big bomb' },
+  engineer: { name: 'Engineer', rar: 'Epic', col: '#3ad0ff', ai: 'drill', cd: 8, noMix: true, desc: 'Builds Tech parts. Spend them to upgrade any drone forever' },
   mothership: { name: 'Alien Mothership', rar: 'Celestial', col: '#b0ff3a', ai: 'mother', cd: 0, noMix: true, noRank: true, desc: 'Beams 5 minerals at once + launches a fleet. No ranks: XP only' },
   alien: { name: 'Alien Ship', rar: 'Celestial', col: '#7dff3a', ai: 'alien', cd: 0, noMix: true, desc: 'Scans a rock and beams its mineral out. The rock stays, and still has it inside' },
 };
@@ -3760,6 +3836,7 @@ const DRONE_NERF = 1.12;   // 2026-11-18: every drone a bit slower
 const RK = { cd: [1, 1, 0.85, 0.72, 0.6, 0.5], dmg: [1, 1, 1, 1, 2, 2], spd: [1, 1, 1.15, 1.3, 1.45, 1.6] };   // 2026-11-17: much weaker (they were way too strong)
 const ALIEN_CD = [0, 60, 45, 34, 24, 15];
 const MOTHER_CD = 26, MOTHER_FLEET_CD = 60, MOTHER_FLEET_T = 15;   // beams 5 at once every 26 s; sends 3 ships for 15 s every 60 s
+const slotsFor = () => Math.min(10, 3 + Math.max(0, rebirthsDone()));   // 2026-11-18: slots come from rebirthing
 const SLOT_PRICES = [0, 0, 0, 5e6, 5e8, 5e10, 5e12, 5e14, 5e16, 5e18];   // slots 4..10 (pretty expensive!)
 const mixKey = (a, b) => [a, b].sort().join('+');
 function mergeResult(a, b) {
@@ -3784,7 +3861,8 @@ function deployed() { const out = []; for (let k = 0; k < G.slotsOpen; k++) { co
 const droneSlotsUsed = () => (G.drones ? deployed().length : 0);
 const slotOf = d => G.slots.indexOf(d.id);
 function addDrone(type, rank) {
-  const d = { id: G.nextId++, type, rank: clamp(rank, 1, 5), skin: null, hat: null, lvl: 1, xp: 0 };
+  const d = { id: G.nextId++, type, rank: clamp(rank, 1, 5), skin: null, hat: null, lvl: 1, xp: 0, mods: cleanMods(null) };
+  G.dseen = G.dseen || {}; G.dseen[type] = 1;
   G.drones.push(d);
   for (let k = 0; k < G.slotsOpen; k++) if (!G.slots[k] || !droneById(G.slots[k])) { G.slots[k] = d.id; break; }   // fill an empty slot right away
   return d;
@@ -3797,10 +3875,15 @@ const dLvl = d => d.lvl || 1;
 // what levels give: shorter cooldown, faster flying, extra crack chance, bigger abilities, and a smarter brain at 10 + 20
 const lvlCd = d => 1 - 0.02 * (dLvl(d) - 1);
 const lvlSpd = d => 1 + 0.025 * (dLvl(d) - 1);
-const lvlCrit = d => 0.01 * (dLvl(d) - 1);
+const modOf = (d, k) => (d && d.mods && d.mods[k]) || 0;   // Engineer upgrades on a drone (0..5 each)
+const MOD_MAX = 5, MODS = [['cd', 'Cooldown', '-6%'], ['spd', 'Speed', '+8%'], ['crit', 'Crack', '+4%']];
+const modCost = lv => (lv + 1) * 2;
+const techTime = d => 80 * RK.cd[d.rank] * lvlCd(d);   // seconds per Tech part for one Engineer
+const cleanMods = m => ({ cd: clamp((m && m.cd) | 0, 0, MOD_MAX), spd: clamp((m && m.spd) | 0, 0, MOD_MAX), crit: clamp((m && m.crit) | 0, 0, MOD_MAX) });
+const lvlCrit = d => 0.01 * (dLvl(d) - 1) + 0.04 * modOf(d, 'crit');
 const lvlAbility = d => 1 + 0.02 * (dLvl(d) - 1);
 const aiRank = d => Math.min(5, d.rank + (dLvl(d) >= 10 ? 1 : 0) + (dLvl(d) >= 20 ? 1 : 0));
-function droneCd(d) { return (d.type === 'mothership' ? MOTHER_CD : d.type === 'alien' ? ALIEN_CD[d.rank] : DRONE_TYPES[d.type].cd * RK.cd[d.rank]) * upv('dspeed', 1) * lvlCd(d) * DRONE_NERF * (d.skin === 'striker' ? 0.85 : 1); }
+function droneCd(d) { return (d.type === 'mothership' ? MOTHER_CD : d.type === 'alien' ? ALIEN_CD[d.rank] : DRONE_TYPES[d.type].cd * RK.cd[d.rank]) * upv('dspeed', 1) * lvlCd(d) * DRONE_NERF * (d.skin === 'striker' ? 0.85 : 1) * (1 - 0.06 * modOf(d, 'cd')); }
 function droneXp(d, s) {
   if (dLvl(d) >= DRONE_MAX_LVL) return;
   d.xp = (d.xp || 0) + DT;
@@ -3874,6 +3957,7 @@ const hatFree = id => (G.hats[id] || 0) - G.drones.filter(d => d.hat === id).len
 function dronePal(d) {
   const S = d.skin && SKINS[d.skin]; if (S) return S;
   if (d.type === 'alien' || d.type === 'mothership') return { body: '#9aa8b8', dark: '#3a4452', light: '#eef4ff', accent: '#7dff3a', fx: null };
+  if (d.type === 'engineer') return { body: '#f0c030', dark: '#8a6400', light: '#fff0a0', accent: '#3ad0ff', fx: null };
   return { body: '#aab4c4', dark: '#4a5466', light: '#eef2f8', accent: DRONE_TYPES[d.type].col, fx: null };
 }
 
@@ -3881,10 +3965,10 @@ function dronePal(d) {
 const CRATES = {
   common: { name: 'Common Crate', col: '#a4a4a4', price: 5e5, odds: { normal: 70, bomber: 20, heavy: 10 }, ranks: [100] },
   uncommon: { name: 'Uncommon Crate', col: '#4dff4d', price: 2e7, odds: { normal: 45, bomber: 30, heavy: 25 }, ranks: [100] },
-  rare: { name: 'Rare Crate', col: '#2eb0ff', price: 1e9, odds: { normal: 30, bomber: 35, heavy: 35 }, ranks: [100] },
-  epic: { name: 'Epic Crate', col: '#ff4be6', price: 1e11, odds: { normal: 14, bomber: 37.5, heavy: 39, bigdrill: 4, drillbomber: 4, laser: 0.6 }, ranks: [100] },
-  legendary: { name: 'Legendary Crate', col: '#e8ff3a', price: 1e13, odds: { normal: 6, bomber: 32, heavy: 34, bigdrill: 7, drillbomber: 7, heavybomber: 4, laser: 4 }, ranks: [100] },
-  mythical: { name: 'Mythical Crate', col: '#b05cff', price: 1e15, odds: { bomber: 22, heavy: 28, bigdrill: 13, drillbomber: 13, heavybomber: 9, laser: 7 }, ranks: [100] },
+  rare: { name: 'Rare Crate', col: '#2eb0ff', price: 1e9, odds: { normal: 30, bomber: 35, heavy: 35, engineer: 2 }, ranks: [100] },
+  epic: { name: 'Epic Crate', col: '#ff4be6', price: 1e11, odds: { normal: 14, bomber: 37.5, heavy: 39, bigdrill: 4, drillbomber: 4, engineer: 2.5, laser: 0.6 }, ranks: [100] },
+  legendary: { name: 'Legendary Crate', col: '#e8ff3a', price: 1e13, odds: { normal: 6, bomber: 32, heavy: 34, bigdrill: 7, drillbomber: 7, heavybomber: 4, engineer: 6, laser: 4 }, ranks: [100] },
+  mythical: { name: 'Mythical Crate', col: '#b05cff', price: 1e15, odds: { bomber: 22, heavy: 28, bigdrill: 13, drillbomber: 13, heavybomber: 9, engineer: 9, laser: 7 }, ranks: [100] },
   // SKIN CRATES (own tab): each one gives skins of a few rarities; inside a rarity every skin is equally likely
   skinc: { name: 'Common Skin Crate', col: '#a4a4a4', price: 2e6, rw: { Common: 75, Uncommon: 22, Rare: 3 } },
   skinu: { name: 'Uncommon Skin Crate', col: '#4dff4d', price: 1e8, rw: { Common: 40, Uncommon: 40, Rare: 17, Epic: 3 } },
@@ -3926,7 +4010,8 @@ function doMerge(a, b) {
   const k = slotOf(a) >= 0 ? slotOf(a) : slotOf(b);
   G.slots = G.slots.map(id => id === a.id || id === b.id ? null : id);
   G.drones = G.drones.filter(d => d !== a && d !== b); DRT.delete(a.id); DRT.delete(b.id);
-  const n = { id: G.nextId++, type: res.type, rank: res.rank, skin: a.skin || b.skin, hat: a.hat || b.hat, lvl: Math.max(dLvl(a), dLvl(b)), xp: 0 };   // keeps the higher level
+  const n = { id: G.nextId++, type: res.type, rank: res.rank, skin: a.skin || b.skin, hat: a.hat || b.hat, lvl: Math.max(dLvl(a), dLvl(b)), xp: 0, mods: { cd: Math.max(modOf(a, 'cd'), modOf(b, 'cd')), spd: Math.max(modOf(a, 'spd'), modOf(b, 'spd')), crit: Math.max(modOf(a, 'crit'), modOf(b, 'crit')) } };   // keeps the higher level + the better upgrades
+  G.dseen = G.dseen || {}; G.dseen[n.type] = 1;
   G.drones.push(n);
   if (k >= 0 && k < G.slotsOpen) G.slots[k] = n.id;
   G.droneSel = n.id; G.mergeSel = null;
@@ -4161,11 +4246,12 @@ function droneTrails() {
   }
 }
 function tickDrones() {
+  G.slotsOpen = slotsFor();
   droneTrails();
   if (G.minis && G.minis.length) G.minis = G.minis.filter(m => { if (G.time < m.until) return true; const s = DRT.get(m.d.id); if (s) { sparkle(s.x, s.y, '#7dff3a', 10); } return false; });
   const list = activeDrones(), ids = new Set(list.map(d => d.id));
   for (const id of DRT.keys()) if (!ids.has(id)) DRT.delete(id);
-  for (const d of list) { const s = rt(d); tickDrone(d, s); if (!d.temp) droneXp(d, s); if (s.lvlFx > 0) s.lvlFx -= DT; }
+  for (const d of list) { const s = rt(d); tickDrone(d, s); if (!d.temp) droneXp(d, s); if (d.type === 'engineer' && !d.temp) G.tech = (G.tech || 0) + DT / techTime(d); if (s.lvlFx > 0) s.lvlFx -= DT; }
   // drone bombs
   for (const b of G.dbombs) {
     b.t += DT; if (b.y > b.gy) b.y = Math.max(b.gy, b.y - 4);
@@ -4184,14 +4270,19 @@ function tickDrones() {
 }
 function tickDrone(d, s) {
   s.px = s.x; s.py = s.y;   // where it was last tick (drawing slides between the two)
-  const T = DRONE_TYPES[d.type], R = d.rank, v = (d.type === 'alien' || d.type === 'mothership' ? 1.3 + R * 0.45 : 3.2 * RK.spd[R] * (d.skin === 'striker' ? 1.3 : 1)) * lvlSpd(d) * vsc();
+  const T = DRONE_TYPES[d.type], R = d.rank, v = (d.type === 'alien' || d.type === 'mothership' ? 1.3 + R * 0.45 : 3.2 * RK.spd[R] * (d.skin === 'striker' ? 1.3 : 1)) * lvlSpd(d) * vsc() * (1 + 0.08 * modOf(d, 'spd'));
   s.cd -= DT; s.t += DT; if (s.hitT > 0) s.hitT -= DT; s.act *= 0.9;
+  if (s.warp && (s.warp.t += DT) > 0.45) s.warp = null;
   if (d.skin === 'glitch') {   // GL1TCH can skip space: it blinks straight to the rock it's going for
     s.hopT = (s.hopT === undefined ? 2 : s.hopT) - DT;
     const tg = s.target && s.target.x !== undefined ? s.target : null;
     if (s.hopT <= 0 && tg && Math.hypot(tg.x - s.x, tg.y + 30 - s.y) > 70) {
       for (let q = 0; q < 10; q++) G.parts.push({ kind: 'glitch', x: s.x + (Math.random() - 0.5) * 20, y: s.y + (Math.random() - 0.5) * 14, vx: 0, vy: 0, life: 14, max: 14, s: 3 + Math.random() * 8, h: 2, col: q % 2 ? '#00ff66' : '#ff00ff' });
+      const x0 = s.x, y0 = s.y;
       s.x = tg.x + (Math.random() - 0.5) * 10; s.y = tg.y + 34; s.px = s.x; s.py = s.y;
+      s.warp = { x0, y0, t: 0, seed: Math.random() * 99 };
+      for (let q = 1; q < 16; q++) { const f = q / 16; G.parts.push({ kind: q % 3 ? 'glitch' : 'pix', x: x0 + (s.x - x0) * f + (Math.random() - 0.5) * 12, y: y0 + (s.y - y0) * f + (Math.random() - 0.5) * 10, vx: 0, vy: 0, life: 10 + q, max: 26, s: 2 + Math.random() * 6, h: 1.5, col: q % 2 ? '#00ff66' : '#ff00ff' }); }
+      G.rings.push({ x: x0, y: y0, t: 0, r: 40, col: '#ff00ff' }, { x: s.x, y: s.y, t: 0, r: 46, col: '#00ff66' });
       for (let q = 0; q < 10; q++) G.parts.push({ kind: 'glitch', x: s.x + (Math.random() - 0.5) * 20, y: s.y + (Math.random() - 0.5) * 14, vx: 0, vy: 0, life: 14, max: 14, s: 3 + Math.random() * 8, h: 2, col: q % 2 ? '#00ff66' : '#ff00ff' });
       G.lights.push({ x: s.x, y: s.y, r: 70, col: '#00ff66', life: 0.3, max: 0.3 });
       s.hopT = 2.5 + Math.random() * 3; AUDIO.sfx('glitch');
@@ -4296,7 +4387,7 @@ function tickDrone(d, s) {
 }
 function layBomb(d, x, y) {
   const big = d.type === 'heavybomber', R = d.rank;
-  G.dbombs.push({ x, y, gy: y - 14 * vsc(), t: 0, fuse: big ? 1.6 : 1.2, r: ((big ? 62 : 32) + R * (big ? 8 : 5)) * lvlAbility(d) * gsc(), dmg: RK.dmg[R] + (big ? 1 : 0), drills: d.type === 'drillbomber', big, d, col: dronePal(d).accent });
+  G.dbombs.push({ x, y, gy: y - 14 * vsc(), t: 0, fuse: big ? 1.6 : 1.2, r: ((big ? 62 : 32) + R * (big ? 8 : 5)) * lvlAbility(d) * gsc(), dmg: RK.dmg[R] + (big ? 1 : 0), drills: d.type === 'drillbomber', big, d, col: big ? '#ff6a2a' : '#ff9a3a' });
   droneSfx(d, 'drop');
 }
 function explodeDroneBomb(b) {
@@ -4383,9 +4474,9 @@ function glitchBurst(x, y) { for (let i = 0; i < pn(4); i++) G.parts.push({ kind
 //  SPEED: the body (everything that doesn't move) is drawn ONCE into a cached picture; every frame we only
 //  stamp it and draw the moving bits on top (propellers, eye, lights, flames).
 // ====================================================================
-const BODY_BOX = { normal: [-10, -9, 20, 15], bigdrill: [-13, -10, 26, 17], bomber: [-11, -11, 22, 17], drillbomber: [-11, -11, 22, 17], heavybomber: [-14, -10, 28, 18], heavy: [-14, -10, 28, 18], laser: [-13, -10, 26, 13], alien: [-20, -9, 40, 16] };
+const BODY_BOX = { engineer: [-11, -9, 22, 16], normal: [-10, -9, 20, 15], bigdrill: [-13, -10, 26, 17], bomber: [-11, -11, 22, 17], drillbomber: [-11, -11, 22, 17], heavybomber: [-14, -10, 28, 18], heavy: [-14, -10, 28, 18], laser: [-13, -10, 26, 13], alien: [-20, -9, 40, 16] };
 // where a hat sits on each body: [top of the body in the middle, half its width there, middle height]
-const HAT_FIT = { normal: [-9, 10, -1.5], bigdrill: [-10, 13, -1.5], bomber: [-11.5, 10, -3], drillbomber: [-11.5, 10, -3], heavy: [-10, 14, -1], heavybomber: [-10, 14, -1], laser: [-10, 9, -4], alien: [-12, 9, -2] };
+const HAT_FIT = { engineer: [-9, 11, -1.5], normal: [-9, 10, -1.5], bigdrill: [-10, 13, -1.5], bomber: [-11.5, 10, -3], drillbomber: [-11.5, 10, -3], heavy: [-10, 14, -1], heavybomber: [-10, 14, -1], laser: [-10, 9, -4], alien: [-12, 9, -2] };
 const BFILL = new Map();
 function bodyFill(x, y, w, h, P) { const k = y + '|' + h + '|' + P.light + P.body + P.dark; let g = BFILL.get(k); if (!g) { if (BFILL.size > 200) BFILL.clear(); g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, P.light); g.addColorStop(0.45, P.body); g.addColorStop(1, P.dark); BFILL.set(k, g); } return g; }
 function drill(x, y, len, w, t, P, ang) {
@@ -4413,32 +4504,30 @@ function droneStatic(d, P) {
   const OL = OUTLINE(P), type = d.type;
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   if (type === 'alien') {
-    // drone arms: struts from the rim up to two rotor hubs (the rotors spin in droneMoving)
+    // arms + motor pods, exactly like the other drones
     for (const sx of [-1, 1]) {
-      ctx.strokeStyle = OL; ctx.lineWidth = 3.4; ctx.beginPath(); ctx.moveTo(sx * 13, -3); ctx.lineTo(sx * 22, -11); ctx.stroke();
-      ctx.strokeStyle = P.dark; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(sx * 13, -3); ctx.lineTo(sx * 22, -11); ctx.stroke();
-      ctx.fillStyle = P.dark; ctx.beginPath(); ctx.arc(sx * 22, -11, 2.4, 0, 6.283); ctx.fill(); ctx.lineWidth = 0.9; ctx.strokeStyle = OL; ctx.stroke();
+      ctx.strokeStyle = OL; ctx.lineWidth = 3.2; ctx.beginPath(); ctx.moveTo(sx * 12, -3); ctx.lineTo(sx * 26, -7); ctx.stroke();
+      ctx.strokeStyle = P.dark; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(sx * 12, -3); ctx.lineTo(sx * 26, -7); ctx.stroke();
+      rr(sx * 26 - 2.6, -10, 5.2, 6, 1.6); ctx.fillStyle = P.dark; ctx.fill(); ctx.lineWidth = 0.9; ctx.strokeStyle = OL; ctx.stroke();
+      ctx.fillStyle = rgba(P.light, 0.6); ctx.fillRect(sx * 26 - 1.8, -9.2, 1.2, 4.4);
     }
-    // under-hull with the tractor emitter
-    ctx.beginPath(); ctx.ellipse(0, 3.5, 13, 4.6, 0, 0, 6.283); ctx.fillStyle = P.dark; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = OL; ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(0, 5.4, 6, 2, 0, 0, 6.283); ctx.fillStyle = '#0a140a'; ctx.fill(); ctx.strokeStyle = rgba(P.light, 0.5); ctx.lineWidth = 0.6; ctx.stroke();
-    // the metal disc: chrome top, a dark band with panel lines and little portholes
+    // under-hull + tractor emitter
+    ctx.beginPath(); ctx.ellipse(0, 3.5, 12, 4.4, 0, 0, 6.283); ctx.fillStyle = P.dark; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = OL; ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(0, 5.4, 5.5, 1.9, 0, 0, 6.283); ctx.fillStyle = '#0a140a'; ctx.fill(); ctx.strokeStyle = rgba(P.light, 0.5); ctx.lineWidth = 0.6; ctx.stroke();
+    // the saucer hull
     const dg = ctx.createLinearGradient(0, -7, 0, 6); dg.addColorStop(0, '#ffffff'); dg.addColorStop(0.3, P.light); dg.addColorStop(0.62, P.body); dg.addColorStop(1, P.dark);
-    ctx.beginPath(); ctx.ellipse(0, 0, 20, 6.4, 0, 0, 6.283); ctx.fillStyle = dg; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = OL; ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(0, 1.3, 20, 4, 0, 0, Math.PI); ctx.lineWidth = 2.4; ctx.strokeStyle = rgba(P.dark, 0.95); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(0, 0, 19, 6, 0, 0, 6.283); ctx.fillStyle = dg; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = OL; ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(0, 1.2, 19, 3.8, 0, 0, Math.PI); ctx.lineWidth = 2.3; ctx.strokeStyle = rgba(P.dark, 0.95); ctx.stroke();
     ctx.strokeStyle = rgba(P.dark, 0.55); ctx.lineWidth = 0.55;
-    for (let k = -3; k <= 3; k++) { const px = k * 5.2; ctx.beginPath(); ctx.moveTo(px * 0.9, -2 + Math.abs(k) * 0.25); ctx.lineTo(px, 4.4 - Math.abs(k) * 0.35); ctx.stroke(); }
-    for (const px of [-12, -6, 6, 12]) { ctx.fillStyle = '#1a2a1a'; ctx.beginPath(); ctx.arc(px, 2.3 - Math.abs(px) * 0.04, 1.1, 0, 6.283); ctx.fill(); }
-    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.ellipse(-8, -3.2, 8, 1.2, -0.06, 0, 6.283); ctx.fill();
-    // glass dome with the pilot
-    const gg = ctx.createRadialGradient(-3, -9, 1, 0, -5, 11); gg.addColorStop(0, 'rgba(230,255,235,0.8)'); gg.addColorStop(1, rgba(P.accent, 0.3));
-    ctx.beginPath(); ctx.ellipse(0, -4, 9.5, 8.5, 0, Math.PI, 0); ctx.closePath(); ctx.fillStyle = gg; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = OL; ctx.stroke();
-    ctx.fillStyle = '#5ad04a'; ctx.beginPath(); ctx.ellipse(0, -6.5, 3.9, 4.2, 0, 0, 6.283); ctx.fill(); ctx.lineWidth = 0.6; ctx.strokeStyle = '#1e5a14'; ctx.stroke();
-    ctx.strokeStyle = '#5ad04a'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(-2, -10); ctx.lineTo(-3.4, -12.6); ctx.moveTo(2, -10); ctx.lineTo(3.4, -12.6); ctx.stroke();
-    ctx.fillStyle = '#e0ff3a'; ctx.beginPath(); ctx.arc(-3.4, -12.6, 0.9, 0, 6.283); ctx.arc(3.4, -12.6, 0.9, 0, 6.283); ctx.fill();
-    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(-1.6, -6.8, 1.2, 1.8, -0.4, 0, 6.283); ctx.ellipse(1.6, -6.8, 1.2, 1.8, 0.4, 0, 6.283); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-1.9, -7.4, 0.4, 0, 6.283); ctx.arc(1.3, -7.4, 0.4, 0, 6.283); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.beginPath(); ctx.ellipse(-5, -8, 1.5, 2.6, -0.5, 0, 6.283); ctx.fill();
+    for (let k = -3; k <= 3; k++) { const px = k * 5; ctx.beginPath(); ctx.moveTo(px * 0.9, -2 + Math.abs(k) * 0.25); ctx.lineTo(px, 4.2 - Math.abs(k) * 0.35); ctx.stroke(); }
+    for (const px of [-11, -5.5, 5.5, 11]) { ctx.fillStyle = '#16201a'; ctx.beginPath(); ctx.arc(px, 2.2 - Math.abs(px) * 0.04, 1.05, 0, 6.283); ctx.fill(); }
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.ellipse(-7, -3, 7, 1.1, -0.06, 0, 6.283); ctx.fill();
+    // sensor dome: dark glass with a visor band (the eye moves in droneMoving)
+    const gg = ctx.createLinearGradient(0, -12, 0, -3); gg.addColorStop(0, rgba(P.light, 0.95)); gg.addColorStop(1, P.dark);
+    ctx.beginPath(); ctx.ellipse(0, -3.5, 9, 8, 0, Math.PI, 0); ctx.closePath(); ctx.fillStyle = gg; ctx.fill(); ctx.lineWidth = 1.1; ctx.strokeStyle = OL; ctx.stroke();
+    rr(-6.5, -9, 13, 5, 2.4); ctx.fillStyle = 'rgba(6,8,14,0.95)'; ctx.fill(); ctx.lineWidth = 0.6; ctx.strokeStyle = rgba(P.light, 0.5); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.ellipse(-4.5, -9.6, 2.6, 1, -0.3, 0, 6.283); ctx.fill();
+    ctx.fillStyle = P.dark; ctx.fillRect(-0.6, -13.5, 1.2, 2.6); ctx.fillStyle = P.accent; ctx.beginPath(); ctx.arc(0, -14, 1, 0, 6.283); ctx.fill();   // antenna
     drawHat(d); return;
   }
   const B = BODY_BOX[type], ax = B[0] - 6, armY = B[1] + 1;
@@ -4495,6 +4584,7 @@ function droneStatic(d, P) {
   // glossy highlight across the top
   const hg = ctx.createLinearGradient(0, B[1], 0, B[1] + B[3] * 0.45); hg.addColorStop(0, 'rgba(255,255,255,0.45)'); hg.addColorStop(1, 'rgba(255,255,255,0)');
   ctx.fillStyle = hg; ctx.fillRect(B[0], B[1], B[2], B[3] * 0.45);
+  if (type === 'engineer') { ctx.fillStyle = '#1a1a1a'; for (let k = -6; k < 8; k++) { ctx.beginPath(); ctx.moveTo(k * 4, B[1] + B[3]); ctx.lineTo(k * 4 + 2, B[1] + B[3]); ctx.lineTo(k * 4 + 5, B[1] + B[3] - 4); ctx.lineTo(k * 4 + 3, B[1] + B[3] - 4); ctx.fill(); } }
   // accent stripe (lights up when busy, see droneMoving)
   ctx.fillStyle = rgba(P.accent, 0.55); ctx.fillRect(B[0], B[1] + B[3] * 0.62 + 0.6, B[2], 1.4);
   ctx.restore();
@@ -4505,19 +4595,26 @@ function droneStatic(d, P) {
   ctx.fillStyle = 'rgba(255,255,255,0.18)'; rr(-5.5, ey - 2.2, 6, 1.4, 0.7); ctx.fill();
   // rank chevrons
   // (rank marks on the body removed: the rank shows in the corner badge instead)
+  if (type === 'engineer') {   // tool arms: a wrench on the left, a welding torch on the right
+    for (const sx of [-1, 1]) { ctx.strokeStyle = '#0b0c12'; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(sx * 9, B[1] + B[3] - 3); ctx.lineTo(sx * 13, B[1] + B[3] + 2); ctx.lineTo(sx * 11, B[1] + B[3] + 7); ctx.stroke(); ctx.strokeStyle = P.dark; ctx.lineWidth = 1.4; ctx.stroke(); }
+    ctx.save(); ctx.translate(-11, B[1] + B[3] + 8); ctx.rotate(0.4); ctx.fillStyle = '#c8d0dc'; ctx.fillRect(-0.9, -1, 1.8, 6); ctx.beginPath(); ctx.arc(0, 6, 2.4, 0, 6.283); ctx.fill(); ctx.fillStyle = P.dark; ctx.fillRect(-0.7, 6, 1.4, 3); ctx.lineWidth = 0.6; ctx.strokeStyle = '#0b0c12'; ctx.beginPath(); ctx.arc(0, 6, 2.4, 0, 6.283); ctx.stroke(); ctx.restore();
+    ctx.fillStyle = '#5a6070'; rr(9.5, B[1] + B[3] + 6, 3.4, 5, 1); ctx.fill(); ctx.fillStyle = '#ff9a3a'; ctx.fillRect(10.4, B[1] + B[3] + 10.5, 1.6, 1.5);
+  }
   drawHat(d);
 }
 // ---- the moving part (every frame): propellers, eye, lights, flames ----
 function droneMoving(d, P, t, act) {
   const type = d.type;
   if (type === 'alien') {
-    for (const sx of [-1, 1]) {   // rotors (blur disc + 2 blades), like every drone
-      ctx.save(); ctx.translate(sx * 22, -12); ctx.scale(1, 0.32);
-      ctx.fillStyle = 'rgba(220,235,255,0.22)'; ctx.beginPath(); ctx.arc(0, 0, 9, 0, 6.283); ctx.fill();
-      ctx.rotate(t * 40 * sx); ctx.fillStyle = '#1a1d24'; ctx.fillRect(-9, -1, 18, 2); ctx.rotate(Math.PI / 2); ctx.fillRect(-9, -1, 18, 2);
-      ctx.restore();
+    for (const [px, ph] of [[-26, 0], [26, 1.3]]) {   // propellers, side view: blur disc + a blade that grows and shrinks
+      ctx.globalAlpha = 0.25; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(px, -11.5, 9.5, 1.6, 0, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
+      const w = 9 * Math.abs(Math.cos(t * 38 + ph)) + 0.8;
+      ctx.strokeStyle = '#1a1d24'; ctx.lineWidth = 1.5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(px - w, -11.5); ctx.lineTo(px + w, -11.5); ctx.stroke(); ctx.lineCap = 'butt';
+      ctx.fillStyle = '#0b0c12'; ctx.beginPath(); ctx.arc(px, -11.5, 1.3, 0, 6.283); ctx.fill();
+      if (Math.sin(t * 5 + ph * 3) > 0.4) { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = px < 0 ? '#ff4a4a' : '#4aff6a'; ctx.beginPath(); ctx.arc(px, -6.5, 1, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; }
     }
-    for (let k = 0; k < 4; k++) { const on = (k + Math.floor(t * 6)) % 4 === 0; const px = [-12, -6, 6, 12][k]; if (!on) continue; ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = P.accent; ctx.beginPath(); ctx.arc(px, 2.3 - Math.abs(px) * 0.04, 1.3, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; }
+    { const ex = Math.sin(t * 1.3 + d.id) * 3.2; ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = P.accent; ctx.beginPath(); ctx.arc(ex, -6.5, 1.6, 0, 6.283); ctx.fill(); ctx.globalAlpha = 0.6; ctx.drawImage(soft(P.accent), ex - 5, -11.5, 10, 10); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+    for (let k = 0; k < 4; k++) { const on = (k + Math.floor(t * 6)) % 4 === 0; const px = [-11, -5.5, 5.5, 11][k]; if (!on) continue; ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = P.accent; ctx.beginPath(); ctx.arc(px, 2.2 - Math.abs(px) * 0.04, 1.3, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; }
     ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35 + act * 0.45 + 0.1 * Math.sin(t * 5); ctx.drawImage(soft(P.accent), -18, -1, 36, 20); ctx.globalAlpha = 1;
     ctx.strokeStyle = P.accent; ctx.lineWidth = 1.2; ctx.globalAlpha = 0.6 + 0.3 * Math.sin(t * 8); ctx.beginPath(); ctx.ellipse(0, 4, 9, 2.3, 0, 0, 6.283); ctx.stroke(); ctx.globalAlpha = 1;
     if (act > 0.3) for (let k = 0; k < 3; k++) { const f = (t * 1.5 + k / 3) % 1; ctx.globalAlpha = (1 - f) * act * 0.7; ctx.beginPath(); ctx.ellipse(0, 6 + f * 14, 6 + f * 10, 1.5 + f * 2, 0, 0, 6.283); ctx.stroke(); }
@@ -4545,6 +4642,13 @@ function droneMoving(d, P, t, act) {
     if (Math.sin(t * 4 + ph * 2) > 0.3) { ctx.fillStyle = px < 0 ? '#ff4a4a' : '#4aff7a'; ctx.beginPath(); ctx.arc(px, armY + 1, 0.9, 0, 6.283); ctx.fill(); }
   }
   // drills spin when busy
+  if (type === 'engineer') {   // spinning gear badge + welding sparks while it works
+    ctx.save(); ctx.translate(B[0] + B[2] - 5, B[1] + B[3] * 0.62); ctx.rotate(t * 2); ctx.fillStyle = P.accent; ctx.beginPath(); for (let k = 0; k < 12; k++) { const a = k * Math.PI / 6, r2 = k % 2 ? 2.1 : 3; ctx.lineTo(Math.cos(a) * r2, Math.sin(a) * r2); } ctx.closePath(); ctx.fill(); ctx.fillStyle = P.dark; ctx.beginPath(); ctx.arc(0, 0, 0.9, 0, 6.283); ctx.fill(); ctx.restore();
+    const tx = 11.2, ty = B[1] + B[3] + 12.5, on = act > 0.2 || Math.sin(t * 2.3 + d.id) > 0.85;
+    if (on) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.7 + Math.random() * 0.3; ctx.drawImage(soft('#9ae8ff'), tx - 6, ty - 6, 12, 12); star4(tx, ty, 2 + Math.random() * 1.5, '#ffffff');
+      ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 0.6; for (let k = 0; k < 3; k++) { const a = Math.random() * 3 + 0.1; ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx + Math.cos(a) * 5, ty + Math.sin(a) * 5); ctx.stroke(); }
+      ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+  }
   if ((type === 'normal' || type === 'bigdrill') && act > 0.2) drill(0, B[1] + B[3] - 1, type === 'bigdrill' ? 14 : 11, type === 'bigdrill' ? 5.5 : 4, t * 4, P);
   if (type === 'bomber' || type === 'drillbomber' || type === 'heavybomber') { const r = type === 'heavybomber' ? 7 : 4.5, by = B[1] + B[3] + (type === 'heavybomber' ? 5 : 3); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.6 + 0.4 * Math.sin(t * 20); ctx.drawImage(soft('#ffd27a'), -3, by - r - 7, 6, 6); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
   if (type === 'laser') { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.4 + act * 0.6; ctx.drawImage(soft(P.accent), -7, B[1] + B[3] - 1, 14, 14); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
@@ -4729,8 +4833,9 @@ function drawMothership(P, t, act) {
 }
 function drawDrone(d, x, y, o) {
   o = o || {};
+  if (d.type === 'alien' && !o.world && !o.fitted) { o = Object.assign({}, o, { scale: (o.scale || 1) * 0.62, fitted: true }); }   // the alien drone is wide: smaller in menus
   if (o.box) { ctx.save(); ctx.beginPath(); ctx.rect(o.box[0], o.box[1], o.box[2], o.box[3]); ctx.clip(); drawDrone(d, x, y, Object.assign({}, o, { box: null })); ctx.restore(); return; }   // stay inside the square
-  if (d.type === 'mothership') { const t0 = o.t !== undefined ? o.t : G.time, sc0 = (o.scale || 1) * (o.world ? 1 : 0.62); ctx.save(); ctx.translate(x, y); ctx.scale(sc0, sc0); if (o.tilt) ctx.rotate(o.tilt * 0.5); drawMothership(dronePal(d), t0, o.act || 0); ctx.restore(); return; }
+  if (d.type === 'mothership') { const t0 = o.t !== undefined ? o.t : G.time, sc0 = (o.scale || 1) * (o.world ? 1 : 0.34); ctx.save(); ctx.translate(x, y); ctx.scale(sc0, sc0); if (o.tilt) ctx.rotate(o.tilt * 0.5); drawMothership(dronePal(d), t0, o.act || 0); ctx.restore(); return; }
   const P = dronePal(d), t = o.t !== undefined ? o.t : G.time, act = o.act || 0, sc = o.scale || 1;
   ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc); if (o.tilt) ctx.rotate(o.tilt);
   if (d.rank >= 5 || d.type === 'alien') { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25 + 0.12 * Math.sin(t * 3); ctx.drawImage(soft(d.type === 'alien' ? '#7dff3a' : RANK_COL[5]), -30, -26, 60, 52); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
@@ -4805,6 +4910,17 @@ function drawDroneWorld() {
       if (rk >= 0) { const k = vsc(), ac = SK.accent2 || SK.accent === '#ffffff' ? SK.light : SK.accent; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.22 + 0.1 * Math.sin(G.time * 3 + d.id); ctx.drawImage(soft(ac), x - 34 * k, y - 30 * k, 68 * k, 60 * k);
         if (rk >= 1) for (let q = 0; q < 3; q++) { const a = G.time * 2.2 + q * 2.094 + d.id; ctx.globalAlpha = 0.85; star4(x + Math.cos(a) * 26 * k, y + Math.sin(a) * 9 * k + 4 * k, (1.6 + 0.6 * Math.sin(G.time * 6 + q)) * k * 1.4, q ? '#ffffff' : ac); }
         ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; } }
+    if (s.warp) {   // the teleport trail: a zigzag of green + pink, fading
+      const W2 = s.warp, a = 1 - W2.t / 0.45, R2 = seeded(Math.floor(W2.seed * 1000) + Math.floor(G.time * 20));
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineJoin = 'miter';
+      for (const [col, off, lw] of [['#ff00ff', -2, 3], ['#00ff66', 2, 3], ['#ffffff', 0, 1.2]]) {
+        ctx.globalAlpha = a * (col === '#ffffff' ? 0.9 : 0.7); ctx.strokeStyle = col; ctx.lineWidth = lw * vsc(); ctx.beginPath(); ctx.moveTo(W2.x0 + off, wy(W2.y0));
+        for (let q = 1; q <= 8; q++) { const f = q / 8, jx = q < 8 ? (R2() - 0.5) * 18 : 0, jy = q < 8 ? (R2() - 0.5) * 12 : 0; ctx.lineTo(W2.x0 + (x - W2.x0) * f + jx + off, wy(W2.y0) + (y - wy(W2.y0)) * f + jy); }
+        ctx.stroke();
+      }
+      ctx.globalAlpha = a * 0.6; ctx.drawImage(soft('#00ff66'), x - 30, y - 30, 60, 60); ctx.drawImage(soft('#ff00ff'), W2.x0 - 24, wy(W2.y0) - 24, 48, 48);
+      ctx.restore();
+    }
     if (d.skin === 'glitch') {   // GL1TCH: afterimages, corrupted blocks orbiting, ERROR text now and then
       const k2 = vsc() * 1.4;
       for (let q = 0; q < 2; q++) { const ox = Math.sin(G.time * 13 + q * 3) * 6 * k2, oy = Math.cos(G.time * 9 + q) * 2; ctx.globalAlpha = 0.18; ctx.globalCompositeOperation = 'lighter'; drawDrone(d, x + ox - (q ? 8 : -8) * k2, y + oy, { tilt: s.tilt, t: s.t + ta * DT, scale: k2 }); }
@@ -4903,7 +5019,8 @@ function renderDrones() {
       ctx.fillStyle = 'rgba(0,0,0,0.55)'; rr(x, y, sw, sh, 10); ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.stroke();
       ctx.strokeStyle = '#08080c'; ctx.lineWidth = 7; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x + 20, y + 20); ctx.lineTo(x + sw - 20, y + sh - 34); ctx.moveTo(x + sw - 20, y + 20); ctx.lineTo(x + 20, y + sh - 34); ctx.stroke();
       ctx.strokeStyle = '#1a1a22'; ctx.lineWidth = 3; ctx.stroke(); ctx.lineCap = 'butt';
-      if (k === G.slotsOpen) btn('slotbuy', x + 3, y + sh - 28, sw - 6, 24, fmt(SLOT_PRICES[k]), { col: G.creditz >= SLOT_PRICES[k] ? '#3aa04a' : '#5a3a3a', size: 12, r: 7, fn: buySlot });
+      txt('Rebirth ' + (k - 2), x + sw / 2, y + sh - 16, 11, k === G.slotsOpen ? '#ffd84a' : '#6a7080', { font: FB, weight: 900, shadow: false });
+      if (false) btn('slotbuy', x + 3, y + sh - 28, sw - 6, 24, fmt(SLOT_PRICES[k]), { col: G.creditz >= SLOT_PRICES[k] ? '#3aa04a' : '#5a3a3a', size: 12, r: 7, fn: buySlot });
       continue;
     }
     const d = G.slots[k] && droneById(G.slots[k]);
@@ -4950,11 +5067,22 @@ function renderDrones() {
   txt(droneName(d), 222, y0 + 26, fitSize(droneName(d), 22, 230), RANK_COL[d.rank], { align: 'left', stroke: 3 });
   txt(DRONE_TYPES[d.type].rar, 545, y0 + 27, 13, RCOL[DRONE_TYPES[d.type].rar], { align: 'right', font: FB, weight: 900 });
   txt(DRONE_TYPES[d.type].desc, 222, y0 + 52, fitSize(DRONE_TYPES[d.type].desc, 12, 330, FB), '#c9cfdc', { align: 'left', font: FB, weight: 800 });
-  const stats = d.type === 'mothership' ? 'Every ' + Math.round(droneCd(d)) + 's: 5 minerals   Fleet: 3 ships, 15s, every ' + Math.round(MOTHER_FLEET_CD * lvlCd(d)) + 's' : d.type === 'alien' ? 'Every ' + Math.round(droneCd(d)) + 's   Takes up to: ' + (d.rank >= 5 ? 'any mineral' : 'the ' + (d.rank + 1) + ' cheapest of a biome')
+  const stats = d.type === 'engineer' ? 'Drills every ' + droneCd(d).toFixed(1) + 's   Tech: 1 part every ' + Math.round(techTime(d)) + 's (in a slot)' : d.type === 'mothership' ? 'Every ' + Math.round(droneCd(d)) + 's: 5 minerals   Fleet: 3 ships, 15s, every ' + Math.round(MOTHER_FLEET_CD * lvlCd(d)) + 's' : d.type === 'alien' ? 'Every ' + Math.round(droneCd(d)) + 's   Takes up to: ' + (d.rank >= 5 ? 'any mineral' : 'the ' + (d.rank + 1) + ' cheapest of a biome')
     : 'Every ' + droneCd(d).toFixed(1) + 's   ' + RK.dmg[d.rank] + ' crack' + (RK.dmg[d.rank] > 1 ? 's' : '') + ' per hit   Speed x' + RK.spd[d.rank] + (d.type === 'laser' ? '   ' + laserLanes(d.rank).length + ' beam' + (laserLanes(d.rank).length > 1 ? 's' : '') : '');
   txt(stats, 222, y0 + 74, fitSize(stats, 12, 330, FB), '#ffd84a', { align: 'left', font: FB, weight: 900 });
-  if (dLvl(d) > 1) txt('Level bonus: -' + Math.round((1 - lvlCd(d)) * 100) + '% cooldown, +' + Math.round((lvlSpd(d) - 1) * 100) + '% speed, +' + Math.round(lvlCrit(d) * 100) + '% extra crack' + (aiRank(d) > d.rank ? ', smarter brain' : ''), 222, y0 + 152, fitSize('Level bonus: -00% cooldown, +00% speed, +00% extra crack, smarter brain', 11, 330, FB), '#ffe14a', { align: 'left', font: FB, weight: 900 });
+  if (dLvl(d) > 1 || modOf(d, 'cd') || modOf(d, 'spd') || modOf(d, 'crit')) txt('Bonus: -' + Math.round((1 - lvlCd(d)) * 100) + '% cooldown, +' + Math.round((lvlSpd(d) - 1) * 100) + '% speed, +' + Math.round(lvlCrit(d) * 100) + '% extra crack' + (aiRank(d) > d.rank ? ', smarter brain' : ''), 222, y0 + 152, fitSize('Level bonus: -00% cooldown, +00% speed, +00% extra crack, smarter brain', 11, 330, FB), '#ffe14a', { align: 'left', font: FB, weight: 900 });
   txt(['', 'Brain: picks random rocks', 'Brain: never goes to the same rock as another drone', 'Brain: finishes cracked rocks first, loves golden rocks + chests', 'Brain: picks the best nearby spot', 'Brain: picks the best spot on the whole wall'][aiRank(d)], 222, y0 + 94, 11, '#9ad8ff', { align: 'left', font: FB, weight: 800 });
+  if (G.drones.some(q => q.type === 'engineer')) {
+    const tp = Math.floor(G.tech || 0);
+    ctx.fillStyle = 'rgba(58,208,255,0.1)'; rr(222, y0 + 160, 336, 30, 8); ctx.fill();
+    drawIcon('gear', 236, y0 + 175, 14, '#3ad0ff'); txt(tp + ' Tech', 250, y0 + 175.5, 11, '#9ae8ff', { align: 'left', font: FB, weight: 900, shadow: false });
+    MODS.forEach(([key, nm, eff], i) => {
+      const lv = modOf(d, key), max = lv >= MOD_MAX, c = modCost(lv), ok = !max && tp >= c;
+      btn('emod' + key, 300 + i * 86, y0 + 163, 82, 24, max ? nm + ' MAX' : nm + ' ' + lv + '/5 (' + c + ')', { col: max ? '#2a6a3a' : ok ? '#2a7aa8' : '#3a4256', size: 10, r: 7, fn: () => {
+        if (max) return; if ((G.tech || 0) < c) { toast('Needs ' + c + ' Tech parts. Engineers in slots make them', '#ff8a8a'); AUDIO.sfx('deny'); return; }
+        G.tech -= c; d.mods = cleanMods(d.mods); d.mods[key]++; AUDIO.sfx('buy'); toast(droneName(d) + ': ' + nm + ' ' + eff + ' (forever)', '#9ae8ff'); save(); } });
+    });
+  }
   const k = slotOf(d), inSlot = k >= 0 && k < G.slotsOpen;
   btn('dslot', 222, y0 + 112, 150, 34, inSlot ? 'Take out' : 'Put in slot', { col: inSlot ? '#6a5a3a' : '#3a7a9a', size: 15, fn: () => {
     AUDIO.sfx('click');
@@ -5862,9 +5990,10 @@ function frame(t) {
   while (acc >= DT) { tick(); acc -= DT; }
   TICK_A = clamp(acc / DT, 0, 1);
   // FPS limit: the game still runs 30 ticks a second, we just skip drawing some screen frames
-  const cap = [1000 / 30, 1000 / 60, 0][GFX.fpsCap];
-  if (cap && t - lastDraw < cap - 3) return;
-  const ddt = Math.min(0.25, (t - lastDraw) / 1000); lastDraw = t;
+  // (a browser can never draw faster than your screen refreshes, so 'Uncapped' = as fast as your screen allows)
+  const fm = FPS_MAX[GFX.fpsMax === undefined ? 6 : GFX.fpsMax], cap = fm ? 1000 / fm : 0;
+  if (cap && t < lastDraw + cap - 1) return;
+  const ddt = Math.min(0.25, (t - lastDraw) / 1000); lastDraw = cap ? Math.max(lastDraw + cap, t - cap) : t;   // keeps an even pace (e.g. exactly 60 on a 144 Hz screen)
   const r0 = performance.now(); render(); const rms = performance.now() - r0;
   watchQuality(ddt, rms);
   if (QUALITY.show) drawFps(rms);
@@ -5875,7 +6004,7 @@ function watchQuality(dt, rms) {
   QUALITY.ms = QUALITY.ms * 0.95 + dt * 1000 * 0.05; QUALITY.fps = 1000 / QUALITY.ms; QUALITY.rms = (QUALITY.rms || rms) * 0.95 + rms * 0.05;
   if (!GFX.auto) { if (QUALITY.drop) { QUALITY.drop = 0; resize(); } return; }
   if (G.scene !== 'play' || G.menu === 'settings') return;
-  const goal = GFX.fpsCap === 0 ? 1000 / 30 : 1000 / 60;   // the frame time we are aiming for
+  const goal = FPS_MAX[GFX.fpsMax] === 30 ? 1000 / 30 : 1000 / 60;   // the frame time we are aiming for
   if (QUALITY.drop < 2 && QUALITY.ms > goal * 1.6) { if ((QUALITY.slowT += dt) > 3) { QUALITY.drop++; QUALITY.slowT = 0; resize(); toast('Auto quality: graphics turned down a bit', '#9aa0aa'); } } else QUALITY.slowT = 0;
   if (QUALITY.drop > 0 && QUALITY.ms < goal * 0.8) { if ((QUALITY.fastT += dt) > 20) { QUALITY.drop--; QUALITY.fastT = 0; resize(); } } else QUALITY.fastT = 0;
 }
