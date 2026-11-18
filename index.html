@@ -182,7 +182,14 @@ const AMB_X = {
   prism: { n: 50, move: 'twinkle', col: ['#ff6a6a', '#ffd84a', '#7dff7a', '#6ab0ff', '#d07aff'], size: 5 }, heart: { n: 45, move: 'rise', col: ['#ff4a6a', '#ff8a9a'], size: 3, glow: true },
 };
 const OLD_ORDER = ['Common Caverns', 'Magnetic Mountain', 'Heavy Hights', 'Crystal Cave', 'Red Ravines', 'Cryo Cliffs', 'Toxic Tunnels', 'Void Valley'];   // version 1+2 saves
-const EVENT_MINERALS = [['Starfallium', 'Secret', 'Meteor showers: x3 the best mineral here']];
+const EVENT_MINERALS = [['Starfallium', 'Secret', 'Meteor showers: x3 the best mineral here'],
+  ['Auroralite', 'Secret', 'Aurora Night: rocks can hold it (x4 the best mineral)'], ['Cometite', 'Secret', 'Comet: touch the comet to catch it (x8)'],
+  ['Quakeite', 'Secret', 'Earthquake: shaken loose from rocks (x3)'], ['Phantomite', 'Secret', 'Phantom Mist: break a haunted rock (x5)']];
+// their pictures: shapes borrowed from other crystals, new colours
+(function eventArt() {
+  const src = [['Crystal Cave', 4, ['#5affc8', '#ff7ad8']], ['Starfall Rift', 2, ['#bfe0ff', '#4a6aff']], ['Heavy Hights', 3, ['#c8a070', '#5a3a1a']], ['Void Valley', 5, ['#e8e0ff', '#6a3aaa']]];
+  for (const [bn, gi, cols] of src) { const g = ART.gems[bn] && ART.gems[bn][gi] || ART.gems.Event[0]; ART.gems.Event.push(Object.assign({}, g, { name: EVENT_MINERALS[ART.gems.Event.length][0], shapes: g.shapes.map(sh => Object.assign({}, sh, { fill: sh.fill ? sh.fill.map((c, ci) => cols[Math.min(ci, 1)]) : null })) })); }
+})();
 // the gold family: each biome's golden rocks drop that biome's gold; 1 in 20 is the Pure version (x5)
 const PURE_CHANCE = 1 / 20, GOLD_VALUE = 5, PURE_VALUE = 25;
 const goldenChance = () => upv('golden', 1) / (perk(3) ? 125 : 250);
@@ -416,7 +423,7 @@ function save() {
   try {
     const lv = {}; for (const k in LEVEL_DEFAULTS) lv[k] = G[k];
     localStorage.setItem(SAVE_KEY, JSON.stringify({
-      v: 4, creditz: G.creditz, high: G.high, cm: G.cmLevel, sp: G.spLevel, bomb: G.bombLevel, auto: G.autoLevel, levels: lv,
+      v: 4, order2: 1, creditz: G.creditz, high: G.high, cm: G.cmLevel, sp: G.spLevel, bomb: G.bombLevel, auto: G.autoLevel, levels: lv,
       rebirths: G.rebirths, rmult: G.rebirthMult, biomeName: BIOMES[G.biome].name, hue: G.crystalHue,
       found: G.found, ach: G.ach, reachedNames: BIOMES.filter((b, i) => G.reached & (1 << i)).map(b => b.name), visitedNames: BIOMES.filter((b, i) => G.visited & (1 << i)).map(b => b.name), stats: G.stats,
       heartHP: G.heartHP, won: G.won, settings: G.settings, quests: G.quests, questsDone: G.questsDone, boostT: G.boostT, rate: G.rate || 0, savedAt: Date.now(),
@@ -453,6 +460,11 @@ function loadSave() {
     // biomes reached this run: v3 saves list them; older saves count every biome up to the current one
     G.reached = 0;
     if (Array.isArray(s.reachedNames)) s.reachedNames.forEach(n => { const i = BIOME_INDEX(n); if (i >= 0) G.reached |= 1 << i; });
+    if (!s.order2) {   // saved before the 2026-11-18 biome order: keep how MANY biomes you had, in the new order
+      const n = clamp(Array.isArray(s.reachedNames) ? s.reachedNames.filter(nm => BIOME_INDEX(nm) >= 0).length : (G.biome + 1), 1, BIOMES.length);
+      G.reached = n >= 31 ? 0x7fffffff : (1 << n) - 1;
+      if (G.biome >= n) G.biome = n - 1;
+    }
     for (let i = 0; i <= G.biome; i++) G.reached |= 1 << i;
     G.visited |= G.reached;
     G.stats = Object.assign({ rocks: 0, empty: 0, minerals: 0, time: 0, bombs: 0, hard: 0, chests: 0, rain: 0, mega: 0 }, s.stats || {});
@@ -523,7 +535,7 @@ const rgba = (hex, a) => { const c = hexRgb(hex); return 'rgba(' + c[0] + ',' + 
 function loadBiome(i, fromTeleport) {
   G.biome = i;
   G.visited |= (1 << i); G.reached |= (1 << i);
-  G.rocks = []; G.meteors = []; G.bombs = []; G.mega = null; G.drops = []; G.rain = 0;
+  G.rocks = []; G.meteors = []; G.bombs = []; G.mega = null; G.drops = []; G.rain = 0; G.ev = null;
   G.drills.forEach(d => { d.target = null; });
   G.menu = null; G.regenWait = -1; G.mouse.down = false;
   if (G.biomeFx && !G.biomeFx.out) G.biomeFx.out = 0.001;   // you went somewhere: the 'next biome' banner slides away fast
@@ -684,6 +696,9 @@ function breakRock(rock, special) {
     G.lights.push({ x: rock.x, y: rock.y, r: pure ? 200 : 130, col: '#ffd84a', life: 1, max: 1 });
     if (pure) toast('PURE GOLD!  ' + ART.gems.Pure[i].name, '#fff2a8');
   }
+  else if (rock.ghost) { rock.ghost = false; gemKey = 'Event'; i = 4; gain = 5 * bestValue(b) * totalMult(); rar = 'Secret'; sparkle(rock.x, rock.y, '#e8deff', 18); }
+  else if (G.ev && G.ev.type === 'aurora' && rnd(1, 6) === 1) { gemKey = 'Event'; i = 1; gain = 4 * bestValue(b) * totalMult(); rar = 'Secret'; }
+  else if (G.ev && G.ev.type === 'quake' && rnd(1, 5) === 1) { gemKey = 'Event'; i = 3; gain = 3 * bestValue(b) * totalMult(); rar = 'Secret'; }
   else if (special === 'meteor' && rnd(1, 4) === 1) { gemKey = 'Event'; i = 0; gain = 3 * bestValue(b) * totalMult(); rar = 'Secret'; ach('star'); }
   else {
     i = rock.alienGem >= 0 ? rock.alienGem : rollMineral(b);                    // the Alien ship already scanned this one
@@ -924,6 +939,64 @@ function dropBomb(wx, wy) {
 }
 
 // ---------------- events ----------------
+// NEW EVENTS (2026-11-18): Aurora Night, Comet, Earthquake, Phantom Mist. One at a time, in G.ev.
+const EVENTS = {
+  aurora: { name: 'AURORA NIGHT', dur: 25, col: ['#3affb0', '#9affe0'], msg: 'AURORA NIGHT! Rocks can hold Auroralite' },
+  comet: { name: 'COMET', dur: 14, col: ['#6ab0ff', '#d8ecff'], msg: 'A COMET! Touch it with your pickaxe to catch it' },
+  quake: { name: 'EARTHQUAKE', dur: 12, col: ['#c8803a', '#ffc87a'], msg: 'EARTHQUAKE! Rocks are cracking by themselves' },
+  phantom: { name: 'PHANTOM MIST', dur: 25, col: ['#b89aff', '#e8deff'], msg: 'PHANTOM MIST! Break the haunted rocks' },
+};
+function startEvent(type) {
+  const E = EVENTS[type]; G.ev = { type, t: E.dur, dur: E.dur, k: 0 };
+  if (type === 'comet') { const fromL = Math.random() < 0.5; G.ev.cx = fromL ? -300 : 300; G.ev.cy = 60 + Math.random() * 120; G.ev.vx = (fromL ? 1 : -1) * 600 / (E.dur * 30); G.ev.vy = -0.25; }
+  if (type === 'phantom') { const live = G.rocks.filter(r => r.state === 'rock' && !r.chest && !r.golden); for (let k = 0; k < Math.min(7, live.length); k++) { const r = live.splice(Math.floor(Math.random() * live.length), 1)[0]; r.ghost = true; } }
+  toast(E.msg, E.col[1]); AUDIO.sfx(type === 'quake' ? 'impact' : 'rush'); G.flash = Math.max(G.flash, 0.25); G.flashCol = E.col[1];
+}
+function tickEvent() {
+  const e = G.ev; if (!e) return;
+  e.t -= DT; e.k += DT;
+  if (e.type === 'quake') { G.shake = Math.max(G.shake, 3 + Math.sin(e.k * 9) * 1.5); if ((e.next = (e.next || 0) - DT) <= 0) { e.next = 0.3; const live = G.rocks.filter(r => r.state === 'rock' && r.spawnT <= 0); if (live.length) { const r = live[Math.floor(Math.random() * live.length)]; hitRock(r, 'quake'); dust(r.x, r.y, '#a08060', 4); } } }
+  if (e.type === 'comet' && !e.caught) {
+    e.cx += e.vx; e.cy += e.vy + Math.sin(e.k * 2) * 0.4;
+    if (Math.random() < 0.6) G.parts.push({ kind: 'ember', x: e.cx - Math.sign(e.vx) * 6, y: e.cy + (Math.random() - 0.5) * 6, vx: -e.vx * 0.3, vy: (Math.random() - 0.5) * 0.4, life: 26, max: 26, s: 1.2, col: Math.random() < 0.5 ? '#bfe0ff' : '#ffffff', ph: Math.random() * 6 });
+    const w = toWorld(G.mouse.x, G.mouse.y);
+    if (G.mouse.over && !G.mouse.onUI && Math.hypot(w.x - e.cx, w.y - e.cy) < 30) {
+      e.caught = true; e.t = Math.min(e.t, 1.2);
+      const b = BIOMES[G.biome], g = 8 * bestValue(b) * totalMult(); giveCreditz(g); addFound('Event', 2);
+      G.floats.push({ x: e.cx, y: e.cy + 20, text: 'COMETITE! +' + fmt(g), col: '#bfe0ff', t: 0, size: 18 }); sparkle(e.cx, e.cy, '#bfe0ff', 24);
+      G.lights.push({ x: e.cx, y: e.cy, r: 200, col: '#9ad0ff', life: 0.8, max: 0.8 }); G.flash = 0.4; G.flashCol = '#d8ecff'; AUDIO.sfx('victory'); addXP(40);
+    }
+  }
+  if (e.t <= 0) { if (e.type === 'phantom') for (const r of G.rocks) r.ghost = false; if (e.type === 'comet' && !e.caught) toast('The comet got away...', '#9aa0aa'); G.ev = null; }
+}
+function drawEventWorld() {   // things the events add to the mine
+  const e = G.ev; if (!e) return;
+  if (e.type === 'phantom') for (const r of G.rocks) if (r.ghost && r.state === 'rock') {   // a little ghost floats over a haunted rock
+    const x = r.x, y = wy(r.y) - 4 + Math.sin(G.time * 3 + r.seed) * 3, k = gsc();
+    ctx.save(); ctx.translate(x, y); ctx.scale(k, k);
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35; ctx.drawImage(soft('#b89aff'), -26, -26, 52, 52); ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 0.85; ctx.fillStyle = '#f0ecff'; ctx.beginPath(); ctx.arc(0, -4, 10, Math.PI, 0); ctx.lineTo(10, 9);
+    for (let q = 0; q < 4; q++) ctx.lineTo(10 - (q + 0.5) * 5, 9 + (q % 2 ? -3 : 3) + Math.sin(G.time * 8 + q) * 1.2);
+    ctx.lineTo(-10, 9); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#2a1a4a'; ctx.beginPath(); ctx.ellipse(-3.5, -4, 1.8, 2.6, 0, 0, 6.283); ctx.ellipse(3.5, -4, 1.8, 2.6, 0, 0, 6.283); ctx.fill();
+    ctx.restore(); ctx.globalAlpha = 1;
+  }
+  if (e.type === 'comet' && !e.caught) {   // a glowing comet with a long tail
+    const x = e.cx, y = wy(e.cy), dir = -Math.sign(e.vx);
+    ctx.globalCompositeOperation = 'lighter';
+    const g = ctx.createLinearGradient(x, y, x + dir * 120, y + 18); g.addColorStop(0, 'rgba(220,236,255,0.9)'); g.addColorStop(1, 'rgba(100,160,255,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x, y - 8); ctx.lineTo(x + dir * 120, y + 10); ctx.lineTo(x + dir * 120, y + 26); ctx.lineTo(x, y + 8); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 0.9; ctx.drawImage(soft('#9ad0ff'), x - 30, y - 30, 60, 60); ctx.globalAlpha = 1;
+    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x, y, 7 + Math.sin(G.time * 12) * 1, 0, 6.283); ctx.fill();
+    star4(x, y, 14, '#ffffff'); ctx.globalCompositeOperation = 'source-over';
+  }
+}
+function drawEventBack() {   // things the events add to the sky
+  const e = G.ev; if (!e) return;
+  const a = Math.min(1, e.k * 1.5, e.t * 1.5);
+  if (e.type === 'aurora') { ctx.save(); ctx.globalAlpha = a; SPECIAL_BACK['Aurora Abyss'](); ctx.restore(); }
+  if (e.type === 'phantom') { ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let k = 0; k < 5; k++) { const x = ((G.time * 20 * (k % 2 ? 1 : -1) + k * 300) % (W + 400) + W + 400) % (W + 400) - 200; ctx.globalAlpha = 0.12 * a; ctx.drawImage(soft('#b89aff'), x - 200, H * (0.2 + k * 0.15) - 80, 400, 160); } ctx.restore(); }
+}
 function startShower() { G.shower = 15; G.meteorT = 0.5; toast('METEOR SHOWER!', '#ff9a3a'); AUDIO.sfx('alarm'); }
 function startRush() {
   G.rush = perk(12) ? 40 : 20; toast('GOLD RUSH! Golden rocks everywhere!', '#ffd84a'); AUDIO.sfx('rush');
@@ -1083,10 +1156,12 @@ function tick() {
     } else if (G.rush > 0) {
       G.rush = Math.max(0, G.rush - DT);
       if (G.rush === 0) ach('rush');
+    } else if (G.ev) { tickEvent();
     } else if ((G.nextEvent -= DT * (perk(5) ? 1.5 : 1) * (1 + upv('meteor', 0))) <= 0) {
       G.nextEvent = 180 + Math.random() * 150;
       const e = Math.random();
-      if (e < 0.35) startShower(); else if (e < 0.6) startRush(); else if (e < 0.8 && startMega()) {} else startRain();
+      if (e < 0.2) startShower(); else if (e < 0.37) startRush(); else if (e < 0.5 && startMega()) {} else if (e < 0.63) startRain();
+      else if (e < 0.73) startEvent('aurora'); else if (e < 0.82) startEvent('comet'); else if (e < 0.91) startEvent('quake'); else startEvent('phantom');
     }
     if (G.rain > 0) { G.rain = Math.max(0, G.rain - DT); if ((G.rainT -= DT) <= 0) { spawnDrop(); G.rainT = 0.3; } }
     if (G.drops.length) {
@@ -1944,6 +2019,7 @@ function drawBackFx(shx) {
   setScreen();
   if (BIOMES[bi].name === 'Clockwork Canyon' && G.scene === 'play') drawClockworkBack(shx);
   if (G.scene === 'play' && SPECIAL_BACK[BIOMES[bi].name]) SPECIAL_BACK[BIOMES[bi].name](shx);
+  if (G.scene === 'play') drawEventBack();
   ctx.globalCompositeOperation = 'lighter';
   const beam = beamSprite(acc);
   for (let k = 0; k < 4; k++) {
@@ -2585,6 +2661,17 @@ function drawGem(art, x, y, px, o) {
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = (o.alpha === undefined ? 1 : o.alpha) * gl;
     const gs = o.small ? 0.9 : 1.3; ctx.drawImage(soft(o.glow), -px * gs, -px * gs, px * gs * 2, px * gs * 2);
+    if (o.rank >= 6) {   // Angelic and up: a pulsing halo ring around it
+      const pr = px * (0.78 + 0.06 * Math.sin(G.time * 4));
+      ctx.save(); ctx.globalAlpha *= 0.8; ctx.strokeStyle = o.glow; ctx.lineWidth = Math.max(1, px * 0.04); ctx.beginPath(); ctx.arc(0, 0, pr, 0, 6.283); ctx.stroke();
+      ctx.globalAlpha *= 0.5; ctx.lineWidth = Math.max(1, px * 0.1); ctx.beginPath(); ctx.arc(0, 0, pr, G.time * 2, G.time * 2 + 1.6); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, pr, G.time * 2 + 3.14, G.time * 2 + 4.74); ctx.stroke(); ctx.restore();
+    }
+    if (o.rank >= 7) {   // Transcendant and up: prism colours spinning around it
+      ctx.save(); ctx.rotate(-G.time * 1.2);
+      const PRISM = ['#ff4a6a', '#ffb02a', '#fff23a', '#5aff7a', '#4ad0ff', '#9a6aff'];
+      for (let k = 0; k < 6; k++) { ctx.rotate(1.047); ctx.globalAlpha = (o.alpha === undefined ? 1 : o.alpha) * 0.55; ctx.fillStyle = PRISM[k]; ctx.beginPath(); ctx.moveTo(0, -px * 0.95); ctx.lineTo(px * 0.06, -px * 1.12); ctx.lineTo(0, -px * 1.3); ctx.lineTo(-px * 0.06, -px * 1.12); ctx.closePath(); ctx.fill(); }
+      ctx.restore();
+    }
     if (o.rank >= 5) {
       ctx.save(); ctx.rotate(G.time * 0.8); ctx.fillStyle = rgba(o.glow, 0.18);
       for (let k = 0; k < 8; k++) { ctx.rotate(Math.PI / 4); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-px * 0.12, -px * 1.6); ctx.lineTo(px * 0.12, -px * 1.6); ctx.fill(); }
@@ -2636,6 +2723,12 @@ function gemShapes(art, o) {
         const lg = ctx.createLinearGradient(art.cx - R2 * 0.5, art.cy - R2 * 0.5, art.cx + R2 * 0.5, art.cy + R2 * 0.5);
         lg.addColorStop(0, 'rgba(255,255,255,0.5)'); lg.addColorStop(0.3, 'rgba(255,255,255,0.08)'); lg.addColorStop(0.45, 'rgba(255,255,255,0)'); lg.addColorStop(0.7, 'rgba(0,0,0,0)'); lg.addColorStop(1, 'rgba(0,0,0,0.3)');
         ctx.fillStyle = lg; ctx.fill(p);
+        // facets: light and dark wedges from a point near the top, like a cut gem
+        { const fx = art.cx - R2 * 0.06, fy = art.cy - R2 * 0.1;
+          for (let k = 0; k < 8; k++) { const a0 = k * 0.785 + 0.2, a1 = a0 + 0.785; ctx.fillStyle = k % 2 ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.1)'; ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(fx + Math.cos(a0) * R2, fy + Math.sin(a0) * R2); ctx.lineTo(fx + Math.cos(a1) * R2, fy + Math.sin(a1) * R2); ctx.closePath(); ctx.fill(); } }
+        // a bright "window" reflection at the top left + a soft dark edge at the bottom right
+        ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.beginPath(); ctx.ellipse(art.cx - R2 * 0.2, art.cy - R2 * 0.24, R2 * 0.16, R2 * 0.07, -0.6, 0, 6.283); ctx.fill();
+        const sg = ctx.createRadialGradient(art.cx + R2 * 0.35, art.cy + R2 * 0.35, 0, art.cx + R2 * 0.35, art.cy + R2 * 0.35, R2 * 0.45); sg.addColorStop(0, 'rgba(0,0,0,0.28)'); sg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = sg; ctx.fill(p);
         ctx.strokeStyle = 'rgba(255,255,255,0.28)'; ctx.lineWidth = R2 * 0.018;
         const fx0 = art.cx - R2 * 0.08, fy0 = art.cy - R2 * 0.12;
         for (let k = 0; k < 5; k++) { const a = -2.4 + k * 1.15; ctx.beginPath(); ctx.moveTo(fx0, fy0); ctx.lineTo(fx0 + Math.cos(a) * R2, fy0 + Math.sin(a) * R2); ctx.stroke(); }
@@ -2649,6 +2742,12 @@ function gemShapes(art, o) {
   }
 }
 function gemGlint(art, x, y, px, o) {
+  if (o.glow && o.rank >= 6 && !o.silhouette) {   // sparkles orbiting the rarest crystals
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    const n = o.rank >= 8 ? 5 : o.rank >= 7 ? 4 : 3;
+    for (let k = 0; k < n; k++) { const a = G.time * (1.6 + k * 0.15) + k * 6.283 / n, r2 = px * (0.85 + 0.1 * Math.sin(G.time * 3 + k)); ctx.globalAlpha = (o.alpha === undefined ? 1 : o.alpha) * (0.6 + 0.4 * Math.sin(G.time * 7 + k * 2)); star4(x + Math.cos(a) * r2, y + Math.sin(a) * r2 * 0.6, px * 0.09, k % 2 ? '#ffffff' : o.glow); }
+    ctx.restore();
+  }
   if (!o.silhouette && px > 14) {   // glint
     const tw = 0.5 + 0.5 * Math.sin(G.time * 3 + x * 0.1);
     ctx.save(); ctx.globalAlpha = (o.alpha === undefined ? 1 : o.alpha) * (0.5 + tw * 0.5);
@@ -3038,6 +3137,7 @@ function renderWorld(shx, shy) {
   const hover = worldHover();
   if (G.heart) drawHeart(G.heart);
   for (const r of G.rocks) if (r.state === 'rock' || r.state === 'open') drawRock(r, b.name);
+  drawEventWorld();
   // hover outline + crack timer
   if (hover && hover !== G.heart) {
     ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,' + (0.5 + 0.3 * Math.sin(G.time * 8)) + ')'; const hf = gsc(); rr(hover.x - 26 * hf, wy(hover.y) - 26 * hf, 52 * hf, 52 * hf, 9 * hf); ctx.stroke();
@@ -3227,7 +3327,7 @@ function renderHUD() {
   }
   // event banners (bars drain to exactly 0)
   const ev = G.shower > 0 ? ['METEOR SHOWER', G.shower / 15, '#ff8a3a', '#ffb04a'] : G.rush > 0 ? ['GOLD RUSH', G.rush / (perk(12) ? 40 : 20), '#ffc21a', '#ffe27a']
-    : G.mega ? ['MEGA ROCK', G.mega.t / MEGA_TIME, '#ff8a3a', '#ffb36a'] : G.rain > 0 ? ['CRYSTAL RAIN', G.rain / 15, '#6ab0ff', '#9ad8ff'] : null;
+    : G.mega ? ['MEGA ROCK', G.mega.t / MEGA_TIME, '#ff8a3a', '#ffb36a'] : G.rain > 0 ? ['CRYSTAL RAIN', G.rain / 15, '#6ab0ff', '#9ad8ff'] : G.ev ? [EVENTS[G.ev.type].name, Math.max(0, G.ev.t) / G.ev.dur, EVENTS[G.ev.type].col[0], EVENTS[G.ev.type].col[1]] : null;
   if (ev) {
     const y = TOP + 2; txt(ev[0], W / 2, y + 8, 18, ev[3], { stroke: 3 });
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; rr(W / 2 - 70, y + 20, 140, 6, 3); ctx.fill(); ctx.fillStyle = ev[2]; rr(W / 2 - 70, y + 20, 140 * clamp(ev[1], 0, 1), 6, 3); ctx.fill();
@@ -3616,7 +3716,7 @@ function renderBook() {
     list.forEach((m, i) => {
       const cw = 212, ch = 196, x = 30 + (i % 3) * (cw + 12), y = Y + 26 + Math.floor(i / 3) * (ch + 10), got = found[i] > 0, art = gemArt(key, i), rar = m[2];
       ctx.fillStyle = got ? rgba(RCOL[rar], 0.08) : 'rgba(255,255,255,0.03)'; rr(x, y, cw, ch, 12); ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = got ? rgba(RCOL[rar], 0.5) : 'rgba(255,255,255,0.1)'; ctx.stroke();
-      drawGem(art, x + cw / 2, y + 64, 66, got ? { glow: RCOL[rar], rank: rank(rar) } : { silhouette: true });
+      ctx.save(); ctx.beginPath(); rr(x + 1, y + 1, cw - 2, ch - 2, 11); ctx.clip(); drawGem(art, x + cw / 2, y + 64, 66, got ? { glow: RCOL[rar], rank: rank(rar) } : { silhouette: true }); ctx.restore();
       const nm = got ? art.name : '???';
       txt(nm, x + cw / 2, y + 120, fitSize(nm, 18, cw - 16), got ? '#ffffff' : '#6a7080');
       txt(got || isEv ? rar : '?', x + cw / 2, y + 140, 12, RCOL[rar], { font: FB, weight: 900 });
@@ -3658,7 +3758,7 @@ function renderBook() {
     const done = ACH.filter(a => G.ach[a[0]]).length;
     txt('Trophies  ' + done + ' / ' + ACH.length, 360, Y + 6, 16, '#ffffff');
     TIERS.forEach((t, k) => { const n = ACH.filter(a => (ACH_TIER[a[0]] || 0) === k), g = n.filter(a => G.ach[a[0]]).length; txt(t[0] + ' ' + g + '/' + n.length, 360 + (k - 1.5) * 120, Y + 24, 11, t[1], { font: FB, weight: 900 }); });
-    ACH.forEach((a, i) => {
+    ACH.slice().sort((p, q) => (ACH_TIER[p[0]] || 0) - (ACH_TIER[q[0]] || 0) || (G.ach[q[0]] ? 1 : 0) - (G.ach[p[0]] ? 1 : 0)).forEach((a, i) => {
       const x = 26 + (i % 4) * 168, y = Y + 36 + Math.floor(i / 4) * 38, got = G.ach[a[0]], tc = TIERS[ACH_TIER[a[0]] || 0][1];
       ctx.fillStyle = got ? rgba(tc, 0.12) : 'rgba(255,255,255,0.03)'; rr(x, y, 162, 36, 9); ctx.fill(); if (got) { ctx.lineWidth = 1; ctx.strokeStyle = rgba(tc, 0.45); ctx.stroke(); }
       achMedal(a[0], x + 18, y + 17, 26, !!got);
