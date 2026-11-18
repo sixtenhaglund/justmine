@@ -5352,7 +5352,7 @@ function renderPassButton() {
     const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, hot ? '#5ad02a' : '#3a9a1a'); g.addColorStop(1, '#14400a'); ctx.fillStyle = g; rr(x, y, w, h, 14); ctx.fill();
     ctx.lineWidth = 2; ctx.strokeStyle = '#9aff4a'; ctx.stroke();
     { const uw = Math.min(w, h / 1.9 * 1.05), pw2 = Math.ceil(uw), ph2 = Math.ceil(uw * 0.75), pic = hudPic('passufo', pw2, ph2, () => drawDrone({ id: 9, type: 'alien', rank: 5, skin: null, hat: null }, 0, 0, { scale: uw / 46, t: 1 })); ctx.drawImage(pic, x + w / 2 - pw2 / 2, y + 34 * u + Math.sin(G.time * 2) * 3 - ph2 / 2, pw2, ph2); }
-    txt('PASS', x + w / 2, y + 74 * u, Math.min(28, w / 3.6, 22 * u), '#ffffff', { stroke: 3.5 });
+    txt('PASS', x + w / 2, y + 74 * u, Math.min(28 * HS(), w / 3.6, 22 * u), '#ffffff', { stroke: 3.5 });
     txt('Lv ' + P.lvl, x + w / 2, y + 98 * u, Math.min(22, 15 * u), '#c8ff9a', { stroke: 3 });
     ctx.fillStyle = 'rgba(0,0,0,0.4)'; rr(x + 8, y + 112 * u, w - 16, 9, 4.5); ctx.fill(); ctx.fillStyle = '#9aff4a'; rr(x + 8, y + 112 * u, (w - 16) * (P.lvl >= PASS_MAX ? 1 : clamp(P.xp / xpNeed(P.lvl + 1), 0, 1)), 9, 4.5); ctx.fill();
     txt(seasonText(), x + w / 2, y + 136 * u, fitSize(seasonText(), Math.min(13, 10 * u), w - 8, FB), '#ffffff', { font: FB, weight: 900, shadow: false });
@@ -5376,9 +5376,9 @@ function renderDroneColumn() {
     drawIcon('drone', x + 20, y + 19, 26, '#ffffff'); txt('DRONES ' + droneSlotsUsed() + '/' + G.slotsOpen, x + 88, y + 19.5, 15, '#ffffff', { stroke: 2.5 });
     return;
   }
-  const w = Math.min(118, room - 6), x = W - 10 - w, bh = Math.min(124, Math.max(96, w * 1.05)), by = H - 100 - bh, y0 = TOP + 8, avail = by - 8 - y0;
+  const w = Math.min(118 * HS(), room - 6), x = W - 10 - w, bh = Math.min(124 * HS(), Math.max(96, w * 1.05)), by = H - 100 - bh, y0 = TOP + 8, avail = by - 8 - y0;
   // two columns when there's room: the drone pictures get about twice as big
-  const cols = w >= 84 ? 2 : 1, rows = Math.ceil(10 / cols), size = clamp(Math.floor(Math.min((w - (cols - 1) * 4) / cols, (avail - (rows - 1) * 4) / rows)), 18, 64), n = Math.min(10, cols * Math.floor((avail + 4) / (size + 4))), gx0 = x + (w - (cols * size + (cols - 1) * 4)) / 2;
+  const cols = w >= 84 ? 2 : 1, rows = Math.ceil(10 / cols), size = clamp(Math.floor(Math.min((w - (cols - 1) * 4) / cols, (avail - (rows - 1) * 4) / rows)), 18, 64 * HS()), n = Math.min(10, cols * Math.floor((avail + 4) / (size + 4))), gx0 = x + (w - (cols * size + (cols - 1) * 4)) / 2;
   for (let k = 0; k < n; k++) {
     const sx = gx0 + (k % cols) * (size + 4), y = y0 + Math.floor(k / cols) * (size + 4), id = 'dslotcol' + k;
     if (k >= G.slotsOpen) {   // locked: dark with a darker X
@@ -5398,9 +5398,9 @@ function renderDroneColumn() {
   ctx.fillStyle = 'rgba(0,0,0,0.35)'; rr(x, by + 4, w, bh, 14); ctx.fill();
   const g = ctx.createLinearGradient(0, by, 0, by + bh); g.addColorStop(0, hot ? '#4ac0e0' : '#2a8aa8'); g.addColorStop(1, '#0e3444'); ctx.fillStyle = g; rr(x, by, w, bh, 14); ctx.fill();
   ctx.lineWidth = 2; ctx.strokeStyle = '#8fe0ff'; ctx.stroke();
-  drawIcon('drone', x + w / 2, by + bh * 0.3, Math.min(52, w * 0.5), '#ffffff');
-  txt('DRONES', x + w / 2, by + bh * 0.64, Math.min(24, w / 4.4), '#ffffff', { stroke: 3.5 });
-  txt(droneSlotsUsed() + ' / ' + G.slotsOpen, x + w / 2, by + bh * 0.84, 15, '#bdefff', { font: FB, weight: 900, shadow: false });
+  drawIcon('drone', x + w / 2, by + bh * 0.3, Math.min(52 * HS(), w * 0.5), '#ffffff');
+  txt('DRONES', x + w / 2, by + bh * 0.64, Math.min(24 * HS(), w / 4.4), '#ffffff', { stroke: 3.5 });
+  txt(droneSlotsUsed() + ' / ' + G.slotsOpen, x + w / 2, by + bh * 0.84, 15 * HS(), '#bdefff', { font: FB, weight: 900, shadow: false });
 }
 function renderPassBar() {
   const P = G.pass; if (!P) return;
@@ -5631,8 +5631,10 @@ function attention(x, y, w, h, col) {
   ctx.globalAlpha = 0.25 * p; ctx.drawImage(soft(col), x - w * 0.4, y - h * 0.3, w * 1.8, h * 1.6); ctx.restore();
 }
 const wiggle = () => { const ph = G.time % 3; return ph < 0.5 ? Math.sin(ph * 40) * 0.06 * (1 - ph * 2) : 0; };
+// side buttons grow on big screens (they looked tiny next to the huge rocks on 1920x1080)
+const HS = () => clamp(Math.min(W / 1280, H / 680), 1, 1.9);
 function sideLayout(room) {
-  const w = Math.min(118, room - 6), gap = 10; let ph = Math.round(w * 1.9), wh = Math.round(w * 0.95);
+  const w = Math.min(118 * HS(), room - 6), gap = 10 * HS(); let ph = Math.round(w * 1.9), wh = Math.round(w * 0.95);
   const top = TOP + 6, bottom = H - 100, need = ph + gap + wh;
   if (need > bottom - top) { const f = Math.max(0.45, (bottom - top) / need); ph = Math.round(ph * f); wh = Math.round(wh * f); }
   const py = Math.max(top, Math.min(H / 2 - (ph + gap + wh) / 2 - 10, bottom - ph - gap - wh));
@@ -5648,7 +5650,7 @@ function renderWheelButton() {
   ctx.save(); if (n) { const wg = wiggle(); ctx.translate(x + w / 2, y + h / 2); ctx.rotate(wg); ctx.translate(-x - w / 2, -y - h / 2); }
   ctx.fillStyle = 'rgba(0,0,0,0.35)'; rr(x, y + 4, w, h, 14); ctx.fill();
   const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, hot ? '#f0c040' : '#c48a12'); g.addColorStop(1, '#4a2a04'); ctx.fillStyle = g; rr(x, y, w, h, 14); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#ffe27a'; ctx.stroke();
-  if (room >= 70) { const wr = Math.min(w, h) * 0.3, wd = Math.ceil(wr * 2 + 4), pic = hudPic('wicon', wd, wd, () => drawWheelIcon(0, 0, wr, 0)); ctx.save(); ctx.translate(x + w / 2, y + h * 0.42); ctx.rotate(G.time * (n ? 1.2 : 0.3)); ctx.drawImage(pic, -wd / 2, -wd / 2, wd, wd); ctx.restore(); txt('SPIN', x + w / 2, y + h * 0.86, Math.min(20, w / 5), '#ffffff', { stroke: 3 }); }
+  if (room >= 70) { const wr = Math.min(w, h) * 0.3, wd = Math.ceil(wr * 2 + 4), pic = hudPic('wicon', wd, wd, () => drawWheelIcon(0, 0, wr, 0)); ctx.save(); ctx.translate(x + w / 2, y + h * 0.42); ctx.rotate(G.time * (n ? 1.2 : 0.3)); ctx.drawImage(pic, -wd / 2, -wd / 2, wd, wd); ctx.restore(); txt('SPIN', x + w / 2, y + h * 0.86, Math.min(20 * HS(), w / 5), '#ffffff', { stroke: 3 }); }
   else { drawWheelIcon(x + 22, y + h / 2, 15, G.time * (n ? 1.2 : 0.3)); txt('LUCKY WHEEL', x + 98, y + h / 2 + 0.5, 14, '#ffffff', { stroke: 2.5 }); }
   ctx.restore();
   if (n) { attention(x, y, w, h, '#ffd84a'); notifBadge(x + w - 6, y + 6, n, room >= 70); }
