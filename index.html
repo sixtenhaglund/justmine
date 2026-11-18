@@ -3173,7 +3173,7 @@ function render() {
   drawBloom();
   drawBlackHoles(shx, shy); drawBhPops(shx, shy);
   drawGrade();
-  setScreen();
+  setScreen(); drawFlash();
   if (G.mouse.over && !G.mouse.onUI && inWorld(G.mouse.x, G.mouse.y)) drawCursor(G.mouse.x, G.mouse.y);
   renderHUD();
   renderMenus(); renderDragGhost();
@@ -3878,10 +3878,15 @@ function renderBook() {
 }
 
 // ---------------- overlays: teleport, flash, victory ----------------
+function drawFlash() {   // a quick bright flash over the mine (gold, explosions...), softer while a menu is open
+  if (!(G.flash > 0) || GFX.flashes === 0) return;
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = rgba(G.flashCol, Math.min(0.6, G.flash * 0.6) * (GFX.flashes === 1 ? 0.35 : 1) * (G.menu ? 0.3 : 1)); ctx.fillRect(0, 0, W, H);
+}
 function renderOverlays() {
   setScreen();
   renderAway();
-  if (G.flash > 0 && GFX.flashes !== 0) { ctx.fillStyle = rgba(G.flashCol, Math.min(0.6, G.flash * 0.6) * (GFX.flashes === 1 ? 0.35 : 1)); ctx.fillRect(0, 0, W, H); }
+  // (the screen flash is drawn in drawFlash(), UNDER the HUD and menus: it used to flash over open menus)
   if (G.tp < 2.2) {
     const t = G.tp, b = BIOMES[G.biome];
     // iris opening + warp streaks
