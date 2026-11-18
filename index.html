@@ -107,6 +107,40 @@ const BIOMES = [
   { name: 'Heart Hollow', factor: 10000, req: 3.1e+21, bonus: 180, bright: [-15, 10], amb: 'heart', style: 'block', accent: '#ff6a8a', isNew: true,
     minerals: [[4, 56000, 'Legendary'], [8, 130000, 'Mythical'], [14, 280000, 'Angelic'], [88, 1280000, 'Transcendant'], [200, 2800000, 'Acendant'], [360, 6400000, 'Celestial']] },
 ];
+// 2026-11-18: 4 new biomes, and the late biomes re-sorted from "plain" to "coolest" (Sixten: Void looks better than Heart).
+// Each SLOT keeps its price, hardness and bonus; a biome that moves to a slot gets its mineral values scaled so it pays what that slot paid.
+(function resortBiomes() {
+  const NEW = [
+    { name: 'Starfall Rift', bright: [-15, 10], amb: 'starfall', style: 'block', accent: '#8ab0ff', isNew: true, song: 7, rock: '#1e2a6a', back: ['#0c1040', '#000008'],
+      pal: ['#c8d8ff', '#8ab0ff', '#ffffff', '#ffe27a', '#d07aff', '#7afcff'], names: ['Stardust', 'Meteorite', 'Cometium', 'Nebulite', 'Quasarium', 'Starheart'] },
+    { name: 'Aurora Abyss', bright: [-15, 10], amb: 'aurora', style: 'block', accent: '#5affc8', isNew: true, song: 17, rock: '#0e4a48', back: ['#043a36', '#000a0c'],
+      pal: ['#5affc8', '#3ad0ff', '#ff7ad8', '#c8ff7a', '#8a7aff', '#ffffff'], names: ['Glowium', 'Borealite', 'Polarium', 'Shimmerite', 'Spectrium', 'Auroraheart'] },
+    { name: 'Plasma Core', bright: [-15, 10], amb: 'plasma', style: 'block', accent: '#ff4af0', isNew: true, song: 9, rock: '#3c0c4c', back: ['#34003c', '#08000c'],
+      pal: ['#ff4af0', '#4ae0ff', '#ffffff', '#ffd84a', '#ff4a6a', '#7aff4a'], names: ['Sparkium', 'Ionite', 'Plasmium', 'Fusionite', 'Arcanium', 'Corestar'] },
+    { name: 'Celestial Throne', bright: [-5, 15], amb: 'throne', style: 'block', accent: '#ffe27a', isNew: true, song: 21, rock: '#c8b07a', back: ['#4a3410', '#0c0802'],
+      pal: ['#fff2c0', '#ffe27a', '#ffffff', '#ffb02a', '#c8f0ff', '#ffd8f0'], names: ['Haloite', 'Seraphite', 'Divinium', 'Regalium', 'Celestium', 'Empyrium'] },
+  ];
+  const ORDER = ['Common Caverns', 'Magnetic Mountain', 'Heavy Hights', 'Crystal Cave', 'Red Ravines', 'Cryo Cliffs',
+    'Sandy Spires', 'Bone Basin', 'Jungle Depths', 'Sulfur Swamp', 'Mushroom Marsh', 'Toxic Tunnels', 'Sky Summit', 'Amber Abyss', 'Glacier Gorge', 'Clockwork Canyon',
+    'Storm Peaks', 'Lava Lake', 'Heart Hollow', 'Prism Plateau', 'Neon Nexus', 'Void Valley', 'Starfall Rift', 'Aurora Abyss', 'Plasma Core', 'Celestial Throne'];
+  const ev = b => b.minerals.reduce((a, m) => a + m[1] / m[0], 0);   // what a rock pays on average
+  const byName = {}; BIOMES.forEach((b, i) => { b.song = i; byName[b.name] = b; });
+  const heart = byName['Heart Hollow'];
+  for (const n of NEW) {
+    byName[n.name] = Object.assign({ minerals: heart.minerals.map(m => m.slice()) }, n);
+    ART.backdrops[n.name] = n.back;
+    ART.rocks[n.name] = ART.rocks['Void Valley'].map((r, k) => Object.assign({}, r, { fill: n.rock }));
+    ART.gems[n.name] = ART.gems['Void Valley'].map((g, i) => Object.assign({}, g, { name: n.names[i], shapes: g.shapes.map(sh => Object.assign({}, sh, { fill: sh.fill ? sh.fill.map((c, ci) => ci ? '#140a20' : n.pal[i]) : null })) }));
+  }
+  // the economy of each slot (slots 22+ keep growing at the same pace)
+  const econ = BIOMES.map(b => ({ factor: b.factor, req: b.req, bonus: b.bonus, e: ev(b) }));
+  while (econ.length < ORDER.length) { const p = econ[econ.length - 1]; econ.push({ factor: Math.round(p.factor * 1.3), req: Number((p.req * 12).toPrecision(2)), bonus: Math.round(p.bonus * 1.12), e: p.e * 1.45 }); }
+  const out = ORDER.map((n, j) => {
+    const b = byName[n], e = econ[j], k = e.e / ev(b);
+    return Object.assign({}, b, { factor: e.factor, req: e.req, bonus: e.bonus, minerals: b.minerals.map(m => [m[0], Number((m[1] * k).toPrecision(3)), m[2]]) });
+  });
+  BIOMES.length = 0; out.forEach(b => BIOMES.push(b));
+})();
 const BIOME_INDEX = name => BIOMES.findIndex(b => b.name === name);
 // how each biome's rocks crack and break. crack/glow/hi colour the cracks, deco decorates them, brk is the break effect
 const BIOME_FX = {
@@ -132,9 +166,15 @@ const BIOME_FX = {
   'Sky Summit': { crack: '#ffffff', hi: '#5a7a9a', brk: 'feathers' },
   'Prism Plateau': { rainbow: true, hi: '#ffffff', deco: { shape: 'facet', col: ['#ffffff'] }, brk: 'shards', bcol: 'rainbow' },
   'Heart Hollow': { glow: '#ff2a4a', crack: '#ff8a9a', brk: 'pulse' },
+  'Starfall Rift': { glow: '#8ab0ff', crack: '#e0ecff', hi: '#ffffff', brk: 'shards', bcol: ['#ffffff', '#8ab0ff', '#ffe27a'] },
+  'Aurora Abyss': { glow: '#5affc8', crack: '#d0fff0', hi: '#ffffff', brk: 'shards', bcol: ['#5affc8', '#ff7ad8', '#8a7aff'] },
+  'Plasma Core': { glow: '#ff4af0', crack: '#4ae0ff', hi: '#ffffff', brk: 'bolt' },
+  'Celestial Throne': { glow: '#ffe27a', crack: '#8a6a1a', hi: '#ffffff', brk: 'shards', bcol: ['#ffe27a', '#ffffff'] },
 };
 // generic ambient effects for the new biomes: how many, how they move, colours
 const AMB_X = {
+  starfall: { n: 34, move: 'fall', col: ['#ffffff', '#8ab0ff', '#ffe27a'], size: 2.5, glow: true }, aurora: { n: 44, move: 'drift', col: ['#5affc8', '#ff7ad8', '#8ab0ff'], size: 2, glow: true },
+  plasma: { n: 46, move: 'rise', col: ['#ff4af0', '#4ae0ff'], size: 2.5, glow: true }, throne: { n: 44, move: 'rise', col: ['#ffe27a', '#ffffff'], size: 2.5, glow: true },
   spores: { n: 40, move: 'rise', col: ['#ff9ad8', '#c8ff9a'], size: 3, glow: true }, bonedust: { n: 40, move: 'drift', col: ['#e8e0c8'], size: 2 },
   gears: { n: 22, move: 'fall', col: ['#d8b060'], size: 3.5, shape: 'gear' }, amberdrip: { n: 30, move: 'fall', col: ['#ffb030'], size: 3, glow: true },
   neon: { n: 50, move: 'drift', col: ['#7afcff', '#ff4ad8', '#a8ff5a'], size: 2, glow: true }, glacier: { n: 90, move: 'fall', col: ['#ffffff'], size: 2.5 },
@@ -283,7 +323,7 @@ const FPS = 30, DT = 1 / FPS;
 
 const ACH = [
   ['first', 'First Find', 'Mine your first mineral'], ['k1', 'Pocket Money', 'Have 1K Creditz'], ['m1', 'Millionaire', 'Have 1M Creditz'],
-  ['b1', 'Billionaire', 'Have 1B Creditz'], ['t1', 'Trillionaire', 'Have 1T Creditz'], ['explorer', 'Explorer', 'Visit all 22 biomes'],
+  ['b1', 'Billionaire', 'Have 1B Creditz'], ['t1', 'Trillionaire', 'Have 1T Creditz'], ['explorer', 'Explorer', 'Visit every biome'],
   ['reb1', 'Born Again', 'Rebirth once'], ['reb5', 'Again and Again', 'Rebirth 5 times'], ['reb10', 'Rebirth Master', 'Rebirth 10 times'],
   ['speed', 'Speed Demon', 'Buy +100% Mining speed'], ['x100', 'x100!', 'Buy x100 Creditz'], ['x400', 'x400!!!', 'Buy every listed Creditz upgrade'],
   ['boom', 'Demolition', 'Buy Bomb level 5'], ['robots', 'Robot Army', 'Max out Auto miner'], ['lucky', 'Four-Leaf', 'Max out Luck'],
@@ -438,6 +478,7 @@ function loadSave() {
 function loadDrones(s) {
   const okType = t => !!DRONE_TYPES[t];
   G.drones = Array.isArray(s.drones) ? s.drones.filter(d => d && okType(d.type)).map(d => ({ id: d.id | 0, type: d.type, rank: clamp(d.rank | 0, 1, 5), skin: SKINS[d.skin] ? d.skin : null, hat: HATS[d.hat] ? d.hat : null, lvl: clamp(d.lvl | 0 || 1, 1, DRONE_MAX_LVL), xp: num(+d.xp, 0) })) : [];
+  G.drones.forEach(d => { if (d.type === 'mothership') d.hat = null; });   // the mothership can't wear cosmetics
   G.nextId = Math.max(s.nextId | 0, 1, ...G.drones.map(d => d.id + 1));
   G.slotsOpen = clamp(s.slotsOpen | 0 || 3, 3, 10);
   G.slots = Array.from({ length: 10 }, (_, k) => Array.isArray(s.slots) && G.drones.some(d => d.id === s.slots[k]) ? s.slots[k] : null);
@@ -482,9 +523,9 @@ function loadBiome(i, fromTeleport) {
   G.drills.forEach(d => { d.target = null; });
   G.menu = null; G.regenWait = -1; G.mouse.down = false;
   if (G.biomeFx && !G.biomeFx.out) G.biomeFx.out = 0.001;   // you went somewhere: the 'next biome' banner slides away fast
-  if (fromTeleport) { G.loading = 30; G.tp = 0; G.tpName = BIOMES[i].name; G.amb = []; AUDIO.setSong(i); }
+  if (fromTeleport) { G.loading = 30; G.tp = 0; G.tpName = BIOMES[i].name; G.amb = []; AUDIO.setSong(BIOMES[i].song === undefined ? i % 22 : BIOMES[i].song); }
   G.heart = null;
-  if (i === BIOMES.length - 1 && rebirthsDone() >= HEART_REBIRTHS && !G.won) G.heart = { hp: G.heartHP, cool: 0, shake: 0, flash: 0 };
+  if (BIOMES[i].name === 'Heart Hollow' && rebirthsDone() >= HEART_REBIRTHS && !G.won) G.heart = { hp: G.heartHP, cool: 0, shake: 0, flash: 0 };
   makeGrid();
 }
 const GRID_SIZES = [[9, 5], [13, 7], [17, 9], [21, 11], [27, 14], [37, 19], [45, 23]];
@@ -1313,7 +1354,7 @@ function tryRebirth() {
   G.tpName = 'REBIRTH ' + rebirthsDone();
   toast('Every mineral is now worth x' + fmt(G.rebirthMult) + '!', '#ffd84a');
   if (unlocked) toast('New perk: ' + unlocked[1], '#7dff7a');
-  if (rebirthsDone() === HEART_REBIRTHS && !G.won) toast('Something woke up deep in ' + BIOMES[BIOMES.length - 1].name + '...', '#b678ff');
+  if (rebirthsDone() === HEART_REBIRTHS && !G.won) toast('Something woke up deep in ' + 'Heart Hollow' + '...', '#b678ff');
   G.flash = 1; G.flashCol = '#fff2c0';
   AUDIO.sfx('rebirth');
   checkAch(); save(); pushScore(true);
@@ -1838,6 +1879,40 @@ function gearSprite(r, teeth, depth) {   // one gear, drawn once (it only ever t
   ctx.beginPath(); ctx.arc(0, 0, r * 0.16, 0, 6.283); ctx.fillStyle = 'rgba(232,192,112,' + (depth > 0.6 ? 0.35 : 0.22) + ')'; ctx.fill();
   ctx = keep; GEARC.set(key, c); return c;
 }
+const SPECIAL_BACK = {
+  'Starfall Rift': () => {   // shooting stars streak across a deep blue sky
+    ctx.globalCompositeOperation = 'lighter';
+    for (let k = 0; k < 6; k++) { const f = (G.time * 0.35 + k * 0.37) % 1.6; if (f > 1) continue; const x0 = W * ((k * 0.29 + 0.1) % 1), y0 = H * 0.05 + k * 20, x = x0 + f * W * 0.5, y = y0 + f * H * 0.45;
+      const g = ctx.createLinearGradient(x - 120, y - 108, x, y); g.addColorStop(0, 'rgba(138,176,255,0)'); g.addColorStop(1, 'rgba(255,255,255,' + (0.8 * Math.sin(f * Math.PI)) + ')');
+      ctx.strokeStyle = g; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x - 120, y - 108); ctx.lineTo(x, y); ctx.stroke(); ctx.globalAlpha = Math.sin(f * Math.PI); ctx.drawImage(soft('#c8d8ff'), x - 10, y - 10, 20, 20); ctx.globalAlpha = 1; }
+    ctx.globalAlpha = 0.12; ctx.drawImage(soft('#5a6aff'), W * 0.6, -H * 0.2, W * 0.6, H * 0.7); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  },
+  'Aurora Abyss': () => {   // waving aurora curtains
+    ctx.globalCompositeOperation = 'lighter';
+    const cols = ['90,255,200', '255,122,216', '138,122,255'];
+    for (let b = 0; b < 3; b++) {
+      ctx.beginPath(); const y0 = H * (0.12 + b * 0.1);
+      for (let x = 0; x <= W; x += 24) { const y = y0 + Math.sin(x * 0.006 + G.time * (0.5 + b * 0.2) + b * 2) * 30 + Math.sin(x * 0.015 - G.time * 0.8) * 10; x ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+      for (let x = W; x >= 0; x -= 24) { const y = y0 + 90 + Math.sin(x * 0.006 + G.time * (0.5 + b * 0.2) + b * 2) * 30; ctx.lineTo(x, y); }
+      const g = ctx.createLinearGradient(0, y0 - 30, 0, y0 + 120); g.addColorStop(0, 'rgba(' + cols[b] + ',0.22)'); g.addColorStop(1, 'rgba(' + cols[b] + ',0)');
+      ctx.fillStyle = g; ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  },
+  'Plasma Core': () => {   // a huge pulsing energy core with arcs
+    const cx = W * 0.5, cy = H * 0.5, p = 0.5 + 0.5 * Math.sin(G.time * 2);
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.22 + 0.1 * p; ctx.drawImage(soft('#ff4af0'), cx - H * 0.7, cy - H * 0.7, H * 1.4, H * 1.4);
+    ctx.globalAlpha = 0.15; ctx.drawImage(soft('#4ae0ff'), cx - H * 0.4, cy - H * 0.4, H * 0.8, H * 0.8);
+    ctx.lineWidth = 2; for (let k = 0; k < 5; k++) { if (Math.sin(G.time * 7 + k * 3) < 0.3) continue; ctx.globalAlpha = 0.5; ctx.strokeStyle = k % 2 ? '#4ae0ff' : '#ff9af8'; ctx.beginPath(); let x = cx, y = cy; ctx.moveTo(x, y); const a = k * 1.256 + G.time * 0.3; for (let q = 1; q <= 8; q++) { x = cx + Math.cos(a) * q * H * 0.07 + (Math.random() - 0.5) * 30; y = cy + Math.sin(a) * q * H * 0.07 + (Math.random() - 0.5) * 30; ctx.lineTo(x, y); } ctx.stroke(); }
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  },
+  'Celestial Throne': () => {   // heavenly light rays from above
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.save(); ctx.translate(W * 0.5, -H * 0.15); ctx.rotate(Math.sin(G.time * 0.1) * 0.08);
+    for (let k = -6; k <= 6; k++) { ctx.globalAlpha = 0.05 + 0.03 * Math.sin(G.time * 0.7 + k); ctx.fillStyle = k % 2 ? '#ffe27a' : '#ffffff'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(k * 120 - 40, H * 1.4); ctx.lineTo(k * 120 + 40, H * 1.4); ctx.closePath(); ctx.fill(); }
+    ctx.restore(); ctx.globalAlpha = 0.25; ctx.drawImage(soft('#fff2c0'), W * 0.2, -H * 0.4, W * 0.6, H * 0.8); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  },
+};
 function drawClockworkBack(shx) {
   for (const [gx0, gy0, gr0, teeth, spd, depth] of CLOCK_GEARS) {
     const x = gx0 * W + shx * 0.2 * depth + PAR.x * depth * 0.6, y = gy0 * H + PAR.y * depth * 0.6, r = gr0 * H, c = gearSprite(r, teeth, depth), S = c.width / DPR;
@@ -1857,6 +1932,7 @@ function drawBackFx(shx) {
   const bi = G.scene === 'title' ? 0 : G.biome, acc = mix(BIOMES[bi].accent, '#ffffff', 0.45);
   setScreen();
   if (BIOMES[bi].name === 'Clockwork Canyon' && G.scene === 'play') drawClockworkBack(shx);
+  if (G.scene === 'play' && SPECIAL_BACK[BIOMES[bi].name]) SPECIAL_BACK[BIOMES[bi].name](shx);
   ctx.globalCompositeOperation = 'lighter';
   const beam = beamSprite(acc);
   for (let k = 0; k < 4; k++) {
@@ -3358,10 +3434,11 @@ function renderShop() {
 }
 // the biome map: a numbered path 1 -> 12 (row one left to right, row two right to left)
 const nextBiome = () => { for (let i = 1; i < BIOMES.length; i++) if (!isUnlocked(i)) return canVisit(i) ? i : -1; return -1; };
-function biomeNodePos(i) { const row = Math.floor(i / 6), k = i % 6, col = row % 2 ? 5 - k : k; return { x: 75 + col * 134, y: 128 + row * 150 }; }
+function biomeNodePos(i) { const row = Math.floor(i / 6), k = i % 6, col = row % 2 ? 5 - k : k; return { x: 75 + col * 134, y: 128 + row * 132 }; }
+const BMH = () => 128 + (Math.ceil(BIOMES.length / 6) - 1) * 132 + 112;
 function renderBiomes() {
-  const f = modalFrame('biomes', 840, 680); if (!f) return;
-  panel(0, 0, 840, 680, 'BIOME MAP', '#2f8f6a');
+  const f = modalFrame('biomes', 840, BMH()); if (!f) return;
+  panel(0, 0, 840, BMH(), 'BIOME MAP', '#2f8f6a');
   closeBtn(794, 12);
   txt('Unlock biomes in order: pay once, then travel there free (until you rebirth)', 420, 46, 13, '#c9cfdc', { font: FB, weight: 800 });
   const nb = nextBiome();
@@ -3427,7 +3504,7 @@ function renderRebirth() {
   txt('Rebirths done: ' + rebirthsDone(), 250, 220, 12, '#aeb6c6', { font: FB, weight: 800 });
   const next = PERKS.find(p => p[0] > rebirthsDone());
   if (next) { txt('Perk at rebirth ' + next[0] + ':', 250, 250, 12, '#7dff7a', { font: FB, weight: 900 }); txt(next[1], 250, 268, fitSize(next[1], 15, 440, FB), '#ffffff', { font: FB, weight: 800 }); }
-  if (!G.won) { const goal = rebirthsDone() >= HEART_REBIRTHS ? 'The Heart of the Mountain waits in ' + BIOMES[BIOMES.length - 1].name + '!' : 'Final goal: rebirth ' + HEART_REBIRTHS + ' times, then find the Heart in ' + BIOMES[BIOMES.length - 1].name + ''; txt(goal, 250, 298, fitSize(goal, 12, 450, FB), '#ffb36a', { font: FB, weight: 800 }); }
+  if (!G.won) { const goal = rebirthsDone() >= HEART_REBIRTHS ? 'The Heart of the Mountain waits in ' + 'Heart Hollow' + '!' : 'Final goal: rebirth ' + HEART_REBIRTHS + ' times, then find the Heart in ' + 'Heart Hollow' + ''; txt(goal, 250, 298, fitSize(goal, 12, 450, FB), '#ffb36a', { font: FB, weight: 800 }); }
   btn('confirm', 150, 330, 200, 54, 'Confirm', { col: ok ? '#d49a1a' : '#5a5040', disabled: !ok, clickDisabled: true, size: 24, fn: () => tryRebirth() });
   ctx.globalAlpha = 1;
 }
@@ -3522,7 +3599,7 @@ function renderBook() {
       txt('Rebirth ' + p[0], 100, y + 13, 13, got ? '#7dff7a' : '#7a8090', { align: 'left' });
       txt(p[1], 200, y + 13, 13, got ? '#ffffff' : '#8a90a0', { align: 'left', font: FB, weight: 800 });
     });
-    const gy = Y + 22 + PERKS.length * 30 + 8, goal = G.won ? 'You broke the Heart of the Mountain. You beat Just Mine!' : 'FINAL GOAL: rebirth ' + HEART_REBIRTHS + ' times, then break the Heart of the Mountain in ' + BIOMES[BIOMES.length - 1].name + '';
+    const gy = Y + 22 + PERKS.length * 30 + 8, goal = G.won ? 'You broke the Heart of the Mountain. You beat Just Mine!' : 'FINAL GOAL: rebirth ' + HEART_REBIRTHS + ' times, then break the Heart of the Mountain in ' + 'Heart Hollow' + '';
     ctx.fillStyle = 'rgba(255,120,40,0.1)'; rr(60, gy, 600, 44, 10); ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(255,140,60,0.6)'; ctx.stroke();
     drawIcon('heart', 84, gy + 22, 24, '#ff6a1a');
     txt(goal, 106, gy + 22, fitSize(goal, 13, 540, FB), G.won ? '#7dff7a' : '#ffb36a', { align: 'left', font: FB, weight: 900 });
@@ -3672,7 +3749,7 @@ const DRONE_TYPES = {
   drillbomber: { name: 'Drillbomber', rar: 'Epic', col: '#ff5ab0', ai: 'bomb', cd: 7, desc: 'Its bombs shoot small drills in 4 directions' },
   bigdrill: { name: 'Big Drill', rar: 'Epic', col: '#5affb0', ai: 'drill', cd: 4.5, desc: 'Drills in a + shape (5 rocks at once)' },
   heavybomber: { name: 'Heavy Bomber', rar: 'Legendary', col: '#ff5a2a', ai: 'bomb', cd: 9, desc: 'Drops one really big bomb' },
-  mothership: { name: 'Alien Mothership', rar: 'Celestial', col: '#b0ff3a', ai: 'mother', cd: 0, noMix: true, noRank: true, desc: 'Beams 5 minerals out at once. Every minute it sends out 3 Alien Ships for 15 s. No ranks: grows with XP only' },
+  mothership: { name: 'Alien Mothership', rar: 'Celestial', col: '#b0ff3a', ai: 'mother', cd: 0, noMix: true, noRank: true, desc: 'Beams 5 minerals at once + launches a fleet. No ranks: XP only' },
   alien: { name: 'Alien Ship', rar: 'Celestial', col: '#7dff3a', ai: 'alien', cd: 0, noMix: true, desc: 'Scans a rock and beams its mineral out. The rock stays, and still has it inside' },
 };
 const MIXES = { 'bomber+normal': 'drillbomber', 'heavy+normal': 'bigdrill', 'bomber+heavy': 'heavybomber' };
@@ -3796,7 +3873,7 @@ const skinFree = id => (G.skins[id] || 0) - G.drones.filter(d => d.skin === id).
 const hatFree = id => (G.hats[id] || 0) - G.drones.filter(d => d.hat === id).length;
 function dronePal(d) {
   const S = d.skin && SKINS[d.skin]; if (S) return S;
-  if (d.type === 'alien') return { body: '#9aa8b8', dark: '#3a4452', light: '#eef4ff', accent: '#7dff3a', fx: null };
+  if (d.type === 'alien' || d.type === 'mothership') return { body: '#9aa8b8', dark: '#3a4452', light: '#eef4ff', accent: '#7dff3a', fx: null };
   return { body: '#aab4c4', dark: '#4a5466', light: '#eef2f8', accent: DRONE_TYPES[d.type].col, fx: null };
 }
 
@@ -4336,26 +4413,32 @@ function droneStatic(d, P) {
   const OL = OUTLINE(P), type = d.type;
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   if (type === 'alien') {
-    // under-hull (darker, with a glowing engine ring drawn in droneMoving)
-    ctx.beginPath(); ctx.ellipse(0, 3, 14, 4.5, 0, 0, 6.283); ctx.fillStyle = P.dark; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = OL; ctx.stroke();
-    // the big metal disc: shiny top, dark rim band with panel lines
-    const dg = ctx.createLinearGradient(0, -7, 0, 6); dg.addColorStop(0, '#ffffff'); dg.addColorStop(0.35, P.light); dg.addColorStop(0.6, P.body); dg.addColorStop(1, P.dark);
-    ctx.beginPath(); ctx.ellipse(0, 0, 21, 6.5, 0, 0, 6.283); ctx.fillStyle = dg; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = OL; ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(0, 1.2, 21, 4.2, 0, 0, Math.PI); ctx.lineWidth = 2.2; ctx.strokeStyle = rgba(P.dark, 0.9); ctx.stroke();
-    ctx.strokeStyle = rgba(P.dark, 0.55); ctx.lineWidth = 0.6;
-    for (let k = -3; k <= 3; k++) { const px = k * 5.4; ctx.beginPath(); ctx.moveTo(px * 0.95, -1.5 + Math.abs(k) * 0.2); ctx.lineTo(px, 4.6 - Math.abs(k) * 0.35); ctx.stroke(); }
-    ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.ellipse(-8, -3, 8, 1.3, -0.06, 0, 6.283); ctx.fill();
-    // little fins
-    ctx.fillStyle = P.dark; for (const sx of [-1, 1]) { ctx.beginPath(); ctx.moveTo(sx * 17, -1); ctx.lineTo(sx * 24, -5); ctx.lineTo(sx * 21, 1); ctx.closePath(); ctx.fill(); ctx.lineWidth = 0.8; ctx.strokeStyle = OL; ctx.stroke(); }
+    // drone arms: struts from the rim up to two rotor hubs (the rotors spin in droneMoving)
+    for (const sx of [-1, 1]) {
+      ctx.strokeStyle = OL; ctx.lineWidth = 3.4; ctx.beginPath(); ctx.moveTo(sx * 13, -3); ctx.lineTo(sx * 22, -11); ctx.stroke();
+      ctx.strokeStyle = P.dark; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(sx * 13, -3); ctx.lineTo(sx * 22, -11); ctx.stroke();
+      ctx.fillStyle = P.dark; ctx.beginPath(); ctx.arc(sx * 22, -11, 2.4, 0, 6.283); ctx.fill(); ctx.lineWidth = 0.9; ctx.strokeStyle = OL; ctx.stroke();
+    }
+    // under-hull with the tractor emitter
+    ctx.beginPath(); ctx.ellipse(0, 3.5, 13, 4.6, 0, 0, 6.283); ctx.fillStyle = P.dark; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = OL; ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(0, 5.4, 6, 2, 0, 0, 6.283); ctx.fillStyle = '#0a140a'; ctx.fill(); ctx.strokeStyle = rgba(P.light, 0.5); ctx.lineWidth = 0.6; ctx.stroke();
+    // the metal disc: chrome top, a dark band with panel lines and little portholes
+    const dg = ctx.createLinearGradient(0, -7, 0, 6); dg.addColorStop(0, '#ffffff'); dg.addColorStop(0.3, P.light); dg.addColorStop(0.62, P.body); dg.addColorStop(1, P.dark);
+    ctx.beginPath(); ctx.ellipse(0, 0, 20, 6.4, 0, 0, 6.283); ctx.fillStyle = dg; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = OL; ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(0, 1.3, 20, 4, 0, 0, Math.PI); ctx.lineWidth = 2.4; ctx.strokeStyle = rgba(P.dark, 0.95); ctx.stroke();
+    ctx.strokeStyle = rgba(P.dark, 0.55); ctx.lineWidth = 0.55;
+    for (let k = -3; k <= 3; k++) { const px = k * 5.2; ctx.beginPath(); ctx.moveTo(px * 0.9, -2 + Math.abs(k) * 0.25); ctx.lineTo(px, 4.4 - Math.abs(k) * 0.35); ctx.stroke(); }
+    for (const px of [-12, -6, 6, 12]) { ctx.fillStyle = '#1a2a1a'; ctx.beginPath(); ctx.arc(px, 2.3 - Math.abs(px) * 0.04, 1.1, 0, 6.283); ctx.fill(); }
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.ellipse(-8, -3.2, 8, 1.2, -0.06, 0, 6.283); ctx.fill();
     // glass dome with the pilot
-    const gg = ctx.createRadialGradient(-3, -9, 1, 0, -5, 11); gg.addColorStop(0, 'rgba(220,255,230,0.75)'); gg.addColorStop(1, 'rgba(90,200,140,0.35)');
-    ctx.beginPath(); ctx.ellipse(0, -4, 10, 9, 0, Math.PI, 0); ctx.closePath(); ctx.fillStyle = gg; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = OL; ctx.stroke();
-    ctx.fillStyle = '#5ad04a'; ctx.beginPath(); ctx.ellipse(0, -6.5, 4, 4.3, 0, 0, 6.283); ctx.fill(); ctx.lineWidth = 0.6; ctx.strokeStyle = '#1e5a14'; ctx.stroke();   // head
-    ctx.strokeStyle = '#5ad04a'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(-2, -10); ctx.lineTo(-3.5, -13); ctx.moveTo(2, -10); ctx.lineTo(3.5, -13); ctx.stroke();   // antennae
-    ctx.fillStyle = '#e0ff3a'; ctx.beginPath(); ctx.arc(-3.5, -13, 0.9, 0, 6.283); ctx.arc(3.5, -13, 0.9, 0, 6.283); ctx.fill();
+    const gg = ctx.createRadialGradient(-3, -9, 1, 0, -5, 11); gg.addColorStop(0, 'rgba(230,255,235,0.8)'); gg.addColorStop(1, rgba(P.accent, 0.3));
+    ctx.beginPath(); ctx.ellipse(0, -4, 9.5, 8.5, 0, Math.PI, 0); ctx.closePath(); ctx.fillStyle = gg; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = OL; ctx.stroke();
+    ctx.fillStyle = '#5ad04a'; ctx.beginPath(); ctx.ellipse(0, -6.5, 3.9, 4.2, 0, 0, 6.283); ctx.fill(); ctx.lineWidth = 0.6; ctx.strokeStyle = '#1e5a14'; ctx.stroke();
+    ctx.strokeStyle = '#5ad04a'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(-2, -10); ctx.lineTo(-3.4, -12.6); ctx.moveTo(2, -10); ctx.lineTo(3.4, -12.6); ctx.stroke();
+    ctx.fillStyle = '#e0ff3a'; ctx.beginPath(); ctx.arc(-3.4, -12.6, 0.9, 0, 6.283); ctx.arc(3.4, -12.6, 0.9, 0, 6.283); ctx.fill();
     ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(-1.6, -6.8, 1.2, 1.8, -0.4, 0, 6.283); ctx.ellipse(1.6, -6.8, 1.2, 1.8, 0.4, 0, 6.283); ctx.fill();
     ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-1.9, -7.4, 0.4, 0, 6.283); ctx.arc(1.3, -7.4, 0.4, 0, 6.283); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.65)'; ctx.beginPath(); ctx.ellipse(-5, -8, 1.6, 2.8, -0.5, 0, 6.283); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.beginPath(); ctx.ellipse(-5, -8, 1.5, 2.6, -0.5, 0, 6.283); ctx.fill();
     drawHat(d); return;
   }
   const B = BODY_BOX[type], ax = B[0] - 6, armY = B[1] + 1;
@@ -4428,6 +4511,13 @@ function droneStatic(d, P) {
 function droneMoving(d, P, t, act) {
   const type = d.type;
   if (type === 'alien') {
+    for (const sx of [-1, 1]) {   // rotors (blur disc + 2 blades), like every drone
+      ctx.save(); ctx.translate(sx * 22, -12); ctx.scale(1, 0.32);
+      ctx.fillStyle = 'rgba(220,235,255,0.22)'; ctx.beginPath(); ctx.arc(0, 0, 9, 0, 6.283); ctx.fill();
+      ctx.rotate(t * 40 * sx); ctx.fillStyle = '#1a1d24'; ctx.fillRect(-9, -1, 18, 2); ctx.rotate(Math.PI / 2); ctx.fillRect(-9, -1, 18, 2);
+      ctx.restore();
+    }
+    for (let k = 0; k < 4; k++) { const on = (k + Math.floor(t * 6)) % 4 === 0; const px = [-12, -6, 6, 12][k]; if (!on) continue; ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = P.accent; ctx.beginPath(); ctx.arc(px, 2.3 - Math.abs(px) * 0.04, 1.3, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; }
     ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35 + act * 0.45 + 0.1 * Math.sin(t * 5); ctx.drawImage(soft(P.accent), -18, -1, 36, 20); ctx.globalAlpha = 1;
     ctx.strokeStyle = P.accent; ctx.lineWidth = 1.2; ctx.globalAlpha = 0.6 + 0.3 * Math.sin(t * 8); ctx.beginPath(); ctx.ellipse(0, 4, 9, 2.3, 0, 0, 6.283); ctx.stroke(); ctx.globalAlpha = 1;
     if (act > 0.3) for (let k = 0; k < 3; k++) { const f = (t * 1.5 + k / 3) % 1; ctx.globalAlpha = (1 - f) * act * 0.7; ctx.beginPath(); ctx.ellipse(0, 6 + f * 14, 6 + f * 10, 1.5 + f * 2, 0, 0, 6.283); ctx.stroke(); }
@@ -4590,33 +4680,57 @@ function pixelSprite(d, P, t, act) {
 const DSPR = {}, GLC = new Map();
 function dspr(k, w, h) { let c = DSPR[k]; if (!c) c = DSPR[k] = document.createElement('canvas'); if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } return c; }
 function drawMothership(P, t, act) {
-  ctx.save(); ctx.scale(1.55, 1.55);
-  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.45 + 0.15 * Math.sin(t * 2) + act * 0.3; ctx.drawImage(soft('#7dff3a'), -40, -18, 80, 44); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
-  // lower hull with 3 glowing hangar bays
-  ctx.beginPath(); ctx.ellipse(0, 4, 24, 6.5, 0, 0, 6.283); ctx.fillStyle = '#2a3242'; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = '#0b0c12'; ctx.stroke();
-  for (const bx of [-11, 0, 11]) { ctx.fillStyle = '#0a1a0a'; ctx.beginPath(); ctx.ellipse(bx, 6.5, 3.6, 1.6, 0, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.6 + 0.4 * Math.sin(t * 6 + bx); ctx.fillStyle = '#7dff3a'; ctx.beginPath(); ctx.ellipse(bx, 6.6, 2.6, 1, 0, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
-  // the huge main disc
-  const dg = ctx.createLinearGradient(0, -8, 0, 6); dg.addColorStop(0, '#f4f8ff'); dg.addColorStop(0.4, '#9aa8bc'); dg.addColorStop(0.75, '#4a5468'); dg.addColorStop(1, '#1a2030');
-  ctx.beginPath(); ctx.ellipse(0, 0, 34, 8.5, 0, 0, 6.283); ctx.fillStyle = dg; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = '#0b0c12'; ctx.stroke();
-  ctx.strokeStyle = 'rgba(20,26,40,0.6)'; ctx.lineWidth = 0.6; for (let k = -6; k <= 6; k++) { ctx.beginPath(); ctx.moveTo(k * 5.2, -2); ctx.lineTo(k * 5.6, 6.5 - Math.abs(k) * 0.5); ctx.stroke(); }
-  ctx.beginPath(); ctx.ellipse(0, 1.5, 34, 5.5, 0, 0, Math.PI); ctx.lineWidth = 2.6; ctx.strokeStyle = 'rgba(16,20,32,0.85)'; ctx.stroke();
-  ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.ellipse(-12, -4.5, 13, 1.6, -0.04, 0, 6.283); ctx.fill();
-  // spikes + antenna
-  ctx.fillStyle = '#3a4456'; for (const sx of [-1, 1]) { ctx.beginPath(); ctx.moveTo(sx * 28, -2); ctx.lineTo(sx * 40, -7); ctx.lineTo(sx * 33, 2); ctx.closePath(); ctx.fill(); ctx.lineWidth = 0.9; ctx.strokeStyle = '#0b0c12'; ctx.stroke(); }
-  // upper hull + dome with the glowing core
-  ctx.beginPath(); ctx.ellipse(0, -5, 18, 5, 0, Math.PI, 0); ctx.closePath(); ctx.fillStyle = '#6a7890'; ctx.fill(); ctx.lineWidth = 1.1; ctx.strokeStyle = '#0b0c12'; ctx.stroke();
-  const cg = ctx.createRadialGradient(0, -10, 1, 0, -8, 11); cg.addColorStop(0, '#f0ffd8'); cg.addColorStop(0.35, '#9aff4a'); cg.addColorStop(1, 'rgba(40,120,30,0.6)');
+  const A = P.accent, body = P.body, light = P.light, dark = P.dark;
+  ctx.save(); ctx.scale(1.5, 1.5);
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.4 + 0.15 * Math.sin(t * 2) + act * 0.3; ctx.drawImage(soft(A), -42, -20, 84, 48); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  // 4 drone arms with big rotors (it is still a drone!)
+  const HUB = [[-34, -12], [34, -12], [-22, -17], [22, -17]];
+  for (const [hx, hy] of HUB) { ctx.strokeStyle = '#0b0c12'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(hx * 0.55, -3); ctx.lineTo(hx, hy); ctx.stroke(); ctx.strokeStyle = dark; ctx.lineWidth = 2.4; ctx.stroke(); }
+  for (const [hx, hy] of HUB) {
+    ctx.save(); ctx.translate(hx, hy - 1); ctx.scale(1, 0.3);
+    ctx.fillStyle = 'rgba(220,235,255,0.2)'; ctx.beginPath(); ctx.arc(0, 0, 11, 0, 6.283); ctx.fill();
+    ctx.rotate(t * 34 * (hx > 0 ? 1 : -1)); ctx.fillStyle = '#1a1d24'; for (let b = 0; b < 3; b++) { ctx.rotate(2.094); ctx.fillRect(-1.2, 0, 2.4, 11); }
+    ctx.restore();
+    ctx.fillStyle = dark; ctx.beginPath(); ctx.arc(hx, hy, 2.6, 0, 6.283); ctx.fill(); ctx.lineWidth = 0.9; ctx.strokeStyle = '#0b0c12'; ctx.stroke();
+    ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = Math.sin(t * 6 + hx) > 0 ? A : '#ff4a4a'; ctx.beginPath(); ctx.arc(hx, hy, 1, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over';
+  }
+  // lower hull + 3 glowing hangar bays + a tractor emitter
+  ctx.beginPath(); ctx.ellipse(0, 4.5, 23, 6.5, 0, 0, 6.283); ctx.fillStyle = dark; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = '#0b0c12'; ctx.stroke();
+  for (const bx of [-12, 12]) { ctx.fillStyle = '#05080a'; ctx.beginPath(); ctx.ellipse(bx, 6.8, 3.8, 1.7, 0, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.6 + 0.4 * Math.sin(t * 6 + bx); ctx.fillStyle = A; ctx.beginPath(); ctx.ellipse(bx, 7, 2.6, 1, 0, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+  ctx.fillStyle = '#05080a'; ctx.beginPath(); ctx.ellipse(0, 8, 6.5, 2.4, 0, 0, 6.283); ctx.fill();
+  ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = A; ctx.lineWidth = 1.1;
+  for (let k = 0; k < 3; k++) { const f = (t * 1.2 + k / 3) % 1; ctx.globalAlpha = (1 - f) * (0.5 + act * 0.5); ctx.beginPath(); ctx.ellipse(0, 8 + f * 10, 5 + f * 9, 1.6 + f * 2.2, 0, 0, 6.283); ctx.stroke(); }
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  // the huge main disc in the skin's colours
+  const dg = ctx.createLinearGradient(0, -9, 0, 7); dg.addColorStop(0, '#ffffff'); dg.addColorStop(0.3, light); dg.addColorStop(0.62, body); dg.addColorStop(1, dark);
+  ctx.beginPath(); ctx.ellipse(0, 0, 34, 8.6, 0, 0, 6.283); ctx.fillStyle = dg; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = '#0b0c12'; ctx.stroke();
+  ctx.strokeStyle = rgba(dark, 0.6); ctx.lineWidth = 0.6; for (let k = -6; k <= 6; k++) { ctx.beginPath(); ctx.moveTo(k * 5, -2.5); ctx.lineTo(k * 5.5, 6.5 - Math.abs(k) * 0.5); ctx.stroke(); }
+  ctx.beginPath(); ctx.ellipse(0, 1.6, 34, 5.6, 0, 0, Math.PI); ctx.lineWidth = 2.8; ctx.strokeStyle = rgba(dark, 0.95); ctx.stroke();
+  // glowing seams that pulse along the hull
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.45 + 0.35 * Math.sin(t * 3); ctx.strokeStyle = A; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.ellipse(0, 1.6, 30, 4.6, 0, 0.15, Math.PI - 0.15); ctx.stroke(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.ellipse(-12, -4.6, 13, 1.6, -0.04, 0, 6.283); ctx.fill();
+  // spikes
+  ctx.fillStyle = body; for (const sx of [-1, 1]) { ctx.beginPath(); ctx.moveTo(sx * 30, -1); ctx.lineTo(sx * 41, -4); ctx.lineTo(sx * 33, 3); ctx.closePath(); ctx.fill(); ctx.lineWidth = 0.9; ctx.strokeStyle = '#0b0c12'; ctx.stroke(); }
+  // the spinning segmented ring around the dome
+  ctx.save(); ctx.translate(0, -6); ctx.lineWidth = 2.2;
+  for (let k = 0; k < 8; k++) { const a0 = t * 1.4 + k * 0.785; ctx.strokeStyle = k % 2 ? light : dark; ctx.beginPath(); ctx.ellipse(0, 0, 21, 5.2, 0, a0, a0 + 0.55); ctx.stroke(); }
+  ctx.restore();
+  // upper hull + dome with the energy core
+  ctx.beginPath(); ctx.ellipse(0, -5, 17, 5, 0, Math.PI, 0); ctx.closePath(); ctx.fillStyle = body; ctx.fill(); ctx.lineWidth = 1.1; ctx.strokeStyle = '#0b0c12'; ctx.stroke();
+  const cg = ctx.createRadialGradient(0, -10, 1, 0, -8, 11); cg.addColorStop(0, '#ffffff'); cg.addColorStop(0.35, A); cg.addColorStop(1, rgba(dark, 0.7));
   ctx.beginPath(); ctx.ellipse(0, -8, 10, 8.5, 0, Math.PI, 0); ctx.closePath(); ctx.fillStyle = cg; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = '#0b0c12'; ctx.stroke();
-  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5 + 0.3 * Math.sin(t * 4); ctx.drawImage(soft('#c8ff8a'), -12, -20, 24, 18);
-  ctx.globalAlpha = 1; ctx.strokeStyle = '#b4ff6a'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(0, -16.5); ctx.lineTo(0, -22); ctx.stroke(); ctx.fillStyle = Math.sin(t * 8) > 0 ? '#ff4a4a' : '#ffd84a'; ctx.beginPath(); ctx.arc(0, -22.5, 1.3, 0, 6.283); ctx.fill();
-  // ring of rim lights, chasing around
-  for (let k = 0; k < 16; k++) { const a = k / 16 * 6.283 + t * 1.6; if (Math.sin(a) <= -0.25) continue; const c = ['#ff4a4a', '#ffd84a', '#7dff3a', '#4ad0ff'][(k + Math.floor(t * 8)) % 4]; ctx.globalAlpha = 0.9; ctx.fillStyle = c; ctx.beginPath(); ctx.arc(Math.cos(a) * 30, 1.5 + Math.sin(a) * 4.5, 1.3, 0, 6.283); ctx.fill(); }
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.55 + 0.35 * Math.sin(t * 4); ctx.drawImage(soft(A), -13, -22, 26, 20);
+  for (let k = 0; k < 3; k++) { const a = t * 3 + k * 2.094; ctx.globalAlpha = 0.8; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(Math.cos(a) * 5, -9 + Math.sin(a) * 2.5, 0.9, 0, 6.283); ctx.fill(); }
+  ctx.globalAlpha = 1; ctx.strokeStyle = light; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(0, -16.5); ctx.lineTo(0, -21); ctx.stroke(); ctx.fillStyle = Math.sin(t * 8) > 0 ? '#ff4a4a' : A; ctx.beginPath(); ctx.arc(0, -21.5, 1.3, 0, 6.283); ctx.fill();
+  // rim lights chasing around
+  for (let k = 0; k < 16; k++) { const a = k / 16 * 6.283 + t * 1.6; if (Math.sin(a) <= -0.25) continue; const c = [A, '#ffffff', A, '#ffd84a'][(k + Math.floor(t * 8)) % 4]; ctx.globalAlpha = 0.95; ctx.fillStyle = c; ctx.beginPath(); ctx.arc(Math.cos(a) * 30, 1.6 + Math.sin(a) * 4.6, 1.3, 0, 6.283); ctx.fill(); }
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   ctx.restore();
 }
 function drawDrone(d, x, y, o) {
   o = o || {};
-  if (d.type === 'mothership') { const t0 = o.t !== undefined ? o.t : G.time, sc0 = o.scale || 1; ctx.save(); ctx.translate(x, y); ctx.scale(sc0, sc0); if (o.tilt) ctx.rotate(o.tilt * 0.5); drawMothership(dronePal(d), t0, o.act || 0); ctx.restore(); return; }
+  if (o.box) { ctx.save(); ctx.beginPath(); ctx.rect(o.box[0], o.box[1], o.box[2], o.box[3]); ctx.clip(); drawDrone(d, x, y, Object.assign({}, o, { box: null })); ctx.restore(); return; }   // stay inside the square
+  if (d.type === 'mothership') { const t0 = o.t !== undefined ? o.t : G.time, sc0 = (o.scale || 1) * (o.world ? 1 : 0.62); ctx.save(); ctx.translate(x, y); ctx.scale(sc0, sc0); if (o.tilt) ctx.rotate(o.tilt * 0.5); drawMothership(dronePal(d), t0, o.act || 0); ctx.restore(); return; }
   const P = dronePal(d), t = o.t !== undefined ? o.t : G.time, act = o.act || 0, sc = o.scale || 1;
   ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc); if (o.tilt) ctx.rotate(o.tilt);
   if (d.rank >= 5 || d.type === 'alien') { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25 + 0.12 * Math.sin(t * 3); ctx.drawImage(soft(d.type === 'alien' ? '#7dff3a' : RANK_COL[5]), -30, -26, 60, 52); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
@@ -4698,7 +4812,7 @@ function drawDroneWorld() {
       for (let q = 0; q < 6; q++) { const a = G.time * 2.4 + q * 1.047, rr2 = (20 + 4 * Math.sin(G.time * 5 + q)) * k2; if (Math.random() < 0.15) continue; ctx.fillStyle = q % 2 ? '#00ff66' : '#ff00ff'; ctx.fillRect(x + Math.cos(a) * rr2 - 1.5, y + Math.sin(a) * rr2 * 0.5 - 1.5, 3 + (q % 3), 3); }
       if (Math.sin(G.time * 1.3 + d.id) > 0.96) txt(Math.random() < 0.5 ? 'ERR0R' : '0x1F', x + (Math.random() - 0.5) * 10, y - 26 * k2, 7, Math.random() < 0.5 ? '#00ff66' : '#ff00ff', { font: 'monospace', weight: 900, shadow: false });
     }
-    drawDrone(d, x, y, { tilt: s.tilt, act: Math.max(s.act, s.hitT > 0 ? 1 : 0), t: s.t + ta * DT, scale: vsc() * (d.skin === 'glitch' ? 1.4 : 1) });
+    drawDrone(d, x, y, { tilt: s.tilt, act: Math.max(s.act, s.hitT > 0 ? 1 : 0), t: s.t + ta * DT, scale: vsc() * (d.skin === 'glitch' ? 1.4 : 1), world: true });
     if (s.lvlFx > 0) {   // LEVEL UP: flash yellow
       const k = s.lvlFx / 1.4, pulse = Math.abs(Math.sin(s.lvlFx * 9));
       ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = k * (0.5 + 0.5 * pulse); ctx.drawImage(soft('#ffe14a'), x - 34, y - 34, 68, 68); ctx.drawImage(soft('#ffffff'), x - 14, y - 14, 28, 28);
@@ -4746,7 +4860,7 @@ function cardDrone(d, x, y, w, h, id, opts) {
   rr(x, y, w, h, 10); ctx.fill();
   ctx.lineWidth = sel || canM ? 2 : 1; ctx.strokeStyle = canM ? '#7dff7a' : sel ? '#8fb0ff' : rgba(RCOL[DRONE_TYPES[d.type].rar], 0.6); ctx.stroke();
   ctx.save(); if (merging && !canM && A !== d) ctx.globalAlpha *= 0.35;
-  drawDrone(d, x + w / 2, y + h * 0.42, { scale: Math.min(w, h) / 38, t: G.time + d.id });
+  drawDrone(d, x + w / 2, y + h * 0.42, { scale: Math.min(w, h) / 38, t: G.time + d.id, box: [x + 1, y + 1, w - 2, h - 2] });
   rankBadge(d, x + w - 4, y + 4, Math.min(1, w / 76));
   { const k = Math.min(1, w / 76), lt = 'Lv' + dLvl(d); rr(x + 4, y + 4, (8 + lt.length * 6.2) * k, 15 * k, 4 * k); ctx.fillStyle = 'rgba(8,10,16,0.85)'; ctx.fill(); txt(lt, x + 4 + (4 + lt.length * 3.1) * k, y + 4 + 8 * k, 10 * k, '#ffe14a', { font: FB, weight: 900, shadow: false });
     const f = dLvl(d) >= DRONE_MAX_LVL ? 1 : clamp((d.xp || 0) / dXpNeed(dLvl(d)), 0, 1); ctx.fillStyle = 'rgba(0,0,0,0.5)'; rr(x + 6, y + h - 30, w - 12, 4, 2); ctx.fill(); ctx.fillStyle = '#ffe14a'; rr(x + 6, y + h - 30, (w - 12) * f, 4, 2); ctx.fill(); }
@@ -4828,7 +4942,7 @@ function renderDrones() {
   }
   if (!d) { txt('Tap a drone to see it, merge it or give it a skin', w / 2, y0 + 100, 15, '#8a90a0', { font: FB, weight: 800 }); return; }
   ctx.fillStyle = rgba(RANK_COL[d.rank], 0.12); rr(32, y0 + 12, 170, 186, 12); ctx.fill();
-  drawDrone(d, 117, y0 + 90, { scale: 2.4, t: G.time });
+  drawDrone(d, 117, y0 + 90, { scale: 2.4, t: G.time, box: [32, y0 + 12, 170, 186] });
   { const L = dLvl(d), maxd = L >= DRONE_MAX_LVL, f = maxd ? 1 : clamp((d.xp || 0) / dXpNeed(L), 0, 1);
     txt('Level ' + L + (maxd ? ' (MAX)' : ' / ' + DRONE_MAX_LVL), 117, y0 + 158, 14, '#ffe14a', { stroke: 3 });
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; rr(46, y0 + 170, 142, 10, 5); ctx.fill(); ctx.fillStyle = '#ffe14a'; rr(46, y0 + 170, 142 * f, 10, 5); ctx.fill();
@@ -4836,7 +4950,7 @@ function renderDrones() {
   txt(droneName(d), 222, y0 + 26, fitSize(droneName(d), 22, 230), RANK_COL[d.rank], { align: 'left', stroke: 3 });
   txt(DRONE_TYPES[d.type].rar, 545, y0 + 27, 13, RCOL[DRONE_TYPES[d.type].rar], { align: 'right', font: FB, weight: 900 });
   txt(DRONE_TYPES[d.type].desc, 222, y0 + 52, fitSize(DRONE_TYPES[d.type].desc, 12, 330, FB), '#c9cfdc', { align: 'left', font: FB, weight: 800 });
-  const stats = d.type === 'mothership' ? 'Every ' + Math.round(droneCd(d)) + 's: 5 minerals at once (any kind)   Fleet: 3 ships for 15s every ' + Math.round(MOTHER_FLEET_CD * lvlCd(d)) + 's' : d.type === 'alien' ? 'Every ' + Math.round(droneCd(d)) + 's   Takes up to: ' + (d.rank >= 5 ? 'any mineral' : 'the ' + (d.rank + 1) + ' cheapest of a biome')
+  const stats = d.type === 'mothership' ? 'Every ' + Math.round(droneCd(d)) + 's: 5 minerals   Fleet: 3 ships, 15s, every ' + Math.round(MOTHER_FLEET_CD * lvlCd(d)) + 's' : d.type === 'alien' ? 'Every ' + Math.round(droneCd(d)) + 's   Takes up to: ' + (d.rank >= 5 ? 'any mineral' : 'the ' + (d.rank + 1) + ' cheapest of a biome')
     : 'Every ' + droneCd(d).toFixed(1) + 's   ' + RK.dmg[d.rank] + ' crack' + (RK.dmg[d.rank] > 1 ? 's' : '') + ' per hit   Speed x' + RK.spd[d.rank] + (d.type === 'laser' ? '   ' + laserLanes(d.rank).length + ' beam' + (laserLanes(d.rank).length > 1 ? 's' : '') : '');
   txt(stats, 222, y0 + 74, fitSize(stats, 12, 330, FB), '#ffd84a', { align: 'left', font: FB, weight: 900 });
   if (dLvl(d) > 1) txt('Level bonus: -' + Math.round((1 - lvlCd(d)) * 100) + '% cooldown, +' + Math.round((lvlSpd(d) - 1) * 100) + '% speed, +' + Math.round(lvlCrit(d) * 100) + '% extra crack' + (aiRank(d) > d.rank ? ', smarter brain' : ''), 222, y0 + 152, fitSize('Level bonus: -00% cooldown, +00% speed, +00% extra crack, smarter brain', 11, 330, FB), '#ffe14a', { align: 'left', font: FB, weight: 900 });
@@ -4847,11 +4961,11 @@ function renderDrones() {
     if (inSlot) { G.slots[k] = null; DRT.delete(d.id); }
     else { let e = -1; for (let q = 0; q < G.slotsOpen; q++) if (!G.slots[q] || !droneById(G.slots[q])) { e = q; break; } if (e < 0) { toast('All your slots are full', '#ff8a8a'); AUDIO.sfx('deny'); return; } G.slots[e] = d.id; }
     save(); } });
-  btn('dmerge', 382, y0 + 112, 150, 34, 'Merge...', { col: '#3a8a4a', size: 15, fn: () => { G.mergeSel = d.id; AUDIO.sfx('click'); } });
+  if (!DRONE_TYPES[d.type].noRank) btn('dmerge', 382, y0 + 112, 150, 34, 'Merge...', { col: '#3a8a4a', size: 15, fn: () => { G.mergeSel = d.id; AUDIO.sfx('click'); } });
   // skins + hats: white boxes showing how THIS drone would look (one owned copy = one drone at a time)
-  const hats = G.dressTab === 1, list = [null].concat(hats ? Object.keys(HATS).filter(id => G.hats[id] > 0) : Object.keys(SKINS).filter(id => G.skins[id] > 0));
+  const noHat = d.type === 'mothership', hats = G.dressTab === 1 && !noHat, list = [null].concat(hats ? Object.keys(HATS).filter(id => G.hats[id] > 0) : Object.keys(SKINS).filter(id => G.skins[id] > 0));
   btn('dress0', 560, y0 + 10, 84, 26, 'Skins', { col: hats ? '#343c50' : '#4a5ad0', size: 13, r: 7, fn: () => { G.dressTab = 0; if (SCR.dress) SCR.dress.target = SCR.dress.pos = 0; AUDIO.sfx('click'); } });
-  btn('dress1', 650, y0 + 10, 84, 26, 'Hats', { col: hats ? '#7a4ad0' : '#343c50', size: 13, r: 7, fn: () => { G.dressTab = 1; if (SCR.dress) SCR.dress.target = SCR.dress.pos = 0; AUDIO.sfx('click'); } });
+  if (!noHat) btn('dress1', 650, y0 + 10, 84, 26, 'Hats', { col: hats ? '#7a4ad0' : '#343c50', size: 13, r: 7, fn: () => { G.dressTab = 1; if (SCR.dress) SCR.dress.target = SCR.dress.pos = 0; AUDIO.sfx('click'); } });
   const dsa = scrollArea('dress', 558, y0 + 40, 274, 160, 'y', Math.ceil(list.length / 3) * 80);
   clipBox(558, y0 + 40, 274, 160);
   list.forEach((id, i) => {
@@ -4862,7 +4976,7 @@ function renderDrones() {
     rr(x, y, tw, th, 9); ctx.fillStyle = UI.hot === id2 ? '#ffffff' : '#eef1f6'; ctx.fill();
     ctx.lineWidth = on ? 3 : 1; ctx.strokeStyle = on ? '#3aa04a' : id ? (RCOL[(hats ? HATS[id] : SKINS[id]).rar] || '#c8d0dc') : '#c8d0dc'; ctx.stroke();
     ctx.save(); if (!ok) ctx.globalAlpha = 0.35;
-    drawDrone({ id: d.id, type: d.type, rank: d.rank, skin: hats ? d.skin : id, hat: hats ? id : d.hat }, x + tw / 2, y + 32, { scale: 1.45 });
+    drawDrone({ id: d.id, type: d.type, rank: d.rank, skin: hats ? d.skin : id, hat: hats ? id : d.hat }, x + tw / 2, y + 32, { scale: 1.45, box: [x + 1, y + 1, tw - 2, th - 2] });
     ctx.restore();
     const nm = id ? (hats ? HATS[id].name : SKINS[id].name) : 'None';
     txt(nm, x + tw / 2, y + th - 9, fitSize(nm, 11, tw - 8, FB), '#1a1d24', { font: FB, weight: 900, shadow: false });
@@ -4871,7 +4985,7 @@ function renderDrones() {
   });
   unclip();
   if (list.length > 6) txt('scroll', 828, y0 + 23, 10, '#8a90a0', { align: 'right', font: FB, weight: 800 });
-  if (list.length === 1) txt(hats ? 'Hats come from the Alien Pass' : 'Skins come from the Skin Crate + the Alien Pass', 562, y0 + 140, 11, '#8a90a0', { align: 'left', font: FB, weight: 800 });
+  if (list.length === 1) txt(hats ? 'Hats come from the Alien Pass' : 'Skins: Skin Shop, Lucky Wheel, Alien Pass', 562, y0 + 140, 11, '#8a90a0', { align: 'left', font: FB, weight: 800 });
 }
 function drawCrate(x, y, s, col, t, shake) {
   ctx.save(); ctx.translate(x + (shake ? (Math.random() - 0.5) * shake : 0), y); ctx.scale(s, s);
@@ -4899,7 +5013,7 @@ function renderSkinList(w, h) {
     const S = SKINS[id], rc = RCOL[S.rar] || '#ffffff', own = G.skins[id] || 0;
     ctx.fillStyle = rgba(rc, own ? 0.14 : 0.06); rr(x, y, tw, th, 12); ctx.fill(); ctx.lineWidth = own ? 2 : 1; ctx.strokeStyle = rgba(rc, own ? 0.9 : 0.4); ctx.stroke();
     ctx.fillStyle = '#eef1f6'; rr(x + 8, y + 8, tw - 16, 76, 9); ctx.fill();
-    ctx.save(); if (!own) ctx.globalAlpha *= 0.55; drawDrone({ id: 70 + i, type: 'normal', rank: 1, skin: id, hat: null }, x + tw / 2, y + 48, { scale: 1.6, t: G.time + i }); ctx.restore();
+    ctx.save(); if (!own) ctx.globalAlpha *= 0.55; drawDrone({ id: 70 + i, type: 'normal', rank: 1, skin: id, hat: null }, x + tw / 2, y + 48, { scale: 1.6, t: G.time + i, box: [x + 8, y + 8, tw - 16, 76] }); ctx.restore();
     if (own) { const lab = 'x' + own, bw = 12 + lab.length * 6; rr(x + tw - bw - 10, y + 11, bw, 16, 8); ctx.fillStyle = '#2a3446'; ctx.fill(); txt(lab, x + tw - bw / 2 - 10, y + 19.5, 11, '#ffffff', { font: FB, weight: 900, shadow: false }); }
     txt(S.name, x + tw / 2, y + 100, fitSize(S.name, 15, tw - 12), '#ffffff', { stroke: 3 });
     txt(S.rar, x + tw / 2, y + 119, 11, rc, { font: FB, weight: 900, shadow: false });
@@ -5391,7 +5505,7 @@ function renderPass() {
     txt(String(l), x + cw / 2, cy + 1, 15, '#ffffff', { stroke: 3 });
     if (r) {
       if (!got) ctx.globalAlpha = 0.55;
-      rewardIcon(r, x + cw / 2, cy + 82, 1.45);
+      ctx.save(); ctx.beginPath(); rr(x + 2, cy + 2, cw - 4, ch - 4, 14); ctx.clip(); rewardIcon(r, x + cw / 2, cy + 82, 1.45); ctx.restore();
       ctx.globalAlpha = 1;
       const nm = passRewardText(r);
       txt(nm, x + cw / 2, cy + 146, fitSize(nm, 14, cw - 14), got ? '#ffffff' : '#aab0c0', { stroke: 3 });
