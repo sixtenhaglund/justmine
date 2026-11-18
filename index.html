@@ -900,13 +900,13 @@ function drawBhPops(shx, shy) {
   for (const p of G.bhPops) {
     const f = p.t, x = p.x, y = wy(p.y), R = p.R, e = 1 - Math.pow(1 - f, 3);
     // core flash
-    ctx.globalAlpha = Math.max(0, 1 - f * 2.2); ctx.drawImage(soft('#ffffff'), x - R * 1.4, y - R * 1.4, R * 2.8, R * 2.8); ctx.drawImage(soft('#b678ff'), x - R * 2.2, y - R * 2.2, R * 4.4, R * 4.4);
+    ctx.globalAlpha = Math.max(0, 0.55 - f * 1.4); ctx.drawImage(soft('#ffffff'), x - R * 1.4, y - R * 1.4, R * 2.8, R * 2.8); ctx.drawImage(soft('#b678ff'), x - R * 2.2, y - R * 2.2, R * 4.4, R * 4.4);
     // light beams
     ctx.save(); ctx.translate(x, y); ctx.rotate(p.x * 0.01);
-    for (let k = 0; k < 14; k++) { ctx.rotate(6.283 / 14); const L = R * (0.6 + 2.6 * e) * (k % 2 ? 0.7 : 1); ctx.globalAlpha = Math.max(0, 0.6 - f * 0.8); ctx.fillStyle = k % 2 ? '#c89aff' : '#ffffff'; ctx.beginPath(); ctx.moveTo(-R * 0.06, 0); ctx.lineTo(0, -L); ctx.lineTo(R * 0.06, 0); ctx.closePath(); ctx.fill(); }
+    for (let k = 0; k < 14; k++) { ctx.rotate(6.283 / 14); const L = R * (0.6 + 2.6 * e) * (k % 2 ? 0.7 : 1); ctx.globalAlpha = Math.max(0, 0.32 - f * 0.45); ctx.fillStyle = k % 2 ? '#c89aff' : '#ffffff'; ctx.beginPath(); ctx.moveTo(-R * 0.06, 0); ctx.lineTo(0, -L); ctx.lineTo(R * 0.06, 0); ctx.closePath(); ctx.fill(); }
     ctx.restore();
     // shockwaves
-    for (const [d, col, lw] of [[0, '#ffffff', 8], [0.12, '#b678ff', 14], [0.25, '#7a2aff', 6]]) { const g2 = Math.max(0, f - d); if (g2 <= 0) continue; const e2 = 1 - Math.pow(1 - Math.min(1, g2 / 0.75), 3); ctx.globalAlpha = Math.max(0, 1 - g2 / 0.75) * 0.9; ctx.strokeStyle = col; ctx.lineWidth = lw * (1 - e2 * 0.7) * vsc(); ctx.beginPath(); ctx.arc(x, y, R * (0.3 + 2.4 * e2), 0, 6.283); ctx.stroke(); }
+    for (const [d, col, lw] of [[0, '#ffffff', 8], [0.12, '#b678ff', 14], [0.25, '#7a2aff', 6]]) { const g2 = Math.max(0, f - d); if (g2 <= 0) continue; const e2 = 1 - Math.pow(1 - Math.min(1, g2 / 0.75), 3); ctx.globalAlpha = Math.max(0, 1 - g2 / 0.75) * 0.6; ctx.strokeStyle = col; ctx.lineWidth = lw * (1 - e2 * 0.7) * vsc(); ctx.beginPath(); ctx.arc(x, y, R * (0.3 + 2.4 * e2), 0, 6.283); ctx.stroke(); }
   }
   ctx.restore(); ctx.globalAlpha = 1;
 }
@@ -1290,7 +1290,7 @@ function tick() {
     for (const bo of G.bombs) if (bo.t >= 0 && bo.speed >= 0 && bombTier(bo.level).name === 'black') {   // during the pull
       const R = bombRadius(bo), life = clamp(bo.t / 0.7, 0, 1);
       for (let q = 0; q < 3; q++) { const a = Math.random() * 6.283, d0 = R * (1.3 + Math.random() * 0.6); G.parts.push({ kind: 'suck', x: bo.x + Math.cos(a) * d0, y: bo.y + Math.sin(a) * d0, tx: bo.x, ty: bo.y, vx: 0, vy: 0, life: 14, max: 14, col: q ? '#b678ff' : '#ffffff', s: 2 }); }
-      G.shake = Math.max(G.shake, 1 + life * 6);
+      G.shake = Math.max(G.shake, 1 + life * 3);
     }
     for (const bo of G.bombs) if (bo.speed < 0 && bombTier(bo.level).name === 'black') {   // the implosion's final pop
       G.bhPops = G.bhPops || []; G.bhPops.push({ x: bo.x, y: bo.y, t: 0, R: bombRadius(bo) });
@@ -1299,7 +1299,7 @@ function tick() {
       G.lights.push({ x: bo.x, y: bo.y, r: R * 2.2 + 40, col: '#e0c8ff', life: 0.5, max: 0.5 }); sparkle(bo.x, bo.y, '#e0c8ff', 16); G.shake = Math.max(G.shake, 10);
       G.rings.push({ x: bo.x, y: bo.y, t: 0, r: R * 1.9, col: '#ffffff' }, { x: bo.x, y: bo.y, t: -0.08, r: R * 1.5, col: '#b678ff' });
       for (let i = 0; i < 26; i++) { const a = i / 26 * 6.283, v = (5 + Math.random() * 5) * vsc(); G.parts.push({ kind: 'spark', x: bo.x, y: bo.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 18 + rnd(0, 10), max: 28, col: i % 2 ? '#ffffff' : '#c890ff', s: 2 }); }
-      G.flash = Math.max(G.flash || 0, 0.5); G.flashCol = '#e0c8ff'; G.shake = Math.max(G.shake, 16);
+      G.flash = Math.max(G.flash || 0, 0.22); G.flashCol = '#e0c8ff'; G.shake = Math.max(G.shake, 9);
       for (let i = 0; i < 30; i++) { const a = Math.random() * 6.283, v = (3 + Math.random() * 8) * vsc(); G.parts.push({ kind: 'ember', x: bo.x, y: bo.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 30 + rnd(0, 20), max: 50, s: 1.4, col: i % 3 ? '#b678ff' : '#ffffff', ph: Math.random() * 6 }); }
     }
     if (G.bhPops) { for (const p of G.bhPops) p.t += DT; G.bhPops = G.bhPops.filter(p => p.t < 1); }
@@ -1725,6 +1725,7 @@ const GFX_ROWS = [
   ['grain', 'Film grain', ['Off', 'On']],
   ['trail', 'Pickaxe FX', ['Off', 'On']],
   ['shake', 'Screen shake', ['Off', 'Low', 'Full']],
+  ['flashes', 'Screen flashes', ['Off', 'Low', 'Full']],
   ['fpsMax', 'Max FPS', ['30', '60', '90', '120', '144', '240', 'Uncapped']],
   ['auto', 'Auto quality', ['Off', 'On']],
   ['fps', 'Show FPS', ['Off', 'On']],
@@ -1744,7 +1745,7 @@ const GFX_PRESETS = [   // Low, Medium, High, Ultra
   { res: 4, light: 2, bloom: 2, shadows: 2, bg: 2, parts: 3, amb: 2, grade: 1, grain: 1, trail: 1 },
 ];
 const GFX_KEY = 'justmine.gfx.v1';
-function gfxDefaults() { const p = TOUCH ? 1 : 2; return Object.assign({ preset: p, shake: 2, fpsMax: 6, hud: 0, auto: 1, fps: 0, ui: 0, musicVol: 2, floats: 1, gemNames: 1, pickSize: 1, splash: 1 }, GFX_PRESETS[p]); }
+function gfxDefaults() { const p = TOUCH ? 1 : 2; return Object.assign({ preset: p, shake: 2, flashes: 2, fpsMax: 6, hud: 0, auto: 1, fps: 0, ui: 0, musicVol: 2, floats: 1, gemNames: 1, pickSize: 1, splash: 1 }, GFX_PRESETS[p]); }
 const GFX = gfxDefaults();
 try { const s = JSON.parse(localStorage.getItem(GFX_KEY) || 'null'); if (s) for (const [k, , opts] of GFX_ROWS) if (typeof s[k] === 'number' && s[k] >= 0 && s[k] < opts.length) GFX[k] = s[k] | 0; if (s && s.fpsMax === undefined && (s.fpsCap === 0 || s.fpsCap === 1)) GFX.fpsMax = s.fpsCap; } catch (e) {}   // the old 30/60 limit carries over
 function setGfx(key, v) {
@@ -2154,6 +2155,7 @@ function drawLighting(shx, shy) {
 // BLOOM: bright things glow. Shrink the picture, keep only its bright parts
 // (multiplying a picture by itself makes dark colours MUCH darker but leaves bright ones bright),
 // then stretch it back over the screen. Stretching a tiny picture blurs it for free.
+const SHK = { x: 0, y: 0 };   // this frame's screen shake offset
 const BLOOM = {};
 function bloomCv(k, w, h) { let c = BLOOM[k]; if (!c) c = BLOOM[k] = document.createElement('canvas'); if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } return c; }
 function drawBloom() {
@@ -2161,15 +2163,17 @@ function drawBloom() {
   const w1 = Math.max(4, Math.ceil(cv.width / 6)), h1 = Math.max(4, Math.ceil(cv.height / 6));
   const a = bloomCv('a', w1, h1), ax = a.getContext('2d'), b = bloomCv('b', Math.max(2, Math.ceil(w1 / 4)), Math.max(2, Math.ceil(h1 / 4)));
   BLOOM.n = (BLOOM.n || 0) + 1;
-  const busy = G.shake > 0.5 || G.flash > 0.03 || G.bombs.length > 0;   // shaking/flashing: an old glow would sit in the wrong place and smear ('melting'), so redo it every frame
+  const busy = G.flash > 0.05;   // a big flash changes everything at once: redo the glow right away
   if (busy || BLOOM.n % 3 === 0 || BLOOM.w !== w1 || BLOOM.h !== h1) {   // you can't see a glow that is 1 frame old, but it halves the cost
-    BLOOM.w = w1; BLOOM.h = h1;
+    BLOOM.w = w1; BLOOM.h = h1; BLOOM.ox = SHK.x; BLOOM.oy = SHK.y;   // remember how the screen was shaken when this glow was made
     ax.globalAlpha = 1; ax.imageSmoothingEnabled = true; ax.imageSmoothingQuality = 'high';
     ax.globalCompositeOperation = 'copy'; ax.drawImage(cv, 0, 0, w1, h1);
     ax.globalCompositeOperation = 'multiply'; ax.drawImage(a, 0, 0); ax.drawImage(a, 0, 0); ax.drawImage(a, 0, 0);   // x^8
     const bx = b.getContext('2d'); bx.globalCompositeOperation = 'copy'; bx.imageSmoothingQuality = 'high'; bx.drawImage(a, 0, 0, b.width, b.height);
   }
-  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = true;
+  // an older glow is moved by however much the screen shook since, so it stays exactly on top (no 'melting' smear)
+  const odx = (SHK.x - (BLOOM.ox || 0)) * DPR, ody = (SHK.y - (BLOOM.oy || 0)) * DPR;
+  ctx.setTransform(1, 0, 0, 1, odx, ody); ctx.imageSmoothingEnabled = true;
   ctx.globalCompositeOperation = 'screen';
   ctx.globalAlpha = lv > 1 ? 0.7 : 0.5; ctx.drawImage(a, 0, 0, cv.width, cv.height);
   ctx.globalAlpha = lv > 1 ? 0.8 : 0.45; ctx.drawImage(b, 0, 0, cv.width, cv.height);
@@ -2486,6 +2490,12 @@ function drawRock(r, bname) {
   const grow = 0.55 + 0.45 * ease(born);
   const jx = r.shake ? (Math.random() - 0.5) * r.shake * 0.7 : 0, jy = r.shake ? (Math.random() - 0.5) * r.shake * 0.7 : 0;
   const x = r.x + jx * 0.5, y = wy(r.y) + jy * 0.5, s = 23, q = s * 0.95;
+  const fxB = BIOME_FX[bname];
+  if (!r.golden && !(r.flash > 0) && !(r.spawnT > 0) && !(fxB && (fxB.molten || fxB.liveSparks)) && r.slot >= 0) {   // plain rock: one direct draw (much cheaper)
+    const wB = ROCK_BOX * grow * f; ctx.globalAlpha = born;
+    ctx.drawImage(ATLAS.c, (r.slot % ATLAS.cols) * S, Math.floor(r.slot / ATLAS.cols) * S, S, S, x - wB / 2, y - wB / 2, wB, wB);
+    ctx.globalAlpha = 1; return;
+  }
   ctx.save();
   const sq = r.flash > 0 ? r.flash * 0.08 : 0;   // squash when hit
   ctx.translate(x, y + sq * 10 * f); ctx.scale(grow * f * (1 + sq), grow * f * (1 - sq));
@@ -3147,7 +3157,7 @@ function render() {
   ctx.fillStyle = '#07080c'; ctx.fillRect(0, 0, cv.width, cv.height);
   if (G.scene === 'loading') { setScreen(); txt('Loading...', W / 2, H / 2, 28, '#ffffff'); return; }
   const shk = G.shake * [0, 0.45, 1][GFX.shake];   // Screen shake setting
-  const shx = shk ? (Math.random() - 0.5) * shk * 2 : 0, shy = shk ? (Math.random() - 0.5) * shk * 2 : 0;
+  const shx = shk ? (Math.random() - 0.5) * shk * 2 : 0, shy = shk ? (Math.random() - 0.5) * shk * 2 : 0; SHK.x = shx; SHK.y = shy;
   tickParallax();
   drawBg(G.scene === 'title' ? 0 : G.biome, shx * 0.4 + PAR.x, shy * 0.4 + PAR.y);
   drawBackFx(shx);
@@ -3279,21 +3289,29 @@ function renderWorld(shx, shy) {
   // particles
   for (const p of G.parts) {
     const a = clamp(p.life / (p.max * 0.4), 0, 1), x = p.x, y = wy(p.y);
+    if (p.kind === 'ember' || p.kind === 'spark' || p.kind === 'star' || p.kind === 'suck') continue;
     if (p.kind === 'chunk') {
       ctx.save(); ctx.translate(x, y); ctx.rotate(p.rot); ctx.globalAlpha = a;
       ctx.fillStyle = p.col; ctx.strokeStyle = '#07070a'; ctx.lineWidth = 1;
       const s = p.s; ctx.beginPath(); ctx.moveTo(-s * (0.5 + p.pts[0] * 0.5), -s * 0.6); ctx.lineTo(s * (0.5 + p.pts[1] * 0.5), -s * 0.4); ctx.lineTo(s * 0.4, s * (0.4 + p.pts[2] * 0.4)); ctx.lineTo(-s * 0.6, s * 0.5); ctx.closePath(); ctx.fill(); if (!p.hi) p.hi = lighten(p.col, 0.4); ctx.save(); ctx.clip(); ctx.fillStyle = p.hi; ctx.globalAlpha = a * 0.7; ctx.fillRect(-s, -s, s * 2, s * 0.45); ctx.restore(); ctx.stroke();
       ctx.restore();
-    } else if (p.kind === 'dust' || p.kind === 'smoke') { ctx.globalAlpha = a * (p.kind === 'smoke' ? 0.55 : 0.35); ctx.drawImage(soft(p.col), x - p.s, y - p.s, p.s * 2, p.s * 2); }
-    else if (p.kind === 'ember') { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a * (0.6 + 0.4 * Math.sin(G.time * 10 + p.ph)); ctx.drawImage(soft(p.col), x - p.s * 3, y - p.s * 3, p.s * 6, p.s * 6); ctx.fillStyle = '#fff2c0'; ctx.fillRect(x - p.s * 0.4, y - p.s * 0.4, p.s * 0.8, p.s * 0.8); ctx.globalCompositeOperation = 'source-over'; }
-    else if (p.kind === 'spark') { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; ctx.strokeStyle = p.col; ctx.lineWidth = p.s; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - p.vx * 2, y + p.vy * 2); ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; }
-    else if (p.kind === 'star') { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; star4(x, y, p.s * 1.6, p.col); ctx.globalCompositeOperation = 'source-over'; }
+    }
+    else if (p.kind === 'dust' || p.kind === 'smoke') { ctx.globalAlpha = a * (p.kind === 'smoke' ? 0.55 : 0.35); ctx.drawImage(soft(p.col), x - p.s, y - p.s, p.s * 2, p.s * 2); }
     else if (FALLERS[p.kind]) { drawBit(p, x, y, a); }
     else if (p.kind === 'coin') { ctx.save(); ctx.translate(x, y); ctx.globalAlpha = a; ctx.scale(Math.abs(Math.cos(p.rot)) + 0.15, 1); ctx.beginPath(); ctx.arc(0, 0, p.s, 0, 6.283); ctx.fillStyle = '#ffd84a'; ctx.fill(); ctx.lineWidth = 0.8; ctx.strokeStyle = '#8a5a00'; ctx.stroke(); ctx.fillStyle = '#fff6c0'; ctx.fillRect(-p.s * 0.3, -p.s * 0.5, p.s * 0.3, p.s); ctx.restore(); }
     else if (p.kind === 'pix') { ctx.globalAlpha = a; ctx.fillStyle = p.col; ctx.fillRect(Math.round(x / 2) * 2 - p.s / 2, Math.round(y / 2) * 2 - p.s / 2, p.s, p.s); }
     else if (p.kind === 'glitch') { ctx.globalAlpha = a * (Math.random() < 0.3 ? 0.3 : 0.9); ctx.fillStyle = p.col; ctx.fillRect(x - p.s / 2, y, p.s, p.h); }
-    else if (p.kind === 'suck') { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; ctx.strokeStyle = p.col; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + (x - p.tx) * 0.25, y - (p.y - p.ty) * -0.25); ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; }
   }
+  ctx.globalCompositeOperation = 'lighter';   // all glowing particles in one go (switching blend modes per particle is slow)
+  for (const p of G.parts) {
+    if (p.kind !== 'ember' && p.kind !== 'spark' && p.kind !== 'star' && p.kind !== 'suck') continue;
+    const a = clamp(p.life / (p.max * 0.4), 0, 1), x = p.x, y = wy(p.y);
+    if (p.kind === 'ember') { ctx.globalAlpha = a * (0.6 + 0.4 * Math.sin(G.time * 10 + p.ph)); ctx.drawImage(soft(p.col), x - p.s * 3, y - p.s * 3, p.s * 6, p.s * 6); ctx.fillStyle = '#fff2c0'; ctx.fillRect(x - p.s * 0.4, y - p.s * 0.4, p.s * 0.8, p.s * 0.8); }
+    else if (p.kind === 'spark') { ctx.globalAlpha = a; ctx.strokeStyle = p.col; ctx.lineWidth = p.s; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - p.vx * 2, y + p.vy * 2); ctx.stroke(); }
+    else if (p.kind === 'star') { ctx.globalAlpha = a; star4(x, y, p.s * 1.6, p.col); }
+    else if (p.kind === 'suck') { ctx.globalAlpha = a; ctx.strokeStyle = p.col; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + (x - p.tx) * 0.25, y - (p.y - p.ty) * -0.25); ctx.stroke(); }
+  }
+  ctx.globalCompositeOperation = 'source-over';
   ctx.globalAlpha = 1;
   // lights (additive glow)
   ctx.globalCompositeOperation = 'lighter';
@@ -3526,7 +3544,7 @@ const SOUND_ROWS = [
 ];
 const SET_TABS = [
   ['Graphics', 'How sharp and fancy the picture is', ['preset', 'res', 'light', 'bloom', 'shadows', 'bg']],
-  ['Effects', 'Particles, weather and screen effects', ['parts', 'amb', 'grade', 'grain', 'trail', 'shake']],
+  ['Effects', 'Particles, weather and screen effects', ['parts', 'amb', 'grade', 'grain', 'trail', 'shake', 'flashes']],
   ['Speed', 'Make the game run smoother', ['fpsMax', 'auto', 'fps']],
   ['Sound', 'Volume and music', ['vol', 'music', 'musicVol']],
   ['Game', 'Buttons, menus, text and the pickaxe', ['hud', 'ui', 'floats', 'gemNames', 'pickSize', 'splash']],
@@ -3861,7 +3879,7 @@ function renderBook() {
 function renderOverlays() {
   setScreen();
   renderAway();
-  if (G.flash > 0) { ctx.fillStyle = rgba(G.flashCol, Math.min(0.6, G.flash * 0.6)); ctx.fillRect(0, 0, W, H); }
+  if (G.flash > 0 && GFX.flashes !== 0) { ctx.fillStyle = rgba(G.flashCol, Math.min(0.6, G.flash * 0.6) * (GFX.flashes === 1 ? 0.35 : 1)); ctx.fillRect(0, 0, W, H); }
   if (G.tp < 2.2) {
     const t = G.tp, b = BIOMES[G.biome];
     // iris opening + warp streaks
@@ -3920,7 +3938,29 @@ function titleLogo(sz) {
   x.font = (sz * 0.33) + 'px ' + FH; x.lineWidth = 4; x.strokeStyle = '#0b0c12'; x.strokeText('©', cx + tw / 2 + sz * 0.13, cy - sz * 0.3); x.fillStyle = '#ffe27a'; x.fillText('©', cx + tw / 2 + sz * 0.13, cy - sz * 0.3);
   TITLE.logo = { c, w, h, tw, cy }; TITLE.key = key; TITLE.tmp = null; return TITLE.logo;
 }
+let WARNED = false;
+function renderWarning() {
+  setScreen(); ctx.globalAlpha = 1;
+  ctx.fillStyle = '#05060a'; ctx.fillRect(0, 0, W, H);
+  const u = clamp(Math.min(W / 800, H / 460), 0.4, 1.4), cx = W / 2, cy = H / 2;
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(u, u);
+  ctx.fillStyle = '#11141c'; rr(-380, -200, 760, 400, 22); ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#ffb02a'; ctx.stroke();
+  ctx.fillStyle = '#ffb02a'; ctx.beginPath(); ctx.moveTo(0, -172); ctx.lineTo(32, -116); ctx.lineTo(-32, -116); ctx.closePath(); ctx.fill();
+  txt('!', 0, -133, 34, '#11141c', { shadow: false });
+  txt('PHOTOSENSITIVITY WARNING', 0, -78, 32, '#ffb02a', { stroke: 4 });
+  const L = ['This game has flashing lights, bright explosions and screen shake.',
+    'A very small number of people can have seizures from flashing lights,',
+    'even if they never had one before. If you feel dizzy or unwell, stop playing.',
+    'You can turn off Screen flashes and Screen shake in Settings.'];
+  L.forEach((l, i) => txt(l, 0, -28 + i * 30, fitSize(l, 17, 700, FB), i === 3 ? '#9ad8ff' : '#e8ecf4', { font: FB, weight: 800, shadow: false }));
+  const p = 0.6 + 0.4 * Math.sin(G.time * 4);
+  txt((TOUCH || G.touch ? 'Tap' : 'Click or press any key') + ' to continue', 0, 160, 18, 'rgba(255,255,255,' + p + ')', { font: FB, weight: 900 });
+  ctx.restore();
+  region('warnok', 0, 0, W, H, () => { WARNED = true; AUDIO.sfx('click'); });
+}
+window.addEventListener('keydown', () => { if (!WARNED && G.scene === 'title') WARNED = true; });
 function renderTitle() {
+  if (!WARNED) { renderWarning(); return; }
   setScreen();
   if (!DECO.length) for (let i = 0; i < 14; i++) DECO.push({ b: rnd(0, BIOMES.length - 1), g: Math.random(), x: Math.random(), y: Math.random(), v: 0.2 + Math.random() * 0.6, r: Math.random() * 6 });
   for (const d of DECO) {   // minerals drifting down in the background
@@ -4447,6 +4487,7 @@ function tickDrone(d, s) {
   s.px = s.x; s.py = s.y;   // where it was last tick (drawing slides between the two)
   const T = DRONE_TYPES[d.type], R = d.rank, v = (d.type === 'alien' || d.type === 'mothership' ? 1.3 + R * 0.45 : 3.2 * RK.spd[R] * (d.skin === 'striker' ? 1.3 : 1)) * lvlSpd(d) * vsc() * (1 + 0.08 * modOf(d, 'spd'));
   s.cd -= DT; s.t += DT; if (s.hitT > 0) s.hitT -= DT; s.act *= 0.9;
+  s.tilt = (s.tilt || 0) * 0.86; s.vx = (s.vx || 0) * 0.9;   // level out when it is not flying (it used to stay crooked while drilling)
   if (s.warp && (s.warp.t += DT) > 0.45) s.warp = null;
   if (s.ghosts) { for (const g of s.ghosts) { g.t += DT; g.x += g.dx; } s.ghosts = s.ghosts.filter(g => g.t < 0.7); if (!s.ghosts.length) s.ghosts = null; }
   if (d.skin === 'glitch') {   // GL1TCH can skip space: it blinks straight to the rock it's going for
