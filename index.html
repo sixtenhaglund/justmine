@@ -4414,6 +4414,7 @@ function tickDrone(d, s) {
   const T = DRONE_TYPES[d.type], R = d.rank, v = (d.type === 'alien' || d.type === 'mothership' ? 1.3 + R * 0.45 : 3.2 * RK.spd[R] * (d.skin === 'striker' ? 1.3 : 1)) * lvlSpd(d) * vsc() * (1 + 0.08 * modOf(d, 'spd'));
   s.cd -= DT; s.t += DT; if (s.hitT > 0) s.hitT -= DT; s.act *= 0.9;
   if (s.warp && (s.warp.t += DT) > 0.45) s.warp = null;
+  if (s.ghosts) { for (const g of s.ghosts) { g.t += DT; g.x += g.dx; } s.ghosts = s.ghosts.filter(g => g.t < 0.7); if (!s.ghosts.length) s.ghosts = null; }
   if (d.skin === 'glitch') {   // GL1TCH can skip space: it blinks straight to the rock it's going for
     s.hopT = (s.hopT === undefined ? 2 : s.hopT) - DT;
     const tg = s.target && s.target.x !== undefined ? s.target : null;
@@ -4422,6 +4423,7 @@ function tickDrone(d, s) {
       const x0 = s.x, y0 = s.y;
       s.x = tg.x + (Math.random() - 0.5) * 10; s.y = tg.y + 34; s.px = s.x; s.py = s.y;
       s.warp = { x0, y0, t: 0, seed: Math.random() * 99 };
+      s.ghosts = []; for (let q = 0; q < 5; q++) { const f = q / 5; s.ghosts.push({ x: x0 + (s.x - x0) * f, y: y0 + (s.y - y0) * f, t: -q * 0.04, tilt: s.tilt, col: q % 2 ? '#ff00ff' : '#00ff66', dx: (Math.random() - 0.5) * 1.6 }); }
       for (let q = 1; q < 16; q++) { const f = q / 16; G.parts.push({ kind: q % 3 ? 'glitch' : 'pix', x: x0 + (s.x - x0) * f + (Math.random() - 0.5) * 12, y: y0 + (s.y - y0) * f + (Math.random() - 0.5) * 10, vx: 0, vy: 0, life: 10 + q, max: 26, s: 2 + Math.random() * 6, h: 1.5, col: q % 2 ? '#00ff66' : '#ff00ff' }); }
       G.rings.push({ x: x0, y: y0, t: 0, r: 40, col: '#ff00ff' }, { x: s.x, y: s.y, t: 0, r: 46, col: '#00ff66' });
       for (let q = 0; q < 10; q++) G.parts.push({ kind: 'glitch', x: s.x + (Math.random() - 0.5) * 20, y: s.y + (Math.random() - 0.5) * 14, vx: 0, vy: 0, life: 14, max: 14, s: 3 + Math.random() * 8, h: 2, col: q % 2 ? '#00ff66' : '#ff00ff' });
@@ -5051,6 +5053,15 @@ function drawDroneWorld() {
       if (rk >= 0) { const k = vsc(), ac = SK.accent2 || SK.accent === '#ffffff' ? SK.light : SK.accent; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.22 + 0.1 * Math.sin(G.time * 3 + d.id); ctx.drawImage(soft(ac), x - 34 * k, y - 30 * k, 68 * k, 60 * k);
         if (rk >= 1) for (let q = 0; q < 3; q++) { const a = G.time * 2.2 + q * 2.094 + d.id; ctx.globalAlpha = 0.85; star4(x + Math.cos(a) * 26 * k, y + Math.sin(a) * 9 * k + 4 * k, (1.6 + 0.6 * Math.sin(G.time * 6 + q)) * k * 1.4, q ? '#ffffff' : ac); }
         ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; } }
+    if (s.ghosts) for (const g of s.ghosts) {   // afterimages: copies left behind where it jumped from, flickering and fading
+      if (g.t < 0) continue;
+      const a = (1 - g.t / 0.7), k3 = vsc() * 1.25 * (1 + g.t * 0.3), gx = g.x + Math.sin(G.time * 40 + g.x) * 2 * a, gy = wy(g.y);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a * 0.45 * (Math.random() < 0.15 ? 0.3 : 1);
+      drawDrone(d, gx, gy, { tilt: g.tilt, t: s.t + ta * DT, scale: k3 });
+      ctx.globalAlpha = a * 0.35; ctx.drawImage(soft(g.col), gx - 26 * k3, gy - 22 * k3, 52 * k3, 44 * k3);
+      ctx.globalAlpha = a * 0.8; ctx.fillStyle = g.col; for (let q = 0; q < 3; q++) ctx.fillRect(gx - 18 * k3 + Math.random() * 30 * k3, gy - 12 * k3 + q * 9 * k3, 6 + Math.random() * 14, 1.5);
+      ctx.restore();
+    }
     if (s.warp) {   // the teleport trail: a zigzag of green + pink, fading
       const W2 = s.warp, a = 1 - W2.t / 0.45, R2 = seeded(Math.floor(W2.seed * 1000) + Math.floor(G.time * 20));
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineJoin = 'miter';
@@ -5063,13 +5074,13 @@ function drawDroneWorld() {
       ctx.restore();
     }
     if (d.skin === 'glitch') {   // GL1TCH: afterimages, corrupted blocks orbiting, ERROR text now and then
-      const k2 = vsc() * 1.4;
+      const k2 = vsc() * 1.25;
       for (let q = 0; q < 2; q++) { const ox = Math.sin(G.time * 13 + q * 3) * 6 * k2, oy = Math.cos(G.time * 9 + q) * 2; ctx.globalAlpha = 0.18; ctx.globalCompositeOperation = 'lighter'; drawDrone(d, x + ox - (q ? 8 : -8) * k2, y + oy, { tilt: s.tilt, t: s.t + ta * DT, scale: k2 }); }
       ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
       for (let q = 0; q < 6; q++) { const a = G.time * 2.4 + q * 1.047, rr2 = (20 + 4 * Math.sin(G.time * 5 + q)) * k2; if (Math.random() < 0.15) continue; ctx.fillStyle = q % 2 ? '#00ff66' : '#ff00ff'; ctx.fillRect(x + Math.cos(a) * rr2 - 1.5, y + Math.sin(a) * rr2 * 0.5 - 1.5, 3 + (q % 3), 3); }
       if (Math.sin(G.time * 1.3 + d.id) > 0.96) txt(Math.random() < 0.5 ? 'ERR0R' : '0x1F', x + (Math.random() - 0.5) * 10, y - 26 * k2, 7, Math.random() < 0.5 ? '#00ff66' : '#ff00ff', { font: 'monospace', weight: 900, shadow: false });
     }
-    drawDrone(d, x, y, { tilt: s.tilt, act: Math.max(s.act, s.hitT > 0 ? 1 : 0), t: s.t + ta * DT, scale: vsc() * (d.skin === 'glitch' ? 1.4 : 1), world: true });
+    drawDrone(d, x, y, { tilt: s.tilt, act: Math.max(s.act, s.hitT > 0 ? 1 : 0), t: s.t + ta * DT, scale: vsc() * (d.skin === 'glitch' ? 1.25 : 1), world: true });
     if (s.lvlFx > 0) {   // LEVEL UP: flash yellow
       const k = s.lvlFx / 1.4, pulse = Math.abs(Math.sin(s.lvlFx * 9));
       ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = k * (0.5 + 0.5 * pulse); ctx.drawImage(soft('#ffe14a'), x - 34, y - 34, 68, 68); ctx.drawImage(soft('#ffffff'), x - 14, y - 14, 28, 28);
