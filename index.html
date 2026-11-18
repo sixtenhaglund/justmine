@@ -313,7 +313,7 @@ const SHOPV = {
   chestup: [1.25, 1.5, 1.75, 2, 2.5, 3],
 };
 // shop tabs: every upgrade line lives in one tab
-const SHOP_TABS = [['Mining', 'pick', ['creditz', 'speed', 'crit', 'value', 'regen']], ['Bombs', 'bomb', ['bomb', 'radius', 'cluster', 'fuse']], ['Robots', 'robot', ['auto', 'robo', 'factory', 'dspeed', 'dpower', 'cluck']],
+const SHOP_TABS = [['Mining', 'pick', ['creditz', 'speed', 'crit', 'value', 'regen']], ['Bombs', 'bomb', ['bomb', 'radius', 'fuse']], ['Robots', 'robot', ['auto', 'robo', 'factory', 'dspeed', 'dpower', 'cluck']],
   ['Luck', 'clover', ['luck', 'rare', 'double', 'golden', 'chestup']], ['Special', 'gem', ['meteor', 'quest', 'offline', 'reborn', 'storm', 'xpboost']]];
 const SHOP_ORDER = SHOP_TABS.flatMap(t => t[2]);
 const LVL_KEY = { creditz: 'cmLevel', speed: 'spLevel', bomb: 'bombLevel', auto: 'autoLevel', luck: 'luckLevel', regen: 'regenLevel', radius: 'radiusLevel', cluster: 'clusterLevel', robo: 'roboLevel',
@@ -446,6 +446,7 @@ function loadSave() {
     G.creditz = num(+s.creditz, 0); G.high = Math.max(num(+s.high, 0), G.creditz); G.shown = G.creditz;
     G.cmLevel = s.cm | 0; G.spLevel = s.sp | 0; G.bombLevel = s.bomb | 0; G.autoLevel = s.auto | 0;
     if (s.levels) for (const k in LEVEL_DEFAULTS) if (s.levels[k] !== undefined) G[k] = s.levels[k] | 0;
+    if (G.clusterLevel > 0) { let back = 0; for (let l = 0; l < G.clusterLevel; l++) back += SHOP.cluster.costs[l] || 0; G.creditz += back; G.clusterLevel = 0; }   // removed upgrade: Creditz back
     if (G.rocksLevel > 0) { let back = 0; for (let l = 0; l < G.rocksLevel; l++) back += SHOP.rocks.costs[l] || 0; G.creditz += back; G.rocksLevel = 0; G.refundNote = back; }   // the upgrade is gone: you get your Creditz back
     for (const k in LVL_KEY) G[LVL_KEY[k]] = clamp(G[LVL_KEY[k]] | 0, 0, SHOP[k].endless ? 60 : SHOP[k].costs.length);
     G.rebirths = Math.max(1, s.rebirths | 0);
@@ -939,7 +940,7 @@ function bombTouches(bo, rock) {
   const half = 25.6 * gsc(), dx = Math.max(Math.abs(bo.x - rock.x) - half, 0), dy = Math.max(Math.abs(bo.y - rock.y) - half, 0);
   return dx * dx + dy * dy <= rad * rad;
 }
-const bombMax = () => 1 + (G.clusterLevel | 0);   // how many bombs you can hold
+const bombMax = () => 1;   // the Bomb charges upgrade was removed (2026-11-18): one bomb at a time
 function dropBomb(wx, wy) {
   if (G.bombCharges === undefined) G.bombCharges = bombMax();
   if (G.scene !== 'play' || !canLoad() || G.bombCharges <= 0 || (G.bombGap || 0) > 0 || G.victory) return;
@@ -3439,7 +3440,7 @@ function renderHUD0() {
     ctx.beginPath(); ctx.arc(cx, cy, (r - 3) * pop, -Math.PI / 2, -Math.PI / 2 + 6.283 * Math.max(0.001, frac)); ctx.stroke(); ctx.lineCap = 'butt';
     drawIcon('bomb', cx, cy - 2, 26, tier.name === 'orange' ? '#2a2d36' : tier.name === 'black' ? '#14081f' : tier.name === 'white' ? '#e9f0ff' : '#2a5aff');
     txt(G.bombArm ? (G.touch || TOUCH ? 'TAP A ROCK' : 'CLICK A SPOT') : ready ? (G.touch || TOUCH ? 'TAP' : 'SPACE') : Math.ceil(G.bombCD) + 's', cx, cy + r + 9, 10, ready ? '#ffd27a' : '#9aa0aa', { font: FB, weight: 900 });
-    if (bombMax() > 1) { ctx.fillStyle = ch ? '#e8402a' : '#4a4f5c'; ctx.beginPath(); ctx.arc(cx + r - 2, cy - r + 4, 10, 0, 6.283); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff'; ctx.stroke(); txt(ch + '', cx + r - 2, cy - r + 4.5, 11, '#ffffff', { shadow: false }); }
+    if (false) { ctx.fillStyle = ch ? '#e8402a' : '#4a4f5c'; ctx.beginPath(); ctx.arc(cx + r - 2, cy - r + 4, 10, 0, 6.283); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff'; ctx.stroke(); txt(ch + '', cx + r - 2, cy - r + 4.5, 11, '#ffffff', { shadow: false }); }
   }
   // chest buffs with timers
   let bi = 0;
