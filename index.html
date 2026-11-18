@@ -228,9 +228,9 @@ const SHOP = {
   radius: { title: 'Bomb radius', name: l => 'Bomb radius +' + (l + 1) * 15 + '%', icon: 'bomb', col: '#ff9a3a', isNew: true,
     costs: [20000, 2e5, 2e6, 2e7, 2e8, 6e9, 6e10, 6e11, 6e12, 6e13, 6e14, 6e15],
     desc: l => 'Bigger explosions' },
-  cluster: { title: 'Aftershock', name: l => 'Aftershock ' + (l + 1), icon: 'bomb', col: '#ff5a5a', isNew: true,   // was Cluster bombs (Sixten didn't like it); same key so levels carry over
+  cluster: { title: 'Bomb charges', name: l => 'Bomb charges ' + (l + 2), icon: 'bomb', col: '#ff5a5a', isNew: true,   // was Cluster bombs (Sixten didn't like it); same key so levels carry over
     costs: [2e5, 4e6, 8e7, 1.6e9, 3.2e10, 6.4e11, 1.3e13, 2.6e14],
-    desc: l => 'Rocks hit by a bomb get cracked AGAIN: ' + Math.round(AFTER_P * (l + 1) * 100) + '% chance' },
+    desc: l => 'Hold up to ' + (l + 2) + ' bombs at once: throw them fast, they refill one by one' },
   robo: { title: 'Robot speed', name: l => 'Robot speed ' + (l + 1), icon: 'gear', col: '#9ae05a', isNew: true,
     costs: [8000, 6e4, 6e5, 7e6, 8e7, 1e9, 1.2e10, 1.5e11, 2e12, 3e13, 5e14, 1e16],
     desc: l => 'Robots crack at ' + Math.round(100 / SHOPV.robo[l]) + '% of your speed' },
@@ -778,7 +778,7 @@ function openChest(r) {
       const i = goldI(), gain = GOLD_VALUE * bestValue(b) * totalMult(); giveCreditz(gain); addFound('Gold', i); ach('golden'); checkAch();
       toast(name + ': ' + ART.gems.Gold[i].name + '! +' + fmt(gain), '#ffd84a');
     } else if (pick === 1) {   // a free bomb right here
-      const keep = G.bombLevel, cd = G.bombCD; G.bombLevel = Math.max(3, keep); G.bombCD = 0; G.loading = 0; dropBomb(r.x, r.y); G.bombLevel = keep; G.bombCD = cd;
+      const keep = G.bombLevel, ch = G.bombCharges, cd = G.bombCD, gp = G.bombGap; G.bombLevel = Math.max(3, keep); G.bombCharges = 1; G.bombGap = 0; G.loading = 0; dropBomb(r.x, r.y); G.bombLevel = keep; G.bombCharges = ch; G.bombCD = cd; G.bombGap = gp;
       toast(name + ': a bomb charge!', '#ff9a3a');
     } else { G.buffs.robots = Math.max(G.buffs.robots || 0, 25); toast(name + ': robot burst! +3 robots for 25s', '#7be05a'); }
   }
@@ -922,10 +922,12 @@ function bombTouches(bo, rock) {
   const half = 25.6 * gsc(), dx = Math.max(Math.abs(bo.x - rock.x) - half, 0), dy = Math.max(Math.abs(bo.y - rock.y) - half, 0);
   return dx * dx + dy * dy <= rad * rad;
 }
+const bombMax = () => 1 + (G.clusterLevel | 0);   // how many bombs you can hold
 function dropBomb(wx, wy) {
-  if (G.scene !== 'play' || !canLoad() || G.bombCD > 0 || G.victory) return;
+  if (G.bombCharges === undefined) G.bombCharges = bombMax();
+  if (G.scene !== 'play' || !canLoad() || G.bombCharges <= 0 || (G.bombGap || 0) > 0 || G.victory) return;
   if (G.bombLevel <= 0) { if (!G.toasts.some(t => t.text.startsWith('Buy a Bomb'))) toast('Buy a Bomb in the Shop first!'); return; }
-  G.bombCD = bombCooldown();
+  G.bombCharges--; G.bombGap = 0.25; if (G.bombCD <= 0) G.bombCD = bombCooldown();   // the refill timer starts
   const L = G.bombLevel, ex = BOMB_EXTRA[L];
   for (let k = 0; k <= 0; k++) {   // one bomb (cluster bombs are gone)
     const a = Math.random() * 6.283, d = k ? (50 + Math.random() * 70) * gsc() : 0;
@@ -1207,7 +1209,9 @@ function tick() {
     // remember how fast Creditz come in (for offline mining)
     if ((G.rateT = (G.rateT || 0) + DT) >= 5) { const r = (G.earned || 0) / G.rateT; G.rate = G.rate ? G.rate * 0.85 + r * 0.15 : r; G.earned = 0; G.rateT = 0; }
     // bombs
-    if (G.bombCD > 0) { G.bombCD -= DT; if (G.bombCD <= 0) { G.bombCD = 0; G.bombPop = 1; } }
+    if (G.bombCharges === undefined || G.bombCharges > bombMax()) G.bombCharges = bombMax();
+    if (G.bombGap > 0) G.bombGap -= DT;
+    if (G.bombCharges < bombMax()) { if (G.bombCD <= 0) G.bombCD = bombCooldown(); G.bombCD -= DT; if (G.bombCD <= 0) { G.bombCharges++; G.bombPop = 1; G.bombCD = G.bombCharges < bombMax() ? bombCooldown() : 0; } } else G.bombCD = 0;
     if (G.keys.Space && !G.menu) { const w = toWorld(G.mouse.x, G.mouse.y); dropBomb(w.x, w.y); }
     for (const bo of G.bombs) { bo.t += DT; if (bo.t < 0) continue; bo.size += bo.speed; bo.speed -= 5; bo.ghost = Math.max(0, bo.ghost) + 5; }
 
@@ -1253,7 +1257,7 @@ function tick() {
       if (bomb) { by = 'bomb'; bomb.hits.add(rock); if (bomb.hits.size >= 15) ach('kaboom'); }
       else if (hover === rock && G.mouse.down) by = 'mouse';
       else { const d = G.drills.find(d => d.target === rock); if (d) { by = 'auto'; d.hitT = 0.15; } }
-      if (by) { hitRock(rock, by); if (by === 'bomb' && G.clusterLevel > 0 && rock.state === 'rock' && Math.random() < AFTER_P * G.clusterLevel) { rock.cool = 0; hitRock(rock, 'bomb'); G.rings.push({ x: rock.x, y: rock.y, t: 0, r: 26, col: '#ffb04a' }); } if (by === 'mouse' && perk(15) && rock.state === 'rock' && Math.random() < 0.25) { rock.cool = 0; hitRock(rock, by); } }
+      if (by) { hitRock(rock, by); if (by === 'mouse' && perk(15) && rock.state === 'rock' && Math.random() < 0.25) { rock.cool = 0; hitRock(rock, by); } }
     }
     compact(G.rocks, r => r.state !== 'dead');
     // the Heart of the Mountain
@@ -3373,16 +3377,17 @@ function renderHUD0() {
   }
   // bomb chip: the ring fills to 100%, then pops when the bomb is ready
   if (G.bombLevel > 0) {
-    const cx = 44, cy = W < 560 ? H - 122 : H - 44, r = 26, ready = G.bombCD <= 0, tier = bombTier(G.bombLevel);
-    region('bombchip', cx - r, cy - r - 4, r * 2, r * 2 + 18, () => { if (G.bombCD > 0) return; G.bombArm = !G.bombArm; AUDIO.sfx('click'); });
+    const cx = 44, cy = W < 560 ? H - 122 : H - 44, r = 26, ch = G.bombCharges === undefined ? bombMax() : G.bombCharges, ready = ch > 0, tier = bombTier(G.bombLevel);
+    region('bombchip', cx - r, cy - r - 4, r * 2, r * 2 + 18, () => { if (!ready) return; G.bombArm = !G.bombArm; AUDIO.sfx('click'); });
     if (G.bombArm) { ctx.fillStyle = 'rgba(255,90,40,' + (0.25 + 0.2 * Math.sin(G.time * 10)) + ')'; ctx.beginPath(); ctx.arc(cx, cy, r + 8, 0, 6.283); ctx.fill(); }
     ctx.fillStyle = 'rgba(10,12,18,0.75)'; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.283); ctx.fill();
-    const frac = ready ? 1 : clamp(1 - G.bombCD / bombCooldown(), 0, 1);
+    const frac = ch >= bombMax() ? 1 : clamp(1 - G.bombCD / bombCooldown(), 0, 1);
     const pop = 1 + G.bombPop * 0.25;
     ctx.lineWidth = 4 * pop; ctx.lineCap = 'round'; ctx.strokeStyle = ready ? (tier.name === 'orange' ? '#ffb04a' : tier.spark) : '#6a7080';
     ctx.beginPath(); ctx.arc(cx, cy, (r - 3) * pop, -Math.PI / 2, -Math.PI / 2 + 6.283 * Math.max(0.001, frac)); ctx.stroke(); ctx.lineCap = 'butt';
     drawIcon('bomb', cx, cy - 2, 26, tier.name === 'orange' ? '#2a2d36' : tier.name === 'black' ? '#14081f' : tier.name === 'white' ? '#e9f0ff' : '#2a5aff');
     txt(G.bombArm ? (G.touch || TOUCH ? 'TAP A ROCK' : 'CLICK A SPOT') : ready ? (G.touch || TOUCH ? 'TAP' : 'SPACE') : Math.ceil(G.bombCD) + 's', cx, cy + r + 9, 10, ready ? '#ffd27a' : '#9aa0aa', { font: FB, weight: 900 });
+    if (bombMax() > 1) { ctx.fillStyle = ch ? '#e8402a' : '#4a4f5c'; ctx.beginPath(); ctx.arc(cx + r - 2, cy - r + 4, 10, 0, 6.283); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff'; ctx.stroke(); txt(ch + '', cx + r - 2, cy - r + 4.5, 11, '#ffffff', { shadow: false }); }
   }
   // chest buffs with timers
   let bi = 0;
