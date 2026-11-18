@@ -3739,7 +3739,7 @@ const BOOK_TABS = () => BIOMES.map(b => b.name).concat(['Events', 'Gold', 'Quest
 const BOOK_QUESTS = BIOMES.length + 2;
 const CODEX_SECS = [['Minerals', 'gem', '#4ad0ff'], ['Gold', 'gem', '#ffd84a'], ['Events', 'star', '#ff9a3a'], ['Drones', 'drone', '#7dff3a'], ['Quests', 'scroll', '#c9cfdc'], ['Trophies', 'trophy', '#ffb02a'], ['Perks', 'rebirth', '#ff7ad8']];
 const DRONE_GET = { normal: 'Common + Uncommon + Rare crates', bomber: 'Drone crates', heavy: 'Drone crates', bigdrill: 'Merge Drone + Heavy, or Epic+ crates', drillbomber: 'Merge Drone + Bomblayer, or Epic+ crates',
-  heavybomber: 'Merge Heavy + Bomblayer, or Legendary+ crates', laser: 'Epic+ crates (very rare)', engineer: 'Rare+ crates', alien: 'The Alien Pass', mothership: 'Alien Pass level 100' };
+  heavybomber: 'Merge Heavy + Bomblayer, or Legendary+ crates', heavylaser: 'Merge Laser + Heavy', laserdriller: 'Merge Laser + Drone', laserbomber: 'Merge Laser + Bomblayer', laser: 'Epic+ crates (very rare)', engineer: 'Rare+ crates', alien: 'The Alien Pass', mothership: 'Alien Pass level 100' };
 function renderBook() {
   const W0 = 720, H0 = 660;
   const f = modalFrame('book', W0, H0); if (!f) return;
@@ -4042,15 +4042,18 @@ const DRONE_TYPES = {
   normal: { name: 'Drone', rar: 'Common', col: '#4ad0ff', ai: 'drill', cd: 2.6, desc: 'Flies to a rock and drills it' },
   bomber: { name: 'Bomblayer', rar: 'Uncommon', col: '#ff8a3a', ai: 'bomb', cd: 5.5, desc: 'Wanders around laying small bombs. Hunts down the last rock' },
   heavy: { name: 'Heavy', rar: 'Rare', col: '#ffc21a', ai: 'heavy', cd: 10, desc: 'Smashes itself down: hits a 3x3 area' },
-  laser: { name: 'Laser', rar: 'Mythical', col: '#ff3a5a', ai: 'laser', cd: 12, noMix: true, desc: 'Fires a laser that burns through rocks one at a time' },
+  laser: { name: 'Laser', rar: 'Mythical', col: '#ff3a5a', ai: 'laser', cd: 12, desc: 'Fires a laser that burns through rocks one at a time' },
   drillbomber: { name: 'Drillbomber', rar: 'Epic', col: '#ff5ab0', ai: 'bomb', cd: 7, desc: 'Its bombs shoot small drills in 4 directions' },
+  heavylaser: { name: 'Heavy Laser', rar: 'Mythical', col: '#ff2a2a', ai: 'laser', cd: 14.5, desc: 'A huge, wide laser beam: 2 cracks per hit, but slower' },
+  laserdriller: { name: 'Laser Driller', rar: 'Mythical', col: '#ff5a9a', ai: 'gatling', cd: 0.4, desc: 'A gatling laser: flies around, turns its aim slowly, rapid weak shots' },
+  laserbomber: { name: 'Laser Bomber', rar: 'Mythical', col: '#ff6a3a', ai: 'bomb', cd: 10, desc: 'Its bombs shoot lasers in 8 directions (bigger with rank + level)' },
   bigdrill: { name: 'Big Drill', rar: 'Epic', col: '#5affb0', ai: 'drill', cd: 4.5, desc: 'Drills in a + shape (5 rocks at once)' },
   heavybomber: { name: 'Heavy Bomber', rar: 'Legendary', col: '#ff5a2a', ai: 'bomb', cd: 9, desc: 'Drops one really big bomb' },
   engineer: { name: 'Engineer', rar: 'Epic', col: '#3ad0ff', ai: 'drill', cd: 8, noMix: true, desc: 'Builds Tech parts. Spend them to upgrade any drone forever' },
   mothership: { name: 'Alien Mothership', rar: 'Celestial', col: '#b0ff3a', ai: 'mother', cd: 0, noMix: true, noRank: true, desc: 'Beams 5 minerals at once + launches a fleet. No ranks: XP only' },
   alien: { name: 'Alien Ship', rar: 'Celestial', col: '#7dff3a', ai: 'alien', cd: 0, noMix: true, desc: 'Scans a rock and beams its mineral out. The rock stays, and still has it inside' },
 };
-const MIXES = { 'bomber+normal': 'drillbomber', 'heavy+normal': 'bigdrill', 'bomber+heavy': 'heavybomber' };
+const MIXES = { 'bomber+normal': 'drillbomber', 'heavy+normal': 'bigdrill', 'bomber+heavy': 'heavybomber', 'heavy+laser': 'heavylaser', 'laser+normal': 'laserdriller', 'bomber+laser': 'laserbomber' };
 const RANK_NAMES = ['', 'I', 'II', 'III', 'IV', 'V'];
 const RANK_COL = ['', '#c8d0dc', '#4dff4d', '#2eb0ff', '#ff4be6', '#ffd84a'];
 // what a rank gives: cooldown multiplier, cracks per hit, flying speed
@@ -4506,8 +4509,9 @@ function tickDrones() {
   // small drills shot out by Drillbomber bombs
   for (const p of G.dproj) {
     p.x += p.dx * 6; p.y += p.dy * 6; p.life -= DT; p.spin += 0.7;
-    for (const r of G.rocks) if (r.state === 'rock' && r.spawnT <= 0 && !p.hit.includes(r) && Math.abs(r.x - p.x) < 21 * gsc() && Math.abs(r.y - p.y) < 21 * gsc()) {
-      p.hit.push(r); droneCrack(r, p.dmg, p.d); chunks(p.x, p.y, '#c9d2d9', 3, true); if (--p.pierce <= 0) { p.life = 0; break; }
+    const hr2 = 21 * gsc() * (p.w ? 1 + (p.w - 1) * 0.25 : 1);
+    for (const r of G.rocks) if (r.state === 'rock' && r.spawnT <= 0 && !p.hit.includes(r) && Math.abs(r.x - p.x) < hr2 && Math.abs(r.y - p.y) < hr2) {
+      p.hit.push(r); if (!p.chance || Math.random() < p.chance) droneCrack(r, p.dmg, p.d); if (p.bolt) emit('spark', p.x, p.y, 2, { col: [p.col, '#ffffff'], sp: 2, s: 1.2, life: 6 }); else chunks(p.x, p.y, '#c9d2d9', 3, true); if (--p.pierce <= 0) { p.life = 0; break; }
     }
     if (Math.abs(p.x) > 240 || p.y < -110 || p.y > 175) p.life = 0;
   }
@@ -4582,10 +4586,24 @@ function tickDrone(d, s) {
       if (flyTo(s, s.target.x, s.target.y + 70 * vsc(), v) && s.cd <= 0) { s.state = 'slam'; s.vy = 0; s.ty = s.target.y + 18 * vsc(); }
       break;
     }
+    case 'gatling': {   // Laser Driller: keeps moving, turns its gun slowly towards a rock, rapid weak laser bolts
+      if (!s.spot || (s.spotT = (s.spotT || 0) - DT) <= 0) { s.spot = laserSpot(d); s.spotT = 3 + Math.random() * 3; }
+      flyTo(s, s.spot.x, s.spot.y, v * 0.55);
+      if (!s.target || !rockAlive(s.target)) s.target = pickRock(d, s, {});
+      if (s.target) {
+        const want = Math.atan2(s.target.y - (s.y - 12), s.target.x - s.x); if (s.gang === undefined) s.gang = want;
+        const da = ((want - s.gang) % 6.283 + 9.425) % 6.283 - 3.1416; s.gang += clamp(da, -1.5 * DT, 1.5 * DT);   // the aim turns slowly
+        if (s.cd <= 0 && Math.abs(da) < 0.5) {
+          s.cd = droneCd(d); s.act = 1;
+          G.dproj.push({ x: s.x + Math.cos(s.gang) * 12, y: s.y - 12 + Math.sin(s.gang) * 12, dx: Math.cos(s.gang) * 1.7, dy: Math.sin(s.gang) * 1.7, life: 1.2, pierce: 1, dmg: 1, chance: 0.45, d, hit: [], spin: 0, bolt: true, w: 1, col: dronePal(d).accent });
+        }
+      }
+      break;
+    }
     case 'laser': {   // Laser: go somewhere, charge, then fire a beam that burns the first rock in its way
       if (s.state === 'fire') {
         s.fireT -= DT; s.zapT -= DT; s.act = 1;
-        if (s.zapT <= 0) { s.zapT = 0.32 / RK.spd[R]; s.ends = laserZap(d, s); }
+        if (s.zapT <= 0) { s.zapT = (d.type === 'heavylaser' ? 0.5 : 0.32) / RK.spd[R]; s.ends = laserZap(d, s); }
         if (s.fireT <= 0) { s.state = 'idle'; s.cd = droneCd(d); s.ends = null; }
         break;
       }
@@ -4635,12 +4653,13 @@ function tickDrone(d, s) {
 }
 function layBomb(d, x, y) {
   const big = d.type === 'heavybomber', R = d.rank;
-  G.dbombs.push({ x, y, gy: y - 14 * vsc(), t: 0, fuse: big ? 1.6 : 1.2, r: ((big ? 62 : 32) + R * (big ? 8 : 5)) * lvlAbility(d) * gsc(), dmg: RK.dmg[R] + (big ? 1 : 0), drills: d.type === 'drillbomber', big, d, col: big ? '#ff6a2a' : '#ff9a3a' });
+  G.dbombs.push({ x, y, gy: y - 14 * vsc(), t: 0, fuse: big ? 1.6 : 1.2, r: ((big ? 62 : 32) + R * (big ? 8 : 5)) * lvlAbility(d) * gsc(), dmg: RK.dmg[R] + (big ? 1 : 0), drills: d.type === 'drillbomber', lasers: d.type === 'laserbomber', big, d, col: big ? '#ff6a2a' : '#ff9a3a' });
   droneSfx(d, 'drop');
 }
 function explodeDroneBomb(b) {
   const R = b.d.rank;
   crackArea(b.x, b.y, b.r, b.dmg, b.d);
+  if (b.lasers) for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, ab = lvlAbility(b.d); G.dproj.push({ x: b.x, y: b.y, dx: Math.cos(a) * 1.5, dy: Math.sin(a) * 1.5, life: (0.45 + R * 0.12) * ab, pierce: 1 + Math.floor(R / 3), dmg: RK.dmg[R], d: b.d, hit: [], spin: 0, bolt: true, w: 1 + R * 0.35 * ab, col: '#ff5a3a' }); }
   if (b.drills) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) G.dproj.push({ x: b.x, y: b.y, dx, dy, life: 1.3, pierce: R >= 3 ? 2 : 1, dmg: RK.dmg[R], d: b.d, hit: [], spin: 0 });
   dust(b.x, b.y, '#9a9aa0', b.big ? 12 : 6); sparkle(b.x, b.y, b.col, b.big ? 14 : 7);
   G.lights.push({ x: b.x, y: b.y, r: b.r * 1.6, col: b.col, life: 0.45, max: 0.45 });
@@ -4650,14 +4669,15 @@ function explodeDroneBomb(b) {
 }
 // laser maths: a ray from the drone; "along" = how far down the ray a rock is, "perp" = how far to the side
 const laserLanes = R => { const n = 1 + Math.floor((R - 1) / 2), out = []; for (let k = 0; k < n; k++) out.push((k - (n - 1) / 2) * 44 * gsc()); return out; };
-function rayFirst(ox, oy, a, lane) {
+function rayFirst(ox, oy, a, lane, wid) {
+  wid = wid || 22;
   const dx = Math.cos(a), dy = Math.sin(a); let best = null, bd = 900;
   for (const r of G.rocks) {
     if (r.state !== 'rock' || r.spawnT > 0) continue;
     const rx = r.x - ox, ry = r.y - oy, along = rx * dx + ry * dy;
     if (along < -10) continue;
     const perp = -rx * dy + ry * dx;
-    if (Math.abs(perp - lane) < 22 * gsc() && along < bd) { bd = along; best = r; }
+    if (Math.abs(perp - lane) < wid * gsc() && along < bd) { bd = along; best = r; }
   }
   return [best, bd];
 }
@@ -4678,8 +4698,8 @@ function laserZap(d, s) {
   const ends = [];
   for (const lane of laserLanes(d.rank)) {
     const ox = s.x - Math.sin(s.ang) * lane, oy = s.y - 12 + Math.cos(s.ang) * lane;
-    const [r, dist] = rayFirst(ox, oy, s.ang, 0);
-    if (r) { droneCrack(r, 1, d); emit('spark', r.x, r.y, 2, { col: [dronePal(d).accent, '#ffffff'], sp: 3, s: 1.5, life: 8 }); }
+    const hv = d.type === 'heavylaser', [r, dist] = rayFirst(ox, oy, s.ang, 0, hv ? 40 : 22);
+    if (r) { droneCrack(r, hv ? 2 : 1, d); emit('spark', r.x, r.y, 2, { col: [dronePal(d).accent, '#ffffff'], sp: 3, s: 1.5, life: 8 }); }
     ends.push({ ox, oy, len: r ? Math.max(0, dist) : 520 });
   }
   return ends;
@@ -4722,9 +4742,9 @@ function glitchBurst(x, y) { for (let i = 0; i < pn(4); i++) G.parts.push({ kind
 //  SPEED: the body (everything that doesn't move) is drawn ONCE into a cached picture; every frame we only
 //  stamp it and draw the moving bits on top (propellers, eye, lights, flames).
 // ====================================================================
-const BODY_BOX = { engineer: [-11, -9, 22, 16], normal: [-10, -9, 20, 15], bigdrill: [-13, -10, 26, 17], bomber: [-11, -11, 22, 17], drillbomber: [-11, -11, 22, 17], heavybomber: [-14, -10, 28, 18], heavy: [-14, -10, 28, 18], laser: [-13, -10, 26, 13], alien: [-20, -9, 40, 16] };
+const BODY_BOX = { heavylaser: [-14, -10, 28, 18], laserdriller: [-10, -9, 20, 15], laserbomber: [-11, -11, 22, 17], engineer: [-11, -9, 22, 16], normal: [-10, -9, 20, 15], bigdrill: [-13, -10, 26, 17], bomber: [-11, -11, 22, 17], drillbomber: [-11, -11, 22, 17], heavybomber: [-14, -10, 28, 18], heavy: [-14, -10, 28, 18], laser: [-13, -10, 26, 13], alien: [-20, -9, 40, 16] };
 // where a hat sits on each body: [top of the body in the middle, half its width there, middle height]
-const HAT_FIT = { engineer: [-9, 11, -1.5], normal: [-9, 10, -1.5], bigdrill: [-10, 13, -1.5], bomber: [-11.5, 10, -3], drillbomber: [-11.5, 10, -3], heavy: [-10, 14, -1], heavybomber: [-10, 14, -1], laser: [-10, 9, -4], alien: [-12, 9, -2] };
+const HAT_FIT = { heavylaser: [-10, 14, -1], laserdriller: [-9, 10, -1.5], laserbomber: [-11.5, 10, -3], engineer: [-9, 11, -1.5], normal: [-9, 10, -1.5], bigdrill: [-10, 13, -1.5], bomber: [-11.5, 10, -3], drillbomber: [-11.5, 10, -3], heavy: [-10, 14, -1], heavybomber: [-10, 14, -1], laser: [-10, 9, -4], alien: [-12, 9, -2] };
 const BFILL = new Map();
 function bodyFill(x, y, w, h, P) { const k = y + '|' + h + '|' + P.light + P.body + P.dark; let g = BFILL.get(k); if (!g) { if (BFILL.size > 200) BFILL.clear(); g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, P.light); g.addColorStop(0.45, P.body); g.addColorStop(1, P.dark); BFILL.set(k, g); } return g; }
 function drill(x, y, len, w, t, P, ang) {
@@ -4793,12 +4813,15 @@ function droneStatic(d, P) {
   if (type === 'drillbomber') hangBomb(0, B[1] + B[3] + 3, 4.5, P, 0, true, true);
   if (type === 'heavybomber') hangBomb(0, B[1] + B[3] + 5, 7, P, 0, false, true);
   if (type === 'heavy') { rr(-12, B[1] + B[3] - 2, 24, 6, 2); ctx.fillStyle = P.dark; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = OL; ctx.stroke(); ctx.fillStyle = P.light; for (const bx of [-8, 0, 8]) { ctx.beginPath(); ctx.arc(bx, B[1] + B[3] + 1, 1.1, 0, 6.283); ctx.fill(); } }
+  if (type === 'heavylaser') { rr(-6, B[1] + B[3] - 2, 12, 9, 2); ctx.fillStyle = P.dark; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = OL; ctx.stroke(); ctx.fillStyle = rgba(P.accent, 0.9); ctx.beginPath(); ctx.arc(0, B[1] + B[3] + 8, 4, 0, 6.283); ctx.fill(); ctx.strokeStyle = OL; ctx.stroke(); }
+  if (type === 'laserbomber') { for (const sx of [-1, 1]) { rr(sx * 9 - 2, B[1] + 4, 4, 5, 1); ctx.fillStyle = P.dark; ctx.fill(); ctx.fillStyle = P.accent; ctx.beginPath(); ctx.arc(sx * 9, B[1] + 10, 1.4, 0, 6.283); ctx.fill(); } }
+  if (type === 'laserdriller') { rr(-4.5, B[1] + B[3] - 1, 9, 5, 1.5); ctx.fillStyle = P.dark; ctx.fill(); ctx.lineWidth = 0.9; ctx.strokeStyle = OL; ctx.stroke(); }
   if (type === 'laser') { rr(-3, B[1] + B[3] - 2, 6, 7, 1.5); ctx.fillStyle = P.dark; ctx.fill(); ctx.lineWidth = 0.9; ctx.strokeStyle = OL; ctx.stroke(); ctx.fillStyle = rgba(P.accent, 0.8); ctx.beginPath(); ctx.arc(0, B[1] + B[3] + 5.5, 2.4, 0, 6.283); ctx.fill(); }
   // body
   const bodyPath = () => {
-    if (type === 'bomber' || type === 'drillbomber') { ctx.beginPath(); ctx.ellipse(0, -3, 11, 8.5, 0, 0, 6.283); }
+    if (type === 'bomber' || type === 'drillbomber' || type === 'laserbomber') { ctx.beginPath(); ctx.ellipse(0, -3, 11, 8.5, 0, 0, 6.283); }
     else if (type === 'laser') { ctx.beginPath(); ctx.moveTo(-13, -3); ctx.quadraticCurveTo(-10, -10, 0, -10); ctx.quadraticCurveTo(10, -10, 13, -3); ctx.quadraticCurveTo(8, 3, 0, 3); ctx.quadraticCurveTo(-8, 3, -13, -3); ctx.closePath(); }
-    else rr(B[0], B[1], B[2], B[3], type === 'heavy' || type === 'heavybomber' ? 3 : 5);
+    else rr(B[0], B[1], B[2], B[3], type === 'heavy' || type === 'heavybomber' || type === 'heavylaser' ? 3 : 5);
   };
   bodyPath(); ctx.fillStyle = bodyFill(B[0], B[1], B[2], B[3], P); ctx.fill();
   ctx.save(); ctx.clip();
@@ -4806,7 +4829,7 @@ function droneStatic(d, P) {
   ctx.strokeStyle = rgba(P.dark, 0.55); ctx.lineWidth = 0.6;
   ctx.beginPath(); ctx.moveTo(B[0], B[1] + B[3] * 0.62); ctx.lineTo(B[0] + B[2], B[1] + B[3] * 0.62); ctx.moveTo(B[0] + B[2] * 0.22, B[1]); ctx.lineTo(B[0] + B[2] * 0.22, B[1] + B[3] * 0.62); ctx.moveTo(B[0] + B[2] * 0.78, B[1]); ctx.lineTo(B[0] + B[2] * 0.78, B[1] + B[3] * 0.62); ctx.stroke();
   ctx.fillStyle = rgba(P.light, 0.8); for (const fx of [0.12, 0.88]) { ctx.beginPath(); ctx.arc(B[0] + B[2] * fx, B[1] + B[3] * 0.8, 0.7, 0, 6.283); ctx.fill(); }
-  if (type === 'heavy' || type === 'heavybomber') { ctx.fillStyle = rgba(P.accent, 0.85); for (let k = -3; k < 5; k++) { ctx.beginPath(); ctx.moveTo(k * 7, B[1] + B[3] - 5); ctx.lineTo(k * 7 + 4, B[1] + B[3] - 5); ctx.lineTo(k * 7 + 7, B[1] + B[3]); ctx.lineTo(k * 7 + 3, B[1] + B[3]); ctx.fill(); } }
+  if (type === 'heavy' || type === 'heavybomber' || type === 'heavylaser') { ctx.fillStyle = rgba(P.accent, 0.85); for (let k = -3; k < 5; k++) { ctx.beginPath(); ctx.moveTo(k * 7, B[1] + B[3] - 5); ctx.lineTo(k * 7 + 4, B[1] + B[3] - 5); ctx.lineTo(k * 7 + 7, B[1] + B[3]); ctx.lineTo(k * 7 + 3, B[1] + B[3]); ctx.fill(); } }
   if (P.fx === 'rust') { const R = seeded(typeSeed(d) + 7); for (let k = 0; k < 6; k++) { ctx.fillStyle = rgba(k % 2 ? '#5a2a10' : '#c06a2a', 0.55); ctx.beginPath(); ctx.arc(B[0] + R() * B[2], B[1] + R() * B[3], 1 + R() * 2.2, 0, 6.283); ctx.fill(); } }
   if (P.fx === 'camo') { const R = seeded(typeSeed(d) + 11); for (let k = 0; k < 9; k++) { ctx.fillStyle = ['#2a3418', '#7a6a3a', '#3a4a22'][k % 3]; ctx.beginPath(); ctx.ellipse(B[0] + R() * B[2], B[1] + R() * B[3], 2 + R() * 3, 1.5 + R() * 2, R() * 3, 0, 6.283); ctx.fill(); } }
   if (P.fx === 'stripes') { ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fillRect(-3, B[1], 2, B[3]); ctx.fillRect(1, B[1], 2, B[3]); }
@@ -4898,7 +4921,14 @@ function droneMoving(d, P, t, act) {
       ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
   }
   if ((type === 'normal' || type === 'bigdrill') && act > 0.2) drill(0, B[1] + B[3] - 1, type === 'bigdrill' ? 14 : 11, type === 'bigdrill' ? 5.5 : 4, t * 4, P);
-  if (type === 'bomber' || type === 'drillbomber' || type === 'heavybomber') { const r = type === 'heavybomber' ? 7 : 4.5, by = B[1] + B[3] + (type === 'heavybomber' ? 5 : 3); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.6 + 0.4 * Math.sin(t * 20); ctx.drawImage(soft('#ffd27a'), -3, by - r - 7, 6, 6); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+  if (type === 'heavylaser' || type === 'laserbomber') { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.4 + act * 0.6; ctx.drawImage(soft(P.accent), type === 'heavylaser' ? -11 : -8, B[1] + B[3] + (type === 'heavylaser' ? 1 : -6), type === 'heavylaser' ? 22 : 16, type === 'heavylaser' ? 22 : 16); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+  if (type === 'laserdriller') {   // the gatling: 4 barrels spinning under the body, a glow at the muzzle when shooting
+    const gy = B[1] + B[3] + 3, spin = t * (act > 0.3 ? 30 : 4);
+    for (let k = 0; k < 4; k++) { const a = spin + k * 1.571, bx = Math.cos(a) * 3; ctx.fillStyle = Math.sin(a) > 0 ? '#5a6070' : '#2a2e38'; ctx.fillRect(bx - 0.9, gy, 1.8, 9); }
+    ctx.fillStyle = '#1a1d24'; ctx.fillRect(-4, gy + 2, 8, 1.6);
+    if (act > 0.3) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = act; ctx.drawImage(soft(P.accent), -8, gy + 4, 16, 16); star4(0, gy + 11, 3, '#ffffff'); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+  }
+  if (type === 'bomber' || type === 'drillbomber' || type === 'heavybomber' || type === 'laserbomber') { const r = type === 'heavybomber' ? 7 : 4.5, by = B[1] + B[3] + (type === 'heavybomber' ? 5 : 3); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.6 + 0.4 * Math.sin(t * 20); ctx.drawImage(soft('#ffd27a'), -3, by - r - 7, 6, 6); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
   if (type === 'laser') { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.4 + act * 0.6; ctx.drawImage(soft(P.accent), -7, B[1] + B[3] - 1, 14, 14); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
   // the eye looks around
   const ey = type === 'laser' ? -5 : B[1] + 5, ex = Math.sin(t * 1.3 + d.id) * 3;
@@ -5122,18 +5152,25 @@ function drawDroneWorld() {
   for (const g of G.rings) { if (g.t < 0) continue; const k = g.t / 0.45; ctx.globalAlpha = Math.max(0, 1 - k); ctx.strokeStyle = g.col; ctx.lineWidth = 3 * (1 - k) + 0.5; ctx.beginPath(); ctx.arc(g.x, wy(g.y), Math.max(1, g.r * ease(k)), 0, 6.283); ctx.stroke(); }
   ctx.globalAlpha = 1;
   for (const bo of G.dbombs) { const blink = Math.sin(bo.t * (8 + bo.t * 14)) > 0; hangBomb(bo.x, wy(bo.y), (bo.big ? 6.5 : 4) * vsc(), { dark: '#222', accent: blink ? '#ff3030' : bo.col }, G.time, bo.drills, false); }
-  for (const p of G.dproj) drill(p.x, wy(p.y), 9 * vsc(), 3 * vsc(), p.spin, null, Math.atan2(-p.dy, p.dx) - Math.PI / 2);
+  for (const p of G.dproj) {
+    if (!p.bolt) { drill(p.x, wy(p.y), 9 * vsc(), 3 * vsc(), p.spin, null, Math.atan2(-p.dy, p.dx) - Math.PI / 2); continue; }
+    const x1 = p.x, y1 = wy(p.y), x0 = x1 - p.dx * 9, y0 = y1 + p.dy * 9;   // a short glowing laser streak
+    ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+    ctx.globalAlpha = 0.45; ctx.strokeStyle = p.col; ctx.lineWidth = 5 * p.w * vsc(); ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    ctx.globalAlpha = 1; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.6 * p.w * vsc(); ctx.stroke();
+    ctx.globalCompositeOperation = 'source-over'; ctx.lineCap = 'butt';
+  }
   for (const d of activeDrones()) {
     const s = DRT.get(d.id); if (!s) continue;
     const ta = TICK_A, x = s.px === undefined ? s.x : s.px + (s.x - s.px) * ta, y = wy(s.py === undefined ? s.y : s.py + (s.y - s.py) * ta) + Math.sin((s.t + ta * DT) * 3 + s.spin) * 1.5, P = dronePal(d);
-    if (d.type === 'laser' && (s.state === 'charge' || s.state === 'fire')) {
-      const a = s.ang, R = d.rank;
+    if ((d.type === 'laser' || d.type === 'heavylaser') && (s.state === 'charge' || s.state === 'fire')) {
+      const a = s.ang, R = d.rank, HW = d.type === 'heavylaser' ? 2.2 : 1;
       if (s.state === 'charge') { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = s.act; ctx.drawImage(soft(P.accent), x - 14, y - 2, 28, 28); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
       else if (s.ends) {
         ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
         for (const e of s.ends) {
           const sx = e.ox, sy = wy(e.oy), ex = sx + Math.cos(a) * e.len, ey = sy - Math.sin(a) * e.len, fl = 0.8 + Math.random() * 0.4;
-          for (const [w, al, c] of [[(10 + R * 5) * fl, 0.25, P.accent], [(4 + R * 2) * fl, 0.6, P.accent], [1.5 + R * 0.6, 1, '#ffffff']]) { ctx.globalAlpha = al; ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke(); }
+          for (const [w, al, c] of [[(10 + R * 5) * fl * HW, 0.25, P.accent], [(4 + R * 2) * fl * HW, 0.6, P.accent], [(1.5 + R * 0.6) * HW, 1, '#ffffff']]) { ctx.globalAlpha = al; ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke(); }
           ctx.globalAlpha = 0.9; ctx.drawImage(soft(P.accent), ex - 14, ey - 14, 28, 28); ctx.drawImage(soft('#ffffff'), ex - 6, ey - 6, 12, 12);
         }
         ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
@@ -5382,7 +5419,7 @@ function renderDrones() {
   txt(droneName(d), 222, y0 + 26, fitSize(droneName(d), 22, 230), RANK_COL[d.rank], { align: 'left', stroke: 3 });
   txt(DRONE_TYPES[d.type].rar, 545, y0 + 27, 13, RCOL[DRONE_TYPES[d.type].rar], { align: 'right', font: FB, weight: 900 });
   txt(DRONE_TYPES[d.type].desc, 222, y0 + 52, fitSize(DRONE_TYPES[d.type].desc, 12, 330, FB), '#c9cfdc', { align: 'left', font: FB, weight: 800 });
-  const stats = d.type === 'engineer' ? 'Drills every ' + droneCd(d).toFixed(1) + 's   Tech: 1 part every ' + Math.round(techTime(d)) + 's (in a slot)' : d.type === 'mothership' ? 'Every ' + Math.round(droneCd(d)) + 's: 5 minerals   Fleet: 3 ships, 15s, every ' + Math.round(MOTHER_FLEET_CD * lvlCd(d)) + 's' : d.type === 'alien' ? 'Every ' + Math.round(droneCd(d)) + 's   Takes up to: ' + (d.rank >= 5 ? 'any mineral' : 'the ' + (d.rank + 1) + ' cheapest of a biome')
+  const stats = d.type === 'laserdriller' ? 'Shoots every ' + droneCd(d).toFixed(2) + 's   45% chance to crack   aim turns slowly' : d.type === 'engineer' ? 'Drills every ' + droneCd(d).toFixed(1) + 's   Tech: 1 part every ' + Math.round(techTime(d)) + 's (in a slot)' : d.type === 'mothership' ? 'Every ' + Math.round(droneCd(d)) + 's: 5 minerals   Fleet: 3 ships, 15s, every ' + Math.round(MOTHER_FLEET_CD * lvlCd(d)) + 's' : d.type === 'alien' ? 'Every ' + Math.round(droneCd(d)) + 's   Takes up to: ' + (d.rank >= 5 ? 'any mineral' : 'the ' + (d.rank + 1) + ' cheapest of a biome')
     : 'Every ' + droneCd(d).toFixed(1) + 's   ' + RK.dmg[d.rank] + ' crack' + (RK.dmg[d.rank] > 1 ? 's' : '') + ' per hit   Speed x' + RK.spd[d.rank] + (d.type === 'laser' ? '   ' + laserLanes(d.rank).length + ' beam' + (laserLanes(d.rank).length > 1 ? 's' : '') : '');
   txt(stats, 222, y0 + 74, fitSize(stats, 12, 330, FB), '#ffd84a', { align: 'left', font: FB, weight: 900 });
   if (dLvl(d) > 1 || modOf(d, 'cd') || modOf(d, 'spd') || modOf(d, 'crit')) txt('Bonus: -' + Math.round((1 - lvlCd(d)) * 100) + '% cooldown, +' + Math.round((lvlSpd(d) - 1) * 100) + '% speed, +' + Math.round(lvlCrit(d) * 100) + '% extra crack' + (aiRank(d) > d.rank ? ', smarter brain' : ''), 222, y0 + 152, fitSize('Level bonus: -00% cooldown, +00% speed, +00% extra crack, smarter brain', 11, 330, FB), '#ffe14a', { align: 'left', font: FB, weight: 900 });
