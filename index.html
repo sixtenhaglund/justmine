@@ -4223,6 +4223,27 @@ function buySlot() {
   if (G.creditz < SLOT_PRICES[k]) { toast('A new drone slot costs ' + fmt(SLOT_PRICES[k]) + ' Creditz', '#ff8a8a'); AUDIO.sfx('deny'); return; }
   G.creditz -= SLOT_PRICES[k]; G.shown = G.creditz; G.slotsOpen++; AUDIO.sfx('buy'); toast('Drone slot ' + G.slotsOpen + ' unlocked!', '#7dff7a'); save();
 }
+function mergeAll() {
+  let n = 0, again = true;
+  while (again) {
+    again = false; const groups = {};
+    for (const d of G.drones) { if (DRONE_TYPES[d.type].noRank || d.rank >= 5) continue; (groups[d.type + '|' + d.rank] = groups[d.type + '|' + d.rank] || []).push(d); }
+    for (const k in groups) {
+      const g = groups[k].sort((p, q) => dLvl(q) - dLvl(p));   // the best levels first
+      while (g.length >= 2) { const a = g.shift(), b = g.shift(); quietMerge(a, b); n++; again = true; }
+    }
+  }
+  if (!n) { toast('Nothing to merge: you need 2 of the same drone with the same rank', '#ff8a8a'); AUDIO.sfx('deny'); return; }
+  G.multi = []; G.droneSel = null; AUDIO.sfx('merge'); addXP(10 * n); toast('Merged ' + n + ' time' + (n > 1 ? 's' : '') + '!', '#7dff7a'); save();
+}
+function quietMerge(a, b) {   // like doMerge, without the big animation
+  const res = mergeResult(a, b); if (!res) return;
+  const k = slotOf(a) >= 0 ? slotOf(a) : slotOf(b);
+  G.slots = G.slots.map(id => id === a.id || id === b.id ? null : id);
+  G.drones = G.drones.filter(d => d !== a && d !== b); DRT.delete(a.id); DRT.delete(b.id);
+  const n = { id: G.nextId++, type: res.type, rank: res.rank, skin: a.skin || b.skin, hat: a.hat || b.hat, lvl: Math.max(dLvl(a), dLvl(b)), xp: 0, mods: { cd: Math.max(modOf(a, 'cd'), modOf(b, 'cd')), spd: Math.max(modOf(a, 'spd'), modOf(b, 'spd')), crit: Math.max(modOf(a, 'crit'), modOf(b, 'crit')) } };
+  G.drones.push(n); if (k >= 0 && k < G.slotsOpen) G.slots[k] = n.id;
+}
 function doMerge(a, b) {
   const res = mergeResult(a, b); if (!res) return;
   const k = slotOf(a) >= 0 ? slotOf(a) : slotOf(b);
@@ -5229,8 +5250,11 @@ function cardDrone(d, x, y, w, h, id, opts) {
   ctx.save(); if (dragged) ctx.globalAlpha *= 0.3;
   ctx.fillStyle = canM ? 'rgba(125,255,122,0.18)' : sel ? 'rgba(120,170,255,0.22)' : UI.hot === id ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)';
   rr(x, y, w, h, 10); ctx.fill();
-  ctx.lineWidth = sel || canM ? 2 : 1; ctx.strokeStyle = canM ? '#7dff7a' : sel ? '#8fb0ff' : rgba(RCOL[DRONE_TYPES[d.type].rar], 0.6); ctx.stroke();
+  const picked = G.multi && G.multi.includes(d.id);
+  if (picked) { ctx.fillStyle = 'rgba(255,90,70,0.22)'; ctx.fill(); }
+  ctx.lineWidth = sel || canM || picked ? 2.2 : 1; ctx.strokeStyle = picked ? '#ff6a5a' : canM ? '#7dff7a' : sel ? '#8fb0ff' : rgba(RCOL[DRONE_TYPES[d.type].rar], 0.6); ctx.stroke();
   ctx.save(); if (merging && !canM && A !== d) ctx.globalAlpha *= 0.35;
+  if (picked) { ctx.fillStyle = '#ff5a4a'; ctx.beginPath(); ctx.arc(x + w / 2, y + h * 0.42, 9, 0, 6.283); ctx.fill(); drawIcon('check', x + w / 2, y + h * 0.42, 11, '#ffffff'); }
   drawDrone(d, x + w / 2, y + h * 0.42, { scale: Math.min(w, h) / 31, t: G.time + d.id, box: [x + 1, y + 1, w - 2, h - 2] });
   rankBadge(d, x + w - 4, y + 4, Math.min(1, w / 76));
   { const k = Math.min(1, w / 76), lt = 'Lvl ' + dLvl(d); rr(x + 4, y + 4, (8 + lt.length * 6.2) * k, 15 * k, 4 * k); ctx.fillStyle = 'rgba(8,10,16,0.85)'; ctx.fill(); txt(lt, x + 4 + (4 + lt.length * 3.1) * k, y + 4 + 8 * k, 10 * k, '#ffe14a', { font: FB, weight: 900, shadow: false });
@@ -5247,7 +5271,16 @@ function rankBadge(d, rx, ry, k) {
   rr(x, ry, bw, bh, 4 * k); ctx.fillStyle = 'rgba(8,10,16,0.85)'; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = RANK_COL[d.rank]; ctx.stroke();
   txt(t, x + bw / 2, ry + bh / 2 + 0.5, 11 * k, RANK_COL[d.rank], { font: FH, shadow: false });
 }
+// MULTI-SELECT: hold Shift or Ctrl (or turn on "Select many") and tap drones, then scrap them all at once
+let MODKEY = false;
 function clickDrone(d) {
+  if ((MODKEY || G.multiMode) && (G.mergeSel === null || G.mergeSel === undefined)) {
+    AUDIO.sfx('click'); G.multi = G.multi || [];
+    if (droneLimited(d)) { toast(DRONE_TYPES[d.type].name + ' is limited: it can\'t be scrapped', '#ffb27a'); return; }
+    const i = G.multi.indexOf(d.id); if (i >= 0) G.multi.splice(i, 1); else G.multi.push(d.id);
+    return;
+  }
+  G.multi = [];
   AUDIO.sfx('click'); G.invBig = false;
   if (G.mergeSel !== null && G.mergeSel !== undefined) {
     const A = droneById(G.mergeSel);
@@ -5293,6 +5326,10 @@ function renderDrones() {
   const inv = G.drones.filter(d => slotOf(d) < 0 || slotOf(d) >= G.slotsOpen).sort((a, c) => c.rank - a.rank || a.type.localeCompare(c.type));
   txt('YOUR DRONES  (' + inv.length + ')', 30, 204, 13, '#9ad8ff', { align: 'left', font: FB, weight: 900 });
   const big = !!G.invBig, IH = big ? h - 236 : 192, PER = 10, CW = (w - 52 - (PER - 1) * 6) / PER, CH = 82;
+  { const mm = !!G.multiMode, ma = scrapArmed('mergeall');
+    btn('multim', w - 410, 192, 120, 22, mm ? 'Select: ON' : 'Select many', { col: mm ? '#c0392b' : '#343c50', size: 11, r: 7, fn: () => { G.multiMode = !G.multiMode; if (!G.multiMode) G.multi = []; AUDIO.sfx('click'); } });
+    btn('mergeall', w - 280, 192, 120, 22, ma ? 'Sure? Merge all' : 'Merge all', { col: ma ? '#2a8a3a' : '#2a5a3a', size: 11, r: 7, fn: () => { if (armScrap('mergeall')) mergeAll(); else toast('Press again: merges every 2 same drones with the same rank', '#9aff9a'); } }); }
+  if (!G.touch && !TOUCH) txt('Shift/Ctrl + click = pick many', 196, 204, 10, '#6a7080', { align: 'left', font: FB, weight: 800, shadow: false });
   if (inv.length > PER * 2 || big) btn('invbig', w - 150, 192, 120, 22, big ? 'Show less' : 'Show more', { col: '#343c50', size: 11, r: 7, fn: () => { G.invBig = !G.invBig; AUDIO.sfx('click'); } });
   const isa = scrollArea('dinv', 20, 214, w - 40, IH, 'y', Math.ceil(inv.length / PER) * (CH + 6) + 6);
   { const fr = UI.frame; DDROP.inv = { x: fr.x + 20 * fr.s, y: fr.y + 214 * fr.s, w: (w - 40) * fr.s, h: IH * fr.s }; DDROP.s = fr.s; }
@@ -5306,6 +5343,20 @@ function renderDrones() {
   // --- selected drone ---
   const y0 = 412;
   ctx.fillStyle = 'rgba(255,255,255,0.04)'; rr(20, y0, w - 40, h - y0 - 18, 12); ctx.fill();
+  G.multi = (G.multi || []).filter(id => droneById(id));
+  if (G.multi.length) {
+    const list = G.multi.map(droneById), cr = list.reduce((a, q) => a + droneScrapCreditz(q), 0), tp = list.reduce((a, q) => a + droneScrapValue(q), 0), armed = scrapArmed('multi');
+    txt(list.length + ' drone' + (list.length > 1 ? 's' : '') + ' picked', w / 2, y0 + 34, 20, '#ff8a7a', { stroke: 3 });
+    txt('Scrap them all for +' + fmt(cr) + ' Creditz and +' + tp + ' Tech parts', w / 2, y0 + 64, 14, '#ffd84a', { font: FB, weight: 900 });
+    btn('mscrap', w / 2 - 190, y0 + 92, 200, 40, armed ? 'Sure? Press again' : 'Scrap all ' + list.length, { col: armed ? '#c0392b' : '#8a3a2a', size: 16, fn: () => {
+      if (!armScrap('multi')) return; let c = 0, t2 = 0;
+      for (const q of list) { if (!q || droneLimited(q)) continue; c += droneScrapCreditz(q); t2 += droneScrapValue(q); const k = slotOf(q); if (k >= 0) G.slots[k] = null; DRT.delete(q.id); }
+      G.drones = G.drones.filter(q => !G.multi.includes(q.id) || droneLimited(q)); G.multi = []; G.droneSel = null;
+      giveCreditz(c, true); G.tech = (G.tech || 0) + t2; G.hudPulse = 1; AUDIO.sfx('clank'); AUDIO.sfx('buy'); toast('Scrapped ' + list.length + ' drones: +' + fmt(c) + ' Creditz, +' + t2 + ' Tech', '#ffd84a'); save(); } });
+    btn('mclear', w / 2 + 20, y0 + 92, 170, 40, 'Clear', { col: '#4a5070', size: 16, fn: () => { G.multi = []; AUDIO.sfx('click'); } });
+    txt('Limited drones (Alien Ships, Mothership) are never picked', w / 2, y0 + 158, 11, '#8a90a0', { font: FB, weight: 800 });
+    return;
+  }
   const d = G.droneSel && droneById(G.droneSel);
   if (G.mergeSel !== null && G.mergeSel !== undefined) {
     const A = droneById(G.mergeSel);
@@ -5481,7 +5532,7 @@ function renderDroneShop(w, h, ORDER, sid) {
     txt(C.name, x + cw / 2, y + 116, fitSize(C.name, 19, cw - 20), C.col, { stroke: 3 });
     let lines;
     if (C.rw) { const tot = Object.values(C.skins).reduce((a, b) => a + b, 0), by = {}; for (const [sk, v] of Object.entries(C.skins)) by[SKINS[sk].rar] = (by[SKINS[sk].rar] || 0) + v; lines = Object.entries(by).map(([r, v]) => r + ' skins ' + fmtPct(v / tot)); lines.unshift(Object.keys(C.skins).length + ' skins to collect'); }
-    else { const w = crateOdds(C), tot = Object.values(w).reduce((a, b) => a + b, 0); lines = Object.entries(w).map(([tp, v]) => DRONE_TYPES[tp].name + ' (' + DRONE_TYPES[tp].rar + ') ' + fmtPct(v / tot)); lines.cols = Object.keys(w).map(tp => RCOL[DRONE_TYPES[tp].rar]); }
+    else { const w = crateOdds(C), tot = Object.values(w).reduce((a, b) => a + b, 0), ent = Object.entries(w).sort((p, q) => RAR7.indexOf(DRONE_TYPES[p[0]].rar) - RAR7.indexOf(DRONE_TYPES[q[0]].rar)); lines = ent.map(([tp, v]) => DRONE_TYPES[tp].name + ' (' + DRONE_TYPES[tp].rar + ') ' + fmtPct(v / tot)); lines.cols = ent.map(e => RCOL[DRONE_TYPES[e[0]].rar]); }
     const lh = lines.length > 7 ? 10.6 : lines.length > 5 ? 12.5 : 16, lf = lines.length > 7 ? 10 : lines.length > 5 ? 10.5 : 12, ly = lines.length > 7 ? 131 : 136;   // long lists squeeze up so nothing hides behind the button
     lines.forEach((l, j) => txt(l, x + cw / 2, y + ly + j * lh, fitSize(l, lf, cw - 24, FB), (lines.cols && lines.cols[j]) || RCOL[l.split(' ')[0]] || '#c9cfdc', { font: FB, weight: 800, shadow: false }));
     btn('crate_' + k, x + 36, y + ch - 44, cw - 72, 34, have ? 'Open free (' + have + ')' : fmt(C.price), { col: have ? '#7a3aa8' : G.creditz >= C.price ? '#3aa04a' : '#6a3a3a', size: 17, fn: () => buyCrate(k) });
@@ -6251,6 +6302,7 @@ cv.addEventListener('pointerdown', e => {
   const touch = e.pointerType === 'touch' || e.pointerType === 'pen';
   if (touch && PTR.id !== null) return;   // ignore extra fingers
   G.touch = touch;
+  MODKEY = !!(e.shiftKey || e.ctrlKey || e.metaKey);
   setMouse(e);
   AUDIO.init();
   try { cv.setPointerCapture(e.pointerId); } catch (err) {}
