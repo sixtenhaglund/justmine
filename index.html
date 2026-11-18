@@ -1780,7 +1780,7 @@ function hudScale() {
   if (GFX.hud > 0) return [1, 0.65, 0.8, 1, 1.2, 1.45][GFX.hud];
   const phone = TOUCH || G.touch || Math.min(W, H) < 520;
   if (phone) return W > H ? clamp(H / 560, 0.6, 1) : clamp(W / 520, 0.62, 1);
-  return clamp(Math.min(W / 1280, H / 720), 1, 1.8);
+  return clamp(Math.min(W / 1536, H / 864), 1, 1.5);   // a bit smaller than before (1920x1080 -> 1.25)
 }
 function resize() {
   // DPR = how many real screen pixels we draw per CSS pixel. Fewer = blurrier but much faster.
@@ -5489,8 +5489,8 @@ const WS = { ang: 0, from: 0, to: 0, t: 0, dur: 4.2, spinning: false, prize: -1,
 const spinPrice = () => Math.min(1e12, 1e5 * Math.pow(4, G.biome));   // 100K in the first biome, at most 1T
 const HUDC = new Map();
 function hudPic(key, w, h, draw) {   // draws draw() once into a w x h picture (centre = 0,0) and reuses it
-  const k = key + '|' + w + 'x' + h + '|' + DPR; let c = HUDC.get(k);
-  if (!c) { if (HUDC.size > 120) HUDC.clear(); c = document.createElement('canvas'); c.width = Math.ceil(w * DPR); c.height = Math.ceil(h * DPR); const x = c.getContext('2d'); x.setTransform(DPR, 0, 0, DPR, c.width / 2, c.height / 2); const keep = ctx; ctx = x; draw(); ctx = keep; HUDC.set(k, c); }
+  const R = DPR * (HUD_ON ? HUDS : 1), k = key + '|' + w + 'x' + h + '|' + R.toFixed(3); let c = HUDC.get(k);   // drawn at the REAL pixel size (UI size included) so it stays sharp
+  if (!c) { if (HUDC.size > 120) HUDC.clear(); c = document.createElement('canvas'); c.width = Math.ceil(w * R); c.height = Math.ceil(h * R); const x = c.getContext('2d'); x.setTransform(R, 0, 0, R, c.width / 2, c.height / 2); const keep = ctx; ctx = x; draw(); ctx = keep; HUDC.set(k, c); }
   return c;
 }
 function drawWheelIcon(x, y, r, a) {   // a little wheel (buttons, pass card)
