@@ -4525,7 +4525,7 @@ function tickDrone(d, s) {
   if (s.ghosts) { for (const g of s.ghosts) { g.t += DT; g.x += g.dx; } s.ghosts = s.ghosts.filter(g => g.t < 0.7); if (!s.ghosts.length) s.ghosts = null; }
   if (d.skin === 'glitch') {   // GL1TCH can skip space: it blinks straight to the rock it's going for
     s.hopT = (s.hopT === undefined ? 2 : s.hopT) - DT;
-    const tg = s.target && s.target.x !== undefined ? s.target : null;
+    const tg = s.target && s.target.x !== undefined ? { x: s.target.x, y: s.target.y } : s.spot ? { x: s.spot.x, y: s.spot.y - 34 } : s.wx !== undefined && s.state !== 'slam' ? { x: s.wx, y: s.wy - 34 } : null;   // where it is heading (laser drones fly to a spot, bombers wander)
     if (s.hopT <= 0 && tg && Math.hypot(tg.x - s.x, tg.y + 30 - s.y) > 70) {
       for (let q = 0; q < 10; q++) G.parts.push({ kind: 'glitch', x: s.x + (Math.random() - 0.5) * 20, y: s.y + (Math.random() - 0.5) * 14, vx: 0, vy: 0, life: 14, max: 14, s: 3 + Math.random() * 8, h: 2, col: q % 2 ? '#00ff66' : '#ff00ff' });
       const x0 = s.x, y0 = s.y;
@@ -4594,7 +4594,7 @@ function tickDrone(d, s) {
         const da = ((want - s.gang) % 6.283 + 9.425) % 6.283 - 3.1416; s.gang += clamp(da, -1.5 * DT, 1.5 * DT);   // the aim turns slowly
         if (s.cd <= 0 && Math.abs(da) < 0.5) {
           s.cd = droneCd(d); s.act = 1;
-          G.dproj.push({ x: s.x + Math.cos(s.gang) * 12, y: s.y - 12 + Math.sin(s.gang) * 12, dx: Math.cos(s.gang) * 1.7, dy: Math.sin(s.gang) * 1.7, life: 1.2, pierce: 1, dmg: 1, chance: 0.45, d, hit: [], spin: 0, bolt: true, w: 1, col: dronePal(d).accent });
+          G.dproj.push({ x: s.x + Math.cos(s.gang) * 12, y: s.y - 12 + Math.sin(s.gang) * 12, dx: Math.cos(s.gang) * 1.7, dy: Math.sin(s.gang) * 1.7, life: 1.2, pierce: 1, dmg: 1, chance: 0.45, d, hit: [], spin: 0, bolt: true, w: 1, col: boltCol(d, s.shots = (s.shots || 0) + 1) });
         }
       }
       break;
@@ -4658,7 +4658,7 @@ function layBomb(d, x, y) {
 function explodeDroneBomb(b) {
   const R = b.d.rank;
   crackArea(b.x, b.y, b.r, b.dmg, b.d);
-  if (b.lasers) for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, ab = lvlAbility(b.d); G.dproj.push({ x: b.x, y: b.y, dx: Math.cos(a) * 1.5, dy: Math.sin(a) * 1.5, life: (0.45 + R * 0.12) * ab, pierce: 1 + Math.floor(R / 3), dmg: RK.dmg[R], d: b.d, hit: [], spin: 0, bolt: true, w: 1 + R * 0.35 * ab, col: '#ff5a3a' }); }
+  if (b.lasers) for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, ab = lvlAbility(b.d); G.dproj.push({ x: b.x, y: b.y, dx: Math.cos(a) * 1.5, dy: Math.sin(a) * 1.5, life: (0.45 + R * 0.12) * ab, pierce: 1 + Math.floor(R / 3), dmg: RK.dmg[R], d: b.d, hit: [], spin: 0, bolt: true, w: 1 + R * 0.35 * ab, col: boltCol(b.d, k) }); }
   if (b.drills) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) G.dproj.push({ x: b.x, y: b.y, dx, dy, life: 1.3, pierce: R >= 3 ? 2 : 1, dmg: RK.dmg[R], d: b.d, hit: [], spin: 0 });
   dust(b.x, b.y, '#9a9aa0', b.big ? 12 : 6); sparkle(b.x, b.y, b.col, b.big ? 14 : 7);
   G.lights.push({ x: b.x, y: b.y, r: b.r * 1.6, col: b.col, life: 0.45, max: 0.45 });
@@ -4668,6 +4668,7 @@ function explodeDroneBomb(b) {
 }
 // laser maths: a ray from the drone; "along" = how far down the ray a rock is, "perp" = how far to the side
 const laserLanes = R => { const n = 1 + Math.floor((R - 1) / 2), out = []; for (let k = 0; k < n; k++) out.push((k - (n - 1) / 2) * 44 * gsc()); return out; };
+const boltCol = (d, k) => d.skin === 'glitch' ? (k % 2 ? '#00ff66' : '#ff00ff') : d.skin === 'rainbow' ? ['#ff3a3a', '#ffa83a', '#fff23a', '#3aff6a', '#3ad0ff', '#8a5aff'][k % 6] : dronePal(d).accent;   // laser bolts in the skin's colours
 function rayFirst(ox, oy, a, lane, wid) {
   wid = wid || 22;
   const dx = Math.cos(a), dy = Math.sin(a); let best = null, bd = 900;
