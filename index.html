@@ -542,7 +542,7 @@ const rgba = (hex, a) => { const c = hexRgb(hex); return 'rgba(' + c[0] + ',' + 
 function loadBiome(i, fromTeleport) {
   G.biome = i;
   G.visited |= (1 << i); G.reached |= (1 << i);
-  G.rocks = []; G.meteors = []; G.bombs = []; G.mega = null; G.drops = []; G.rain = 0; G.ev = null;
+  G.bhPops = []; G.rocks = []; G.meteors = []; G.bombs = []; G.mega = null; G.drops = []; G.rain = 0; G.ev = null;
   G.drills.forEach(d => { d.target = null; });
   G.menu = null; G.regenWait = -1; G.mouse.down = false;
   if (G.biomeFx && !G.biomeFx.out) G.biomeFx.out = 0.001;   // you went somewhere: the 'next biome' banner slides away fast
@@ -892,6 +892,23 @@ function bhDisk(bx, by, H2, from, to) {   // the accretion disk: hot gas spinnin
     ctx.beginPath(); ctx.ellipse(bx, by, r, r * 0.26, -0.18, from, to); ctx.stroke();
   }
   ctx.setLineDash([]); ctx.restore();
+}
+function drawBhPops(shx, shy) {
+  if (!G.bhPops || !G.bhPops.length) return;
+  ctx.setTransform(DPR * K, 0, 0, DPR * K, DPR * (CX + shx), DPR * (CY + shy));
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (const p of G.bhPops) {
+    const f = p.t, x = p.x, y = wy(p.y), R = p.R, e = 1 - Math.pow(1 - f, 3);
+    // core flash
+    ctx.globalAlpha = Math.max(0, 1 - f * 2.2); ctx.drawImage(soft('#ffffff'), x - R * 1.4, y - R * 1.4, R * 2.8, R * 2.8); ctx.drawImage(soft('#b678ff'), x - R * 2.2, y - R * 2.2, R * 4.4, R * 4.4);
+    // light beams
+    ctx.save(); ctx.translate(x, y); ctx.rotate(p.x * 0.01);
+    for (let k = 0; k < 14; k++) { ctx.rotate(6.283 / 14); const L = R * (0.6 + 2.6 * e) * (k % 2 ? 0.7 : 1); ctx.globalAlpha = Math.max(0, 0.6 - f * 0.8); ctx.fillStyle = k % 2 ? '#c89aff' : '#ffffff'; ctx.beginPath(); ctx.moveTo(-R * 0.06, 0); ctx.lineTo(0, -L); ctx.lineTo(R * 0.06, 0); ctx.closePath(); ctx.fill(); }
+    ctx.restore();
+    // shockwaves
+    for (const [d, col, lw] of [[0, '#ffffff', 8], [0.12, '#b678ff', 14], [0.25, '#7a2aff', 6]]) { const g2 = Math.max(0, f - d); if (g2 <= 0) continue; const e2 = 1 - Math.pow(1 - Math.min(1, g2 / 0.75), 3); ctx.globalAlpha = Math.max(0, 1 - g2 / 0.75) * 0.9; ctx.strokeStyle = col; ctx.lineWidth = lw * (1 - e2 * 0.7) * vsc(); ctx.beginPath(); ctx.arc(x, y, R * (0.3 + 2.4 * e2), 0, 6.283); ctx.stroke(); }
+  }
+  ctx.restore(); ctx.globalAlpha = 1;
 }
 function drawBlackHoles(shx, shy) {   // part 2: the black core, the photon ring, light bent over the top, front of the disk
   const list = G.bombs.filter(bo => bo.t >= 0 && bombTier(bo.level).name === 'black'); if (!list.length) return;
@@ -1270,14 +1287,22 @@ function tick() {
         else { const d = G.drills.find(d => d.target === h); if (d) { hitHeart(1); h.cool = 0.6; d.hitT = 0.15; } }
       }
     }
+    for (const bo of G.bombs) if (bo.t >= 0 && bo.speed >= 0 && bombTier(bo.level).name === 'black') {   // during the pull
+      const R = bombRadius(bo), life = clamp(bo.t / 0.7, 0, 1);
+      for (let q = 0; q < 3; q++) { const a = Math.random() * 6.283, d0 = R * (1.3 + Math.random() * 0.6); G.parts.push({ kind: 'suck', x: bo.x + Math.cos(a) * d0, y: bo.y + Math.sin(a) * d0, tx: bo.x, ty: bo.y, vx: 0, vy: 0, life: 14, max: 14, col: q ? '#b678ff' : '#ffffff', s: 2 }); }
+      G.shake = Math.max(G.shake, 1 + life * 6);
+    }
     for (const bo of G.bombs) if (bo.speed < 0 && bombTier(bo.level).name === 'black') {   // the implosion's final pop
+      G.bhPops = G.bhPops || []; G.bhPops.push({ x: bo.x, y: bo.y, t: 0, R: bombRadius(bo) });
       const R = bombRadius(bo);
       AUDIO.sfx('bhpop');
       G.lights.push({ x: bo.x, y: bo.y, r: R * 2.2 + 40, col: '#e0c8ff', life: 0.5, max: 0.5 }); sparkle(bo.x, bo.y, '#e0c8ff', 16); G.shake = Math.max(G.shake, 10);
       G.rings.push({ x: bo.x, y: bo.y, t: 0, r: R * 1.9, col: '#ffffff' }, { x: bo.x, y: bo.y, t: -0.08, r: R * 1.5, col: '#b678ff' });
       for (let i = 0; i < 26; i++) { const a = i / 26 * 6.283, v = (5 + Math.random() * 5) * vsc(); G.parts.push({ kind: 'spark', x: bo.x, y: bo.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 18 + rnd(0, 10), max: 28, col: i % 2 ? '#ffffff' : '#c890ff', s: 2 }); }
-      G.flash = Math.max(G.flash || 0, 0.25); G.flashCol = '#e0c8ff';
+      G.flash = Math.max(G.flash || 0, 0.5); G.flashCol = '#e0c8ff'; G.shake = Math.max(G.shake, 16);
+      for (let i = 0; i < 30; i++) { const a = Math.random() * 6.283, v = (3 + Math.random() * 8) * vsc(); G.parts.push({ kind: 'ember', x: bo.x, y: bo.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 30 + rnd(0, 20), max: 50, s: 1.4, col: i % 3 ? '#b678ff' : '#ffffff', ph: Math.random() * 6 }); }
     }
+    if (G.bhPops) { for (const p of G.bhPops) p.t += DT; G.bhPops = G.bhPops.filter(p => p.t < 1); }
     G.bombs = G.bombs.filter(bo => bo.speed >= 0);
     if ((G.saveT += DT) > 3) { G.saveT = 0; save(); checkAch(); }
   }
@@ -1632,8 +1657,13 @@ const AUDIO = (() => {
       case 'ach': for (const [k, d] of [[72, 0], [76, 0.1], [79, 0.2], [84, 0.32]]) note(mtof(k), t + d, 0.4, 'square', 0.07, o, { lp: 3000 }); break;
       case 'bombBlue': noise(t, 0.9, 0.7, o, { f: 5000, fTo: 200 }); note(110, t, 0.7, 'sine', 0.7, o, { slide: 35 }); for (let k = 0; k < 6; k++) noise(t + 0.05 + k * 0.06, 0.06, 0.25, o, { type: 'bandpass', f: 3000 + k * 400, q: 3 }); break;
       case 'bombWhite': noise(t, 1.2, 0.8, o, { type: 'highpass', f: 1200, fTo: 400 }); note(70, t, 1, 'sine', 0.8, o, { slide: 28 }); for (const k of [0, 7, 12, 19]) note(mtof(84 + k), t + 0.02, 1.2, 'sine', 0.06, o, { att: 0.01 }); break;
-      case 'bhole': note(58, t, 1.1, 'sine', 1, o, { slide: 26 }); note(116, t, 1, 'sawtooth', 0.06, o, { slide: 34, lp: 380 }); noise(t, 0.9, 0.55, o, { type: 'bandpass', f: 3500, fTo: 120, q: 3 }); note(900, t + 0.05, 0.7, 'sine', 0.05, o, { slide: 90 }); break;
-      case 'bhpop': note(44, t, 1, 'sine', 1, o, { slide: 18 }); noise(t, 0.7, 0.8, o, { f: 900, fTo: 50 }); note(1400, t, 0.3, 'triangle', 0.09, o, { slide: 260 }); break;
+      case 'bhole':   // the pull: a deep rumble that rises, a sucking whoosh, a warble
+        note(40, t, 1.1, 'sine', 1.1, o, { slide: 70 }); note(80, t, 1.05, 'sawtooth', 0.08, o, { slide: 160, lp: 500 });
+        noise(t, 1.0, 0.7, o, { type: 'bandpass', f: 4000, fTo: 150, q: 2.5 }); note(600, t + 0.1, 0.9, 'sine', 0.06, o, { slide: 1800 }); break;
+      case 'bhpop':   // the explosion: a huge sub boom + crackle + a bright zap + a long rumbling tail
+        note(55, t, 1.6, 'sine', 1.4, o, { slide: 22 }); note(110, t, 0.5, 'square', 0.12, o, { slide: 35, lp: 900 });
+        noise(t, 1.4, 1.1, o, { f: 2400, fTo: 40 }); noise(t, 0.25, 0.6, o, { type: 'highpass', f: 2500, fTo: 6000 });
+        note(1800, t, 0.35, 'triangle', 0.12, o, { slide: 120 }); noise(t + 0.15, 1.6, 0.35, o, { f: 300, fTo: 30 }); break;
       case 'implode': noise(t, 0.7, 0.5, o, { type: 'bandpass', f: 200, fTo: 3000, q: 2 }); note(900, t, 0.7, 'sawtooth', 0.08, o, { slide: 60, lp: 2000 }); note(48, t + 0.68, 1.2, 'sine', 1, o, { slide: 22 }); noise(t + 0.68, 0.5, 0.6, o, { f: 400, fTo: 60 }); break;
       case 'clank': note(1700, t, 0.12, 'square', 0.06, o, { lp: 5000 }); note(2500, t, 0.18, 'sine', 0.08, o); noise(t, 0.05, 0.2, o, { type: 'highpass', f: 4000 }); break;
       case 'quest': for (const [k, d] of [[67, 0], [72, 0.08], [76, 0.16], [79, 0.24], [84, 0.34]]) note(mtof(k), t + d, 0.35, 'triangle', 0.12, o); break;
@@ -2131,7 +2161,8 @@ function drawBloom() {
   const w1 = Math.max(4, Math.ceil(cv.width / 6)), h1 = Math.max(4, Math.ceil(cv.height / 6));
   const a = bloomCv('a', w1, h1), ax = a.getContext('2d'), b = bloomCv('b', Math.max(2, Math.ceil(w1 / 4)), Math.max(2, Math.ceil(h1 / 4)));
   BLOOM.n = (BLOOM.n || 0) + 1;
-  if (BLOOM.n % 3 === 0 || BLOOM.w !== w1 || BLOOM.h !== h1) {   // you can't see a glow that is 1 frame old, but it halves the cost
+  const busy = G.shake > 0.5 || G.flash > 0.03 || G.bombs.length > 0;   // shaking/flashing: an old glow would sit in the wrong place and smear ('melting'), so redo it every frame
+  if (busy || BLOOM.n % 3 === 0 || BLOOM.w !== w1 || BLOOM.h !== h1) {   // you can't see a glow that is 1 frame old, but it halves the cost
     BLOOM.w = w1; BLOOM.h = h1;
     ax.globalAlpha = 1; ax.imageSmoothingEnabled = true; ax.imageSmoothingQuality = 'high';
     ax.globalCompositeOperation = 'copy'; ax.drawImage(cv, 0, 0, w1, h1);
@@ -3128,7 +3159,7 @@ function render() {
   drawForeground();
   drawLighting(shx, shy);
   drawBloom();
-  drawBlackHoles(shx, shy);
+  drawBlackHoles(shx, shy); drawBhPops(shx, shy);
   drawGrade();
   setScreen();
   if (G.mouse.over && !G.mouse.onUI && inWorld(G.mouse.x, G.mouse.y)) drawCursor(G.mouse.x, G.mouse.y);
@@ -3231,6 +3262,9 @@ function renderWorld(shx, shy) {
         ctx.beginPath(); ctx.arc(bx, by, r0, ang, ang + 0.4 + f * 0.7); ctx.stroke();
       }
       ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (let k = 0; k < 3; k++) { const f = (H2.T * 1.8 + k / 3) % 1, rr3 = R * 2 * (1 - f) + H2.eh; ctx.globalAlpha = f * 0.5 * (1 - H2.dying); ctx.strokeStyle = k % 2 ? '#b678ff' : '#e8d4ff'; ctx.lineWidth = (1 + f * 3) * vsc(); ctx.beginPath(); ctx.arc(bx, by, rr3, 0, 6.283); ctx.stroke(); }
+      ctx.restore();
       bhDisk(bx, by, H2, Math.PI, Math.PI * 2);
       continue;
     }
