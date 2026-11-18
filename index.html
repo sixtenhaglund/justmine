@@ -1306,7 +1306,7 @@ function tryRebirth() {
   { const n = G.rebirths - 1, ck = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythical'][Math.min(5, Math.floor(n / 2))];   // rebirth gifts
     G.crates[ck] = (G.crates[ck] || 0) + 1; G.spins = (G.spins || 0) + 2 + Math.floor(n / 3); if (n % 3 === 0) G.crates.skin = (G.crates.skin || 0) + 1;
     G.boostT = (G.boostT || 0) + 300;
-    toast('Rebirth gifts: ' + CRATES[ck].name + ', ' + (2 + Math.floor(n / 3)) + ' wheel spins' + (n % 3 === 0 ? ', a Skin Crate' : '') + ' + x2 Creditz for 5 min', '#ffd84a'); } toast('Rebirth: +' + Math.round(rxp * xpMult()) + ' Alien Pass XP', '#7dff3a');
+    toast('Rebirth gifts: ' + CRATES[ck].name + ', ' + (2 + Math.floor(n / 3)) + ' wheel spins' + (n % 3 === 0 ? ', a Rare Skin Crate' : '') + ' + x2 Creditz for 5 min', '#ffd84a'); } toast('Rebirth: +' + Math.round(rxp * xpMult()) + ' Alien Pass XP', '#7dff3a');
   resetRun();
   const unlocked = PERKS.find(p => p[0] === rebirthsDone());
   loadBiome(0, true); fixQuests();
@@ -3749,35 +3749,35 @@ const SKINS = {
   toxic: { name: 'Toxic', rar: 'Uncommon', body: '#2a3a1a', dark: '#0e160a', light: '#4a6a2a', accent: '#8dff3a', fx: 'drip' },
   copper: { name: 'Copper', rar: 'Uncommon', body: '#c8743a', dark: '#6a3414', light: '#ffc08a', accent: '#5affd0', fx: 'chrome' },
   candy: { name: 'Candy', rar: 'Rare', body: '#ffffff', dark: '#c8c8d0', light: '#ffffff', accent: '#ff2a4a', fx: 'candy' },
-  lava: { name: 'Lava', rar: 'Rare', body: '#2a1a14', dark: '#0e0806', light: '#4a2a1a', accent: '#ff7a1a', fx: 'lava' },
+  lava: { name: 'Lava', rar: 'Epic', body: '#2a1a14', dark: '#0e0806', light: '#4a2a1a', accent: '#ff7a1a', fx: 'lava' },
   ocean: { name: 'Ocean', rar: 'Rare', body: '#1a6ad0', dark: '#0a2a6a', light: '#6ac8ff', accent: '#bff6ff', fx: 'bubbles' },
-  shadow: { name: 'Shadow', rar: 'Epic', body: '#1a1424', dark: '#06040a', light: '#3a2a4a', accent: '#b05cff', fx: 'smoke' },
-  plasma: { name: 'Plasma', rar: 'Epic', body: '#2a2a5a', dark: '#0e0e2a', light: '#6a6ac8', accent: '#9ae0ff', fx: 'zap' },
+  shadow: { name: 'Shadow', rar: 'Legendary', body: '#1a1424', dark: '#06040a', light: '#3a2a4a', accent: '#b05cff', fx: 'smoke' },
+  plasma: { name: 'Plasma', rar: 'Legendary', body: '#2a2a5a', dark: '#0e0e2a', light: '#6a6ac8', accent: '#9ae0ff', fx: 'zap' },
   diamond: { name: 'Diamond', rar: 'Legendary', body: '#bff0ff', dark: '#5aa0c8', light: '#ffffff', accent: '#ffffff', fx: 'diamond' },
   inferno: { name: 'Inferno', rar: 'Mythical', body: '#3a0a06', dark: '#120202', light: '#8a1a0a', accent: '#ffb02a', fx: 'fire' },
   rusty: { name: 'Rusty', rar: 'Common', body: '#9a6040', dark: '#4a2614', light: '#d08a5a', accent: '#ffb060', fx: 'rust' },
-  neon: { name: 'Neon', rar: 'Uncommon', body: '#16161f', dark: '#06060a', light: '#2c2c3c', accent: '#00f0ff', accent2: '#ff3ad0', fx: 'neon' },
+  neon: { name: 'Neon', rar: 'Rare', body: '#16161f', dark: '#06060a', light: '#2c2c3c', accent: '#00f0ff', accent2: '#ff3ad0', fx: 'neon' },
   pixel: { name: 'Pixel', rar: 'Epic', body: '#4a8aff', dark: '#1a3a9a', light: '#a0d4ff', accent: '#ffd84a', fx: 'pixel' },
   hightech: { name: 'High Tech', rar: 'Legendary', body: '#1c2c52', dark: '#0a1122', light: '#8f9aaa', accent: '#ff2a3a', fx: 'jets' },
-  golden: { name: 'Golden', rar: 'Mythical', body: '#ffc21a', dark: '#9a5e00', light: '#fff2a0', accent: '#ffffff', fx: 'gold' },
+  golden: { name: 'Golden', rar: 'Legendary', body: '#ffc21a', dark: '#9a5e00', light: '#fff2a0', accent: '#ffffff', fx: 'gold' },
   glitch: { name: 'GL1TCH', rar: 'Admin', body: '#0c0c0c', dark: '#000000', light: '#2a2a2a', accent: '#00ff66', accent2: '#ff00ff', fx: 'glitch', code: true },
   alien: { name: 'Little Green', rar: 'Epic', body: '#5ad04a', dark: '#1e5a14', light: '#b0ff8a', accent: '#e0ff3a', fx: null, pass: true },
   chrome: { name: 'UFO Chrome', rar: 'Legendary', body: '#c8d2de', dark: '#5a6474', light: '#ffffff', accent: '#7dff3a', fx: 'chrome', pass: true },
   nebula: { name: 'Nebula', rar: 'Mythical', body: '#2a1052', dark: '#0e0420', light: '#6a3aa8', accent: '#d07aff', fx: 'stars', pass: true },
   // --- 2026-11-18: 14 new crate skins ---
   zebra: { name: 'Zebra', rar: 'Common', body: '#f4f4f4', dark: '#8a8a8a', light: '#ffffff', accent: '#1a1a1a', fx: 'zebra' },
-  sunset: { name: 'Sunset', rar: 'Common', body: '#ff8a4a', dark: '#8a2a5a', light: '#ffd08a', accent: '#ffe27a', fx: 'sunset' },
+  sunset: { name: 'Sunset', rar: 'Uncommon', body: '#ff8a4a', dark: '#8a2a5a', light: '#ffd08a', accent: '#ffe27a', fx: 'sunset' },
   tiger: { name: 'Tiger', rar: 'Uncommon', body: '#ff9a1a', dark: '#8a4a00', light: '#ffd08a', accent: '#1a1a1a', fx: 'tiger' },
-  circuit: { name: 'Circuit', rar: 'Uncommon', body: '#0e2a1a', dark: '#04100a', light: '#1e4a2a', accent: '#3aff8a', fx: 'circuit' },
-  honey: { name: 'Honey', rar: 'Rare', body: '#e8a020', dark: '#8a5a00', light: '#ffd870', accent: '#ffcf3a', fx: 'drip' },
+  circuit: { name: 'Circuit', rar: 'Rare', body: '#0e2a1a', dark: '#04100a', light: '#1e4a2a', accent: '#3aff8a', fx: 'circuit' },
+  honey: { name: 'Honey', rar: 'Uncommon', body: '#e8a020', dark: '#8a5a00', light: '#ffd870', accent: '#ffcf3a', fx: 'drip' },
   galaxy: { name: 'Galaxy', rar: 'Rare', body: '#141a4a', dark: '#060820', light: '#3a3a8a', accent: '#8ab0ff', fx: 'stars' },
   hologram: { name: 'Hologram', rar: 'Epic', body: '#3ad8ff', dark: '#0a5a8a', light: '#bff6ff', accent: '#ffffff', fx: 'holo' },
   storm: { name: 'Storm', rar: 'Epic', body: '#3a404a', dark: '#14181e', light: '#6a7484', accent: '#7ae0ff', fx: 'zap' },
   amethyst: { name: 'Amethyst', rar: 'Epic', body: '#b07aff', dark: '#4a1a8a', light: '#e8d0ff', accent: '#ffffff', fx: 'diamond' },
-  phoenix: { name: 'Phoenix', rar: 'Legendary', body: '#ff6a1a', dark: '#8a1a00', light: '#ffd06a', accent: '#ffe27a', fx: 'fire', wings: '#ff8a2a' },
-  royal: { name: 'Royal', rar: 'Legendary', body: '#5a1a8a', dark: '#24083a', light: '#9a5ad0', accent: '#ffd84a', fx: 'royal' },
+  phoenix: { name: 'Phoenix', rar: 'Mythical', body: '#ff6a1a', dark: '#8a1a00', light: '#ffd06a', accent: '#ffe27a', fx: 'fire', wings: '#ff8a2a' },
+  royal: { name: 'Royal', rar: 'Mythical', body: '#5a1a8a', dark: '#24083a', light: '#9a5ad0', accent: '#ffd84a', fx: 'royal' },
   void: { name: 'Void', rar: 'Mythical', body: '#0a0610', dark: '#000000', light: '#2a1a3a', accent: '#b678ff', fx: 'void' },
-  rainbow: { name: 'Rainbow', rar: 'Mythical', body: '#ffffff', dark: '#b0b0c0', light: '#ffffff', accent: '#ff4aa0', fx: 'rainbow' },
+  rainbow: { name: 'Rainbow', rar: 'Celestial', body: '#ffffff', dark: '#b0b0c0', light: '#ffffff', accent: '#ff4aa0', fx: 'rainbow' },
   angel: { name: 'Angel', rar: 'Celestial', body: '#fff8e8', dark: '#c8b890', light: '#ffffff', accent: '#ffe27a', fx: 'gold', wings: '#ffffff', halo: true },
   // --- pass skins (season 1, levels 51-100) ---
   saucer: { name: 'Saucer', rar: 'Rare', body: '#b8c4d4', dark: '#4a5466', light: '#ffffff', accent: '#7dff3a', fx: 'chrome', pass: true },
@@ -3808,21 +3808,22 @@ const CRATES = {
   epic: { name: 'Epic Crate', col: '#ff4be6', price: 1e11, odds: { normal: 14, bomber: 37.5, heavy: 39, bigdrill: 4, drillbomber: 4, laser: 0.6 }, ranks: [100] },
   legendary: { name: 'Legendary Crate', col: '#e8ff3a', price: 1e13, odds: { normal: 6, bomber: 32, heavy: 34, bigdrill: 7, drillbomber: 7, heavybomber: 4, laser: 4 }, ranks: [100] },
   mythical: { name: 'Mythical Crate', col: '#b05cff', price: 1e15, odds: { bomber: 22, heavy: 28, bigdrill: 13, drillbomber: 13, heavybomber: 9, laser: 7 }, ranks: [100] },
-  skin: { name: 'Skin Crate', col: '#ff8a3a', price: 1e8, skins: {
-    rusty: 11, camo: 11, bubblegum: 11, midnight: 11, arctic: 11,            // Common
-    neon: 6, racer: 6, toxic: 6, copper: 6,                                    // Uncommon
-    candy: 3.5, lava: 3.5, ocean: 3.5,                                         // Rare
-    pixel: 2, shadow: 2, plasma: 2,                                            // Epic
-    hightech: 1.5, diamond: 1.5,                                               // Legendary
-    golden: 0.6, inferno: 0.4,
-    zebra: 11, sunset: 11, tiger: 6, circuit: 6, honey: 3.5, galaxy: 3.5, hologram: 2, storm: 2, amethyst: 2,
-    phoenix: 1.2, royal: 1.2, void: 0.4, rainbow: 0.4, angel: 0.12 } },                                             // Mythical
+  // SKIN CRATES (own tab): each one gives skins of a few rarities; inside a rarity every skin is equally likely
+  skinc: { name: 'Common Skin Crate', col: '#a4a4a4', price: 2e6, rw: { Common: 75, Uncommon: 22, Rare: 3 } },
+  skinu: { name: 'Uncommon Skin Crate', col: '#4dff4d', price: 1e8, rw: { Common: 40, Uncommon: 40, Rare: 17, Epic: 3 } },
+  skin: { name: 'Rare Skin Crate', col: '#2eb0ff', price: 5e9, rw: { Uncommon: 35, Rare: 45, Epic: 17, Legendary: 3 } },
+  skine: { name: 'Epic Skin Crate', col: '#ff4be6', price: 2.5e11, rw: { Rare: 35, Epic: 45, Legendary: 17, Mythical: 3 } },
+  skinl: { name: 'Legendary Skin Crate', col: '#e8ff3a', price: 1e13, rw: { Epic: 40, Legendary: 45, Mythical: 13, Celestial: 2 } },
+  skinm: { name: 'Mythical Skin Crate', col: '#b05cff', price: 5e14, rw: { Legendary: 50, Mythical: 42, Celestial: 8 } },
 };
-const CRATE_ORDER = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythical', 'skin'];
+const CRATE_ORDER = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythical'];
+const SKIN_CRATES = ['skinc', 'skinu', 'skin', 'skine', 'skinl', 'skinm'];
+const SKIN_POOL = Object.keys(SKINS).filter(k => !SKINS[k].pass && !SKINS[k].code);   // pass + code skins never come from crates
+for (const k of SKIN_CRATES) { const C = CRATES[k], n = {}; for (const id of SKIN_POOL) n[SKINS[id].rar] = (n[SKINS[id].rar] || 0) + 1; C.skins = {}; for (const id of SKIN_POOL) { const w = C.rw[SKINS[id].rar]; if (w) C.skins[id] = w / n[SKINS[id].rar]; } }
 function pickW(obj) { let t = 0; for (const k in obj) t += obj[k]; let x = Math.random() * t; for (const k in obj) { x -= obj[k]; if (x < 0) return k; } return Object.keys(obj)[0]; }
 function openCrate(kind) {
   const C = CRATES[kind]; let item;
-  if (kind === 'skin') { const sk = pickW(C.skins), tot = Object.values(C.skins).reduce((a, b) => a + b, 0); G.skins[sk] = (G.skins[sk] || 0) + 1; item = { skin: sk, pct: C.skins[sk] / tot * 100 }; }
+  if (C.rw) { const sk = pickW(C.skins), tot = Object.values(C.skins).reduce((a, b) => a + b, 0); G.skins[sk] = (G.skins[sk] || 0) + 1; item = { skin: sk, pct: C.skins[sk] / tot * 100 }; }
   else {   // crates always give rank I: higher ranks only come from merging. Crate luck makes the rarer types more likely.
     const w = crateOdds(C), tot = Object.values(w).reduce((a, b) => a + b, 0), type = pickW(w);
     item = { drone: addDrone(type, 1), pct: w[type] / tot * 100 };
@@ -3912,7 +3913,7 @@ const PASS_MAX = 100;
 const SEASON_END = Date.UTC(2026, 11, 1, 0, 0, 0);   // Season 1 (Alien) ends 1 December 2026
 const seasonLeft = () => SEASON_END - Date.now();
 function seasonText() { const ms = seasonLeft(); if (ms <= 0) return 'Season over'; const d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5); return d > 0 ? d + 'd ' + h + 'h left' : h + 'h ' + Math.floor(ms % 36e5 / 6e4) + 'm left'; }
-const xpNeed = l => Math.round(280 * Math.pow(1.055, l - 1) / 10) * 10;   // XP to reach level l (level 1 = 280, level 100 = ~57K, about 1.07M XP in total)
+const xpNeed = l => Math.round(340 * Math.pow(1.06, l - 1) / 10) * 10;   // 2026-11-18: harder (about 1.9M XP for all 100 levels)   // XP to reach level l (level 1 = 280, level 100 = ~57K, about 1.07M XP in total)
 const xpMult = () => 1 + upv('xpboost', 0);
 const PASS = (() => {
   const L = { 2: ['hat', 'helmet'], 4: ['spin', 1], 5: ['crate', 'common'], 8: ['spin', 2], 9: ['skin', 'alien'], 11: ['crate', 'uncommon'], 14: ['skin', 'saucer'], 15: ['hat', 'antenna'],
@@ -4776,9 +4777,10 @@ function renderDrones() {
   panel(0, 0, w, h, 'DRONES', '#2a8aa8');
   closeBtn(w - 46, 12);
   if (G.droneTab === undefined) G.droneTab = 0;
-  ['My Drones', 'Drone Shop'].forEach((n, i) => btn('dtab' + i, 30 + i * 200, 28, 190, 34, n, { col: G.droneTab === i ? '#2a8aa8' : '#343c50', size: 16, r: 9, icon: i ? 'shop' : 'drone', fn: () => { G.droneTab = i; G.mergeSel = null; G.skinList = false; AUDIO.sfx('click'); } }));
+  ['My Drones', 'Drone Shop', 'Skin Shop'].forEach((n, i) => btn('dtab' + i, 30 + i * 200, 28, 190, 34, n, { col: G.droneTab === i ? (i === 2 ? '#c05a2a' : '#2a8aa8') : '#343c50', size: 16, r: 9, icon: i === 2 ? 'gem' : i ? 'shop' : 'drone', fn: () => { G.droneTab = i; G.mergeSel = null; G.skinList = false; AUDIO.sfx('click'); } }));
   ctx.globalAlpha *= tabFade('drones', G.droneTab);
-  if (G.droneTab === 1) { renderDroneShop(w, h); return; }
+  if (G.droneTab === 1) { renderDroneShop(w, h, CRATE_ORDER, 'dshop'); return; }
+  if (G.droneTab === 2) { renderDroneShop(w, h, SKIN_CRATES, 'sshop'); return; }
   // --- the 10 slots ---
   txt('SLOTS  (' + droneSlotsUsed() + ' / ' + G.slotsOpen + ' in use)', 30, 80, 13, '#9ad8ff', { align: 'left', font: FB, weight: 900 });
   for (let k = 0; k < 10; k++) {
@@ -4882,11 +4884,11 @@ function drawCrate(x, y, s, col, t, shake) {
   ctx.restore();
 }
 function renderSkinList(w, h) {
-  const C = CRATES.skin, tot = Object.values(C.skins).reduce((a, b) => a + b, 0), RORD = ['Celestial', 'Mythical', 'Legendary', 'Epic', 'Rare', 'Uncommon', 'Common'];
+  const ck = typeof G.skinList === 'string' && CRATES[G.skinList] ? G.skinList : 'skin', C = CRATES[ck], tot = Object.values(C.skins).reduce((a, b) => a + b, 0), RORD = ['Celestial', 'Mythical', 'Legendary', 'Epic', 'Rare', 'Uncommon', 'Common'];
   const ids = Object.keys(C.skins).sort((a, b) => C.skins[a] - C.skins[b] || RORD.indexOf(SKINS[a].rar) - RORD.indexOf(SKINS[b].rar));
   const have = ids.filter(id => G.skins[id] > 0).length;
   btn('skinlist_back', 30, 74, 110, 32, 'Back', { col: '#4a5070', size: 15, r: 9, fn: () => { G.skinList = false; AUDIO.sfx('click'); } });
-  txt('SKIN CRATE: every skin inside', w / 2, 90, 20, C.col, { stroke: 3 });
+  txt(C.name.toUpperCase() + ': the skins inside', w / 2, 90, fitSize(C.name.toUpperCase() + ': the skins inside', 20, w - 360), C.col, { stroke: 3 });
   txt('You have ' + have + ' / ' + ids.length, w - 34, 90, 13, '#c9cfdc', { align: 'right', font: FB, weight: 900 });
   const cols = 6, tw = 128, th = 150, gap = 8, top = 116, boxH = h - top - 70, rows = Math.ceil(ids.length / cols);
   const sa = scrollArea('skinlist', 20, top, w - 40, boxH, 'y', rows * (th + gap) + 6);
@@ -4904,24 +4906,24 @@ function renderSkinList(w, h) {
     txt(fmtPct(C.skins[id] / tot) + ' chance', x + tw / 2, y + 136, 11, '#c9cfdc', { font: FB, weight: 800, shadow: false });
   });
   unclip();
-  const hv = G.crates.skin || 0;
-  btn('skinlist_buy', w / 2 - 130, h - 58, 260, 42, hv ? 'Open free (' + hv + ')' : 'Open one: ' + fmt(C.price), { col: hv ? '#7a3aa8' : G.creditz >= C.price ? '#3aa04a' : '#6a3a3a', size: 17, fn: () => buyCrate('skin') });
+  const hv = G.crates[ck] || 0;
+  btn('skinlist_buy', w / 2 - 130, h - 58, 260, 42, hv ? 'Open free (' + hv + ')' : 'Open one: ' + fmt(C.price), { col: hv ? '#7a3aa8' : G.creditz >= C.price ? '#3aa04a' : '#6a3a3a', size: 17, fn: () => buyCrate(ck) });
 }
-function renderDroneShop(w, h) {
-  if (G.skinList) { renderSkinList(w, h); return; }
-  const rows = Math.ceil(CRATE_ORDER.length / 3), sa = scrollArea('dshop', 20, 72, w - 40, h - 90, 'y', rows * 272 + 10);
+function renderDroneShop(w, h, ORDER, sid) {
+  if (G.skinList && sid === 'sshop') { renderSkinList(w, h); return; }
+  const rows = Math.ceil(ORDER.length / 3), sa = scrollArea(sid, 20, 72, w - 40, h - 90, 'y', rows * 272 + 10);
   if (rows * 272 > h - 90) txt('scroll for more crates', w - 30, 64, 11, '#8a90a0', { align: 'right', font: FB, weight: 800 });
   clipBox(20, 72, w - 40, h - 90);
-  CRATE_ORDER.forEach((k, i) => {
+  ORDER.forEach((k, i) => {
     const C = CRATES[k], x = 26 + (i % 3) * 272, y = 78 + Math.floor(i / 3) * 272 - sa.pos, cw = 262, ch = 262, have = G.crates[k] || 0;
     if (y > h || y + ch < 60) return;
     ctx.fillStyle = rgba(C.col, 0.08); rr(x, y, cw, ch, 14); ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = rgba(C.col, 0.5); ctx.stroke();
-    if (k === 'skin') region('skinlist_open', x, y, cw, ch - 50, () => { G.skinList = true; if (SCR.skinlist) SCR.skinlist.target = SCR.skinlist.pos = 0; AUDIO.sfx('open'); });
+    if (C.rw) region('skinlist_open' + k, x, y, cw, ch - 50, () => { G.skinList = k; if (SCR.skinlist) SCR.skinlist.target = SCR.skinlist.pos = 0; AUDIO.sfx('open'); });
     drawCrate(x + cw / 2, y + 62, 2, C.col, G.time + i);
-    if (k === 'skin') txt('tap to see all skins', x + cw / 2, y + 16, 11, '#ffb27a', { font: FB, weight: 900, shadow: false });
+    if (C.rw) txt('tap to see the skins inside', x + cw / 2, y + 16, 11, '#ffb27a', { font: FB, weight: 900, shadow: false });
     txt(C.name, x + cw / 2, y + 116, fitSize(C.name, 19, cw - 20), C.col, { stroke: 3 });
     let lines;
-    if (k === 'skin') { const tot = Object.values(C.skins).reduce((a, b) => a + b, 0), by = {}; for (const [sk, v] of Object.entries(C.skins)) by[SKINS[sk].rar] = (by[SKINS[sk].rar] || 0) + v; lines = Object.entries(by).map(([r, v]) => r + ' skins ' + fmtPct(v / tot)); lines.unshift(Object.keys(C.skins).length + ' skins to collect'); }
+    if (C.rw) { const tot = Object.values(C.skins).reduce((a, b) => a + b, 0), by = {}; for (const [sk, v] of Object.entries(C.skins)) by[SKINS[sk].rar] = (by[SKINS[sk].rar] || 0) + v; lines = Object.entries(by).map(([r, v]) => r + ' skins ' + fmtPct(v / tot)); lines.unshift(Object.keys(C.skins).length + ' skins to collect'); }
     else { const w = crateOdds(C), tot = Object.values(w).reduce((a, b) => a + b, 0); lines = Object.entries(w).map(([tp, v]) => DRONE_TYPES[tp].name + ' (' + DRONE_TYPES[tp].rar + ') ' + fmtPct(v / tot)); }
     const lh = lines.length > 5 ? 12.5 : 16, lf = lines.length > 5 ? 10.5 : 12;
     lines.forEach((l, j) => txt(l, x + cw / 2, y + 136 + j * lh, fitSize(l, lf, cw - 24, FB), l.startsWith('Laser') ? '#ff6a7a' : RCOL[l.split(' ')[0]] || '#c9cfdc', { font: FB, weight: 800, shadow: false }));
@@ -5127,7 +5129,7 @@ function giveWheelPrize(i) {
     case 'Hat': { const ks = Object.keys(HATS), h = ks[rnd(0, ks.length - 1)]; G.hats[h] = (G.hats[h] || 0) + 1; msg = HATS[h].name + ' (hat)'; break; }
     case 'x2 Boost': G.boostT = (G.boostT || 0) + 120; msg = 'x' + boostMult() + ' Creditz for 2 minutes'; break;
     case 'Drone crate': { const k = Math.random() < 0.7 ? 'uncommon' : 'rare'; G.crates[k] = (G.crates[k] || 0) + 1; msg = 'A free ' + CRATES[k].name + ' (in the Drone Shop)'; break; }
-    case 'Skin crate': G.crates.skin = (G.crates.skin || 0) + 1; msg = 'A free Skin Crate (in the Drone Shop)'; break;
+    case 'Skin crate': G.crates.skin = (G.crates.skin || 0) + 1; msg = 'A free Rare Skin Crate (in the Skin Shop)'; break;
     case 'Extra spin': G.spins = (G.spins || 0) + 1; msg = 'One more spin!'; break;
     case 'JACKPOT': { const a = rv * 1000; giveCreditz(a, true); G.crates.epic = (G.crates.epic || 0) + 1; msg = 'JACKPOT! +' + fmt(a) + ' Creditz + an Epic Crate'; G.flash = 0.6; G.flashCol = '#ffd84a'; G.shake = Math.max(G.shake, 8); break; }
   }
