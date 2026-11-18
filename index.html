@@ -3285,9 +3285,9 @@ function renderSettings() {
   });
   ctx.restore();
   const by = h - 58;
-  btn('set_code', w / 2 - 214, by, 136, 38, 'Codes', { col: '#1a8a4a', size: 15, r: 10, icon: 'gem', fn: () => { AUDIO.sfx('click'); openCodeBox(); } });
-  if (fsOk()) btn('set_fs', w / 2 - 68, by, 136, 38, isFs() ? 'Exit full' : 'Fullscreen', { col: '#3a5fd0', size: 15, r: 10, fn: () => { AUDIO.sfx('click'); toggleFullscreen(); } });
-  btn('set_reset', w / 2 + 78, by, 136, 38, 'Reset gfx', { col: '#5a4a6a', size: 15, r: 10, fn: () => { const d = gfxDefaults(); for (const k in d) GFX[k] = d[k]; setGfx('preset', GFX.preset); AUDIO.sfx('click'); } });
+  // (the Codes button is gone: codes are closed - Sixten 2026-11-18)
+  if (fsOk()) btn('set_fs', w / 2 - 141, by, 136, 38, isFs() ? 'Exit full' : 'Fullscreen', { col: '#3a5fd0', size: 15, r: 10, fn: () => { AUDIO.sfx('click'); toggleFullscreen(); } });
+  btn('set_reset', fsOk() ? w / 2 + 5 : w / 2 - 68, by, 136, 38, 'Reset gfx', { col: '#5a4a6a', size: 15, r: 10, fn: () => { const d = gfxDefaults(); for (const k in d) GFX[k] = d[k]; setGfx('preset', GFX.preset); AUDIO.sfx('click'); } });
   UI.live = true; setScreen(); ctx.globalAlpha = 1;
 }
 function renderMenus() {
@@ -3828,7 +3828,9 @@ function keepCodeSkins() {
   if (all.length !== v.length) { try { localStorage.setItem(VAULT_KEY, JSON.stringify(all)); } catch (e) {} }
 }
 async function codeHash(c) { const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(c)); return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join(''); }
+const CODES_OPEN = false;   // codes are closed: nobody can get a code skin any more. Skins people already got stay (see keepCodeSkins).
 async function redeemCode(raw) {
+  if (!CODES_OPEN) return 'Codes are closed';
   if (!(window.crypto && crypto.subtle)) return 'Codes only work on the real website (https)';
   const c = await codeHash(String(raw || '').trim().toLowerCase().replace(/\s+/g, ''));
   const C = CODES[c]; if (!C) return 'That code does not exist';
