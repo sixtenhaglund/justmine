@@ -1245,7 +1245,7 @@ function tick() {
     if (G.stormLevel > 0 && BIOMES[G.biome].name === 'Storm Peaks' && (G.rodT = (G.rodT || 0) + DT) >= SHOPV.storm[G.stormLevel - 1]) {
       G.rodT = 0;
       const free = G.rocks.filter(r => r.state === 'rock' && r.spawnT <= 0);
-      if (free.length) { const r = free[Math.floor(Math.random() * free.length)]; G.bolt = { t: 0, pts: boltPts() }; G.flash = Math.max(G.flash, 0.22); G.flashCol = '#dfe8ff'; AUDIO.sfx('thunder'); r.costume = 4; breakRock(r, 'meteor'); }
+      if (free.length) { const r = free[Math.floor(Math.random() * free.length)]; G.bolt = { t: 0, pts: boltPts() }; G.flashCol = '#dfe8ff'; AUDIO.sfx('thunder'); r.costume = 4; breakRock(r, 'meteor'); }
     }
     // remember how fast Creditz come in (for offline mining)
     if ((G.rateT = (G.rateT || 0) + DT) >= 5) { const r = (G.earned || 0) / G.rateT; G.rate = G.rate ? G.rate * 0.85 + r * 0.15 : r; G.earned = 0; G.rateT = 0; }
@@ -1430,7 +1430,7 @@ function tickAmbient() {
   if (type === 'sparks' && R() < 0.012) G.arc = { t: 0, pts: arcPts() };
   if (G.arc) { G.arc.t += DT; if (G.arc.t > 0.25) G.arc = null; }
   // Storm Peaks: lightning
-  if (type === 'storm' && G.scene === 'play' && R() < 0.006) { G.bolt = { t: 0, pts: boltPts() }; G.flash = Math.max(G.flash, 0.22); G.flashCol = '#dfe8ff'; AUDIO.sfx('thunder'); }
+  if (type === 'storm' && G.scene === 'play' && R() < 0.006) { G.bolt = { t: 0, pts: boltPts() }; G.flashCol = '#dfe8ff'; AUDIO.sfx('thunder'); }
   if (G.bolt) { G.bolt.t += DT; if (G.bolt.t > 0.35) G.bolt = null; }
 }
 function boltPts() {
@@ -2171,7 +2171,7 @@ function drawLighting(shx, shy) {
     if (col && lv > 1) tint.push([sx, sy, rr2, Math.min(1, a), col]);
   };
    // your torch
-  for (const l of G.lights) L(l.x, l.y, l.r * 1.5, l.life / l.max, l.col);
+  for (const l of G.lights) { const f = l.life / l.max; L(l.x, l.y, Math.min(l.r, 110) * 1.3, lightA(f), l.col); }
   { const lf = Math.max(0.35, gsc()); for (const r of G.rocks) { if (r.state === 'gem' && r.gemT < 2) L(r.x, r.y, 48 * lf, 0.8, RCOL[r.rarity]); else if (r.golden && r.state === 'rock') L(r.x, r.y, 62 * lf, 0.6, '#ffcc33'); } }
   for (const bo of G.bombs) if (bo.t >= 0 && bombTier(bo.level).name !== 'black') L(bo.x, bo.y, 95 * vsc(), 0.9, '#ffb04a');
   for (const m of G.meteors) { const t = m.t / m.dur; L(m.sx + (m.target.x - m.sx) * t, m.sy + (m.target.y - m.sy) * t, 85, 1, '#ff8a3a'); }
@@ -2215,7 +2215,7 @@ function drawBloom() {
   const w1 = Math.max(4, Math.ceil(cv.width / 6)), h1 = Math.max(4, Math.ceil(cv.height / 6));
   const a = bloomCv('a', w1, h1), ax = a.getContext('2d'), b = bloomCv('b', Math.max(2, Math.ceil(w1 / 4)), Math.max(2, Math.ceil(h1 / 4)));
   BLOOM.n = (BLOOM.n || 0) + 1;
-  const busy = G.flash > 0.05;   // a big flash changes everything at once: redo the glow right away
+  const busy = G.flash > 0.05 || G.bombs.length > 0 || (G.bhPops && G.bhPops.length > 0);   // fast bright changes (explosions): a glow updated in steps would flicker   // a big flash changes everything at once: redo the glow right away
   if (busy || BLOOM.n % 3 === 0 || BLOOM.w !== w1 || BLOOM.h !== h1) {   // you can't see a glow that is 1 frame old, but it halves the cost
     BLOOM.w = w1; BLOOM.h = h1; BLOOM.ox = SHK.x; BLOOM.oy = SHK.y;   // remember how the screen was shaken when this glow was made
     ax.globalAlpha = 1; ax.imageSmoothingEnabled = true; ax.imageSmoothingQuality = 'high';
@@ -2572,7 +2572,7 @@ function drawRock(r, bname) {
     const gg = ctx.createLinearGradient(sx - 10, -s, sx + 10, s); gg.addColorStop(0, 'rgba(255,255,255,0)'); gg.addColorStop(0.5, 'rgba(255,250,210,0.55)'); gg.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = gg; ctx.fillRect(-s, -s, s * 2, s * 2); ctx.restore();
   }
-  if (r.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,' + r.flash * 0.45 + ')'; rr(-q, -q, q * 2, q * 2, 7); ctx.fill(); }
+  if (r.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,' + r.flash * 0.16 + ')'; rr(-q, -q, q * 2, q * 2, 7); ctx.fill(); }
   if (r.spawnT > 0) { ctx.fillStyle = 'rgba(0,0,0,' + (r.spawnT / Math.max(0.01, r.spawnMax)) * 0.35 + ')'; rr(-q, -q, q * 2, q * 2, 7); ctx.fill(); }
   if (r.xpRock) {
     const p = 0.5 + 0.5 * Math.sin(G.time * 4 + r.seed);
@@ -3387,7 +3387,7 @@ function renderWorld(shx, shy) {
   // lights (additive glow)
   ctx.globalCompositeOperation = 'lighter';
   const lk = 0.7 * Math.min(1, 10 / Math.max(1, G.lights.length));
-  for (const l of G.lights) { ctx.globalAlpha = (l.life / l.max) * lk; ctx.drawImage(soft(l.col), l.x - l.r, wy(l.y) - l.r, l.r * 2, l.r * 2); }
+  for (const l of G.lights) { const r = Math.min(l.r, 110); ctx.globalAlpha = lightA(l.life / l.max) * lk; ctx.drawImage(soft(l.col), l.x - r, wy(l.y) - r, r * 2, r * 2); }
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
   if (GFX.floats) for (const f of G.floats) { ctx.globalAlpha = clamp((1.5 - f.t) * 2, 0, 1); const sc = f.t < 0.15 ? easeBack(f.t / 0.15) : 1; const fz = Math.max(0.5, gsc()); txt(f.text, f.x, wy(f.y), f.size * sc * fz, f.col, { stroke: 3 * fz }); }
   ctx.globalAlpha = 1;
@@ -3947,6 +3947,8 @@ function renderBook() {
 }
 
 // ---------------- overlays: teleport, flash, victory ----------------
+// bursts of light: never bigger than ~110 units, 60% bright, and they fade IN for a moment instead of popping on (popping = looks like a flash)
+const lightA = f => Math.min(1, (1 - f) * 7) * f * 0.6;
 function drawFlash() {   // a quick bright flash over the mine (gold, explosions...), softer while a menu is open
   if (!(G.flash > 0) || GFX.flashes === 0) return;
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
@@ -5585,10 +5587,10 @@ function renderDrones() {
     txt(maxd ? 'fully trained' : Math.floor(d.xp || 0) + ' / ' + dXpNeed(L) + ' XP  (1 XP a second in a slot)', 117, y0 + 190, fitSize('0000 / 0000 XP  (1 XP a second in a slot)', 10, 160, FB), '#c9cfdc', { font: FB, weight: 800, shadow: false }); }
   txt(droneName(d), 222, y0 + 26, fitSize(droneName(d), 22, 230), RANK_COL[d.rank], { align: 'left', stroke: 3 });
   txt(droneRar(d), 545, y0 + 27, 13, RCOL[droneRar(d)], { align: 'right', font: FB, weight: 900 });
-  if (!d.gold && d.type !== 'goldmother') btn('dgold', 446, y0 + 38, 110, 22, 'GOLD: ' + fmt(GOLD_COST), { col: G.creditz >= GOLD_COST ? '#c48a12' : '#4a3a1a', size: 11, r: 7, fn: () => {
+  if (!d.gold && d.type !== 'goldmother') btn('dgold', 446, y0 + 38, 110, 22, 'GOLD: ' + fmt(GOLD_COST) + ' + reset', { col: G.creditz >= GOLD_COST ? '#c48a12' : '#4a3a1a', size: 11, r: 7, fn: () => {
     if (G.creditz < GOLD_COST) { toast('Turning a drone gold costs ' + fmt(GOLD_COST) + ' Creditz', '#ff8a8a'); AUDIO.sfx('deny'); return; }
-    if (!armScrap('g' + d.id)) { toast('Press again: ' + droneName(d) + ' turns GOLD (2x faster, faster flying, +50% cracks)', '#ffd84a'); return; }
-    G.creditz -= GOLD_COST; G.shown = G.creditz; d.gold = true; AUDIO.sfx('victory'); toast(droneName(d) + ' is now GOLD!', '#ffd84a'); const s2 = DRT.get(d.id); if (s2) { sparkle(s2.x, s2.y, '#ffd84a', 20); G.rings.push({ x: s2.x, y: s2.y, t: 0, r: 60, col: '#ffd84a' }); } save(); } });
+    if (!armScrap('g' + d.id)) { toast('Press again: ' + droneName(d) + ' turns GOLD but goes back to ' + (DRONE_TYPES[d.type].noRank ? '' : 'rank I and ') + 'level 1!', '#ffd84a'); return; }
+    G.creditz -= GOLD_COST; G.shown = G.creditz; d.gold = true; if (!DRONE_TYPES[d.type].noRank) d.rank = 1; d.lvl = 1; d.xp = 0; AUDIO.sfx('victory'); toast(droneName(d) + ' is now GOLD!', '#ffd84a'); const s2 = DRT.get(d.id); if (s2) { sparkle(s2.x, s2.y, '#ffd84a', 20); G.rings.push({ x: s2.x, y: s2.y, t: 0, r: 60, col: '#ffd84a' }); } save(); } });
   else if (d.gold) txt('GOLD: 2x faster, +35% speed, +50% cracks', 556, y0 + 38, 10, '#ffd84a', { align: 'right', font: FB, weight: 900, shadow: false });
   txt(DRONE_TYPES[d.type].desc, 222, y0 + 52, fitSize(DRONE_TYPES[d.type].desc, 11.5, d.gold || d.type === 'goldmother' ? 330 : 218, FB), '#c9cfdc', { align: 'left', font: FB, weight: 800 });
   const stats = d.type === 'laserdriller' ? 'Shoots every ' + droneCd(d).toFixed(2) + 's   45% chance to crack   aim turns slowly' : d.type === 'engineer' ? 'Drills every ' + droneCd(d).toFixed(1) + 's   Tech: 1 part every ' + Math.round(techTime(d)) + 's (in a slot)' : isMoth(d.type) ? 'Every ' + Math.round(droneCd(d)) + 's: 5 minerals   Fleet: 3 ships, 15s, every ' + Math.round(MOTHER_FLEET_CD * lvlCd(d)) + 's' : d.type === 'alien' ? 'Every ' + Math.round(droneCd(d)) + 's   Takes up to: ' + (d.rank >= 5 ? 'any mineral' : 'the ' + (d.rank + 1) + ' cheapest of a biome')
