@@ -5860,7 +5860,7 @@ function renderDroneColumn() {
       region(id, sx, y, size, size, () => open(d && d.id));
       ctx.fillStyle = UI.hot === id ? 'rgba(255,255,255,0.18)' : 'rgba(10,14,22,0.75)'; rr(sx, y, size, size, 9); ctx.fill();
       ctx.lineWidth = 1.4; ctx.strokeStyle = d ? rgba(RCOL[droneRar(d)], 0.85) : 'rgba(255,255,255,0.18)'; ctx.stroke();
-      if (d) { const pic = hudPic('slot' + d.type + (d.skin || '') + (d.hat || '') + d.rank, Math.round(size), Math.round(size), () => drawDrone(d, 0, size * 0.04, { scale: size / 34, t: 1, box: [-size / 2, -size / 2, size, size] })); ctx.drawImage(pic, sx, y, size, size); rankBadge(d, sx + size - 1, y + 1, 0.75); }
+      if (d) { const pic = hudPic('slot' + d.type + (d.skin || '') + (d.hat || '') + d.rank + (d.gold ? 'G' : ''), Math.round(size), Math.round(size), () => drawDrone(d, 0, size * 0.04, { scale: size / 34, t: 1, box: [-size / 2, -size / 2, size, size] })); ctx.drawImage(pic, sx, y, size, size); rankBadge(d, sx + size - 1, y + 1, 0.75); }
       else txt('+', sx + size / 2, y + size / 2 + 1, size * 0.45, 'rgba(255,255,255,0.3)', { shadow: false });
     }
     return;
@@ -5886,7 +5886,7 @@ function renderDroneColumn() {
     region(id, sx, y, size, size, () => open(d && d.id));
     ctx.fillStyle = UI.hot === id ? 'rgba(255,255,255,0.18)' : 'rgba(10,14,22,0.7)'; rr(sx, y, size, size, 7); ctx.fill();
     ctx.lineWidth = 1.2; ctx.strokeStyle = d ? rgba(RCOL[droneRar(d)], 0.8) : 'rgba(255,255,255,0.18)'; ctx.stroke();
-    if (d) { const pic = hudPic('slot' + d.type + (d.skin || '') + (d.hat || '') + d.rank, size, size, () => drawDrone(d, 0, size * 0.04, { scale: size / 34, t: 1, box: [-size / 2, -size / 2, size, size] })); ctx.drawImage(pic, sx, y, size, size); rankBadge(d, sx + size - 1, y + 1, Math.max(0.55, size / 70)); }
+    if (d) { const pic = hudPic('slot' + d.type + (d.skin || '') + (d.hat || '') + d.rank + (d.gold ? 'G' : ''), size, size, () => drawDrone(d, 0, size * 0.04, { scale: size / 34, t: 1, box: [-size / 2, -size / 2, size, size] })); ctx.drawImage(pic, sx, y, size, size); rankBadge(d, sx + size - 1, y + 1, Math.max(0.55, size / 70)); }
     else txt('+', sx + size / 2, y + size / 2 + 1, size * 0.45, 'rgba(255,255,255,0.3)', { shadow: false });
   }
   const hot = UI.hot === 'dronebig';
